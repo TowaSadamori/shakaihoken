@@ -40,3 +40,10 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Firebase Emulators
+*.emulators.export/
+.firebase/emulators/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
