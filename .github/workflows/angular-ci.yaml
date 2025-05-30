@@ -1,0 +1,36 @@
+name: Angular CI
+
+on:
+  push:
+    branches: ['main'] # ご自身のメインブランチ名に合わせてください (例: main, master)
+  pull_request:
+    branches: ['main'] # ご自身のメインブランチ名に合わせてください
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x] # ユーザー様のNode.js v20.18.3 に合わせています
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm' # npmのキャッシュを有効にする
+
+      - name: Install Dependencies
+        run: npm ci # package-lock.jsonに基づいてクリーンインストール
+
+      - name: Lint Code
+        run: npm run lint
+
+      - name: Run Tests
+        run: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI # CI用の設定でテスト実行
+        # ChromeHeadlessCI は Angular v13以降で推奨されるCI向けブラウザ設定です。
+        # もしエラーが出る場合は --browsers=ChromeHeadless も試してください。
