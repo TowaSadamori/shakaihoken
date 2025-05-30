@@ -31,6 +31,4 @@ jobs:
         run: npm run lint
 
       - name: Run Tests
-        run: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI # CI用の設定でテスト実行
-        # ChromeHeadlessCI は Angular v13以降で推奨されるCI向けブラウザ設定です。
-        # もしエラーが出る場合は --browsers=ChromeHeadless も試してください。
+       run: npm run test -- --no-watch --no-progress --browsers=ChromeHeadless # CI用の設定でテスト実行 (ChromeHeadless に変更)
