@@ -1,0 +1,44 @@
+.home-container {
+  padding: 24px;
+}
+
+.welcome-section {
+  margin-bottom: 32px;
+  h1 {
+    font-size: 2rem;
+    color: #1976d2;
+    margin-bottom: 16px;
+  }
+}
+
+.dashboard-section {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+    color: #333;
+  }
+}
+
+.user-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border-left: 4px solid #1976d2;
+
+  h3 {
+    color: #2c3e50;
+    margin-bottom: 16px;
+  }
+
+  .placeholder-text {
+    color: #666;
+    font-style: italic;
+  }
+}
