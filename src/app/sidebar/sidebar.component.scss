@@ -1,0 +1,24 @@
+.sidebar {
+  width: 200px;
+  background: #f0f4f8;
+  height: 100vh;
+  padding: 24px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  margin-bottom: 20px;
+}
+
+.sidebar a {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
