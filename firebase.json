@@ -1,12 +1,4 @@
 {
-  "emulators": {
-    "dataconnect": {
-      "dataDir": "dataconnect/.dataconnect/pgliteData"
-    }
-  },
-  "dataconnect": {
-    "source": "dataconnect"
-  },
   "firestore": {
     "database": "shakaihoken-db",
     "location": "asia-northeast1",
@@ -17,20 +9,14 @@
     {
       "source": "shakaihoken_functions",
       "codebase": "shakaihoken_functions",
+      "region": "asia-northeast1",
       "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", "*.local"],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint",
-        "npm --prefix \"$RESOURCE_DIR\" run build"
-      ]
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
     }
   ],
-  "apphosting": {
-    "backendId": "shakaihoken10093-backend",
-    "rootDir": "/",
-    "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", "functions"]
-  },
   "hosting": {
-    "public": "dist/shakaihoken",
+    "public": "dist/shakaihoken/browser",
+    "site": "kensyu10093-3fdd7",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
