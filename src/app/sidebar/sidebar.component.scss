@@ -53,3 +53,57 @@
 mat-icon {
   margin-right: 12px;
 }
+
+.sidebar .mat-mdc-list-item,
+.sidebar .mat-mdc-list-item.mat-mdc-list-item-interactive,
+.sidebar .mat-mdc-list-item.active {
+  min-height: 48px !important;
+  height: 48px !important;
+  max-height: 48px !important;
+  box-sizing: border-box;
+  overflow: hidden !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.sidebar .mat-mdc-list-item .mat-mdc-list-item-content {
+  align-items: center !important;
+  display: flex !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  box-sizing: border-box;
+  padding: 0 16px !important;
+}
+
+.sidebar .mat-mdc-list-item::after,
+.sidebar .mat-mdc-list-item.mat-mdc-list-item-interactive::after,
+.sidebar .mat-mdc-list-item.active::after {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  content: none !important;
+}
+
+.sidebar .mat-mdc-list-item,
+.sidebar .mat-mdc-list-item .mat-mdc-list-item-title,
+.sidebar .mat-mdc-list-item .mat-mdc-list-item-content,
+.sidebar .mat-mdc-list-item .mat-icon,
+.sidebar .mat-mdc-list-item [matLine],
+.sidebar .mat-mdc-list-item [matListIcon] {
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+.sidebar .mat-mdc-list-item.active,
+.sidebar .mat-mdc-list-item:active,
+.sidebar .mat-mdc-list-item:focus,
+.sidebar .mat-mdc-list-item:hover,
+.sidebar .mat-mdc-list-item.active .mat-mdc-list-item-title,
+.sidebar .mat-mdc-list-item:active .mat-mdc-list-item-title,
+.sidebar .mat-mdc-list-item:focus .mat-mdc-list-item-title,
+.sidebar .mat-mdc-list-item:hover .mat-mdc-list-item-title {
+  color: #fff !important;
+  font-weight: 700 !important;
+  background: #1565c0 !important;
+}

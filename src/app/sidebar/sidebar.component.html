@@ -2,6 +2,7 @@
   <mat-nav-list>
     <a
       mat-list-item
+      disableRipple="true"
       *ngFor="let item of navItems"
       [routerLink]="item.path"
       routerLinkActive="active"
