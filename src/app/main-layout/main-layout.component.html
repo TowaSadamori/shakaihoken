@@ -1,7 +1,16 @@
-<app-header></app-header>
-<div class="layout">
-  <app-sidebar></app-sidebar>
-  <main class="content">
-    <router-outlet></router-outlet>
-  </main>
-</div>
+<app-header [isHandset]="isHandset" (menuClick)="sidenav.toggle()"></app-header>
+<mat-sidenav-container class="sidenav-container">
+  <mat-sidenav
+    #sidenav
+    class="app-sidenav"
+    [mode]="isHandset ? 'over' : 'side'"
+    [opened]="!isHandset"
+  >
+    <app-sidebar (navItemClick)="isHandset && sidenav.close()"></app-sidebar>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

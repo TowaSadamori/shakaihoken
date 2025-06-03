@@ -1,4 +1,4 @@
-<nav class="sidebar">
+<nav class="sidebar" [class.mini]="isMini">
   <mat-nav-list>
     <a
       mat-list-item
@@ -7,9 +7,16 @@
       [routerLink]="item.path"
       routerLinkActive="active"
       [routerLinkActiveOptions]="{ exact: true }"
+      (click)="onNavItemClick()"
     >
       <mat-icon matListIcon>{{ item.icon }}</mat-icon>
-      <span matLine>{{ item.label }}</span>
+      <span matLine class="sidebar-label">{{ item.label }}</span>
     </a>
   </mat-nav-list>
+  <button mat-icon-button class="sidebar-toggle" (click)="toggleMini()">
+    <mat-icon>
+      {{ isMini ? 'chevron_right' : 'chevron_left' }}
+    </mat-icon>
+    <span class="toggle-label" *ngIf="!isMini">メニューを閉じる</span>
+  </button>
 </nav>
