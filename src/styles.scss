@@ -1,5 +1,15 @@
 /* You can add global styles to this file, and also import other style files */
 
+body,
+.mat-app-background {
+  --mat-mdc-list-item-label-text-color: #fff !important;
+  --mdc-list-item-label-text-color: #fff !important;
+  --mat-mdc-list-item-supporting-text-color: #fff !important;
+  --mdc-list-item-supporting-text-color: #fff !important;
+  --mat-mdc-list-item-leading-icon-color: #fff !important;
+  --mdc-list-item-trailing-icon-color: #fff !important;
+}
+
 html,
 body {
   height: 100%;
@@ -7,4 +17,39 @@ body {
 body {
   margin: 0;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.sidebar {
+  width: 200px;
+  background: #1976d2;
+  height: calc(100vh - 64px);
+  padding: 24px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+  color: #fff;
+}
+
+.sidebar .mat-list-item {
+  --mdc-list-item-label-text-color: #fff;
+  --mat-mdc-list-item-label-text-color: #fff;
+  --mdc-list-item-supporting-text-color: #fff;
+  --mat-mdc-list-item-supporting-text-color: #fff;
+  --mdc-list-item-leading-icon-color: #fff;
+  --mat-mdc-list-item-leading-icon-color: #fff;
+  --mdc-list-item-trailing-icon-color: #fff;
+  --mat-mdc-list-item-trailing-icon-color: #fff;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+.sidebar .mat-icon {
+  color: #fff !important;
 }

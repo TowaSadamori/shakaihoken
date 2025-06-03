@@ -1,9 +1,10 @@
 .sidebar {
   width: 200px;
-  background: #f0f4f8;
+  background: #1976d2;
   height: calc(100vh - 64px);
   padding: 24px 0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+  color: #fff;
 }
 
 .sidebar ul {
@@ -13,12 +14,42 @@
 }
 
 .sidebar li {
-  margin-bottom: 20px;
+  margin-bottom: 4px;
 }
 
 .sidebar a {
-  color: #1976d2;
+  color: #fff;
   text-decoration: none;
   font-weight: bold;
   font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  padding: 10px 24px;
+  border-radius: 4px 0 0 4px;
+  transition: background 0.2s;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  background: #1565c0;
+}
+
+/* 文字色・太字を強制 */
+::ng-deep .sidebar .mat-list-item .mat-list-text {
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+/* アイコンも白に */
+::ng-deep .sidebar .mat-list-item .mat-icon {
+  color: #fff !important;
+}
+
+.sidebar .mat-list-item.active,
+.sidebar .mat-list-item:hover {
+  background: #1565c0;
+}
+
+mat-icon {
+  margin-right: 12px;
 }

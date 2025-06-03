@@ -1,7 +1,14 @@
 <nav class="sidebar">
-  <ul>
-    <li><a href="#">ホーム</a></li>
-    <li><a href="#">管理（ダミー）</a></li>
-    <li><a href="#">プロフィール（ダミー）</a></li>
-  </ul>
+  <mat-nav-list>
+    <a
+      mat-list-item
+      *ngFor="let item of navItems"
+      [routerLink]="item.path"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+    >
+      <mat-icon matListIcon>{{ item.icon }}</mat-icon>
+      <span matLine>{{ item.label }}</span>
+    </a>
+  </mat-nav-list>
 </nav>
