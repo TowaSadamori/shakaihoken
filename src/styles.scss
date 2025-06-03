@@ -1,43 +1,30 @@
 /* グローバルスタイルのみ。Materialテーマ定義は不要 */
 
 html,
-body {
+body,
+.app-root-layout {
   height: 100%;
-}
-body {
   margin: 0;
+  padding: 0;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
-}
-
-.sidebar,
-.app-sidenav {
-  height: 100vh !important;
-  min-height: 100vh !important;
-  max-height: 100vh !important;
-}
-// .mat-sidenav,
-// .mat-sidenav-container,
-// .mat-sidenav-content {
-//   height: 100vh !important;
-//   min-height: 100vh !important;
-//   max-height: 100vh !important;
-// }
-.sidebar::-webkit-scrollbar,
-.app-sidenav::-webkit-scrollbar,
-.mat-sidenav::-webkit-scrollbar,
-.mat-sidenav-container::-webkit-scrollbar {
-  display: none !important;
+  overflow-y: auto;
 }
 
 .sidebar {
   width: 200px;
   background: #1976d2;
-  height: calc(100vh - 64px);
-  padding: 24px 0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+  padding: 0;
+  box-shadow: none;
   color: #fff;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+}
+
+.sidebar::-webkit-scrollbar,
+.app-sidenav::-webkit-scrollbar,
+.mat-sidenav::-webkit-scrollbar,
+.mat-sidenav-container::-webkit-scrollbar {
+  display: none !important;
 }
 
 /* Materialのリストテキスト・アイコンを強制的に白・太字に */
