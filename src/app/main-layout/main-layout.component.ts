@@ -16,6 +16,7 @@ import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 export class MainLayoutComponent {
   @ViewChild('sidenav') sidenav!: MatSidenav;
   isHandset = false;
+  sidebarMini = false;
 
   constructor(private breakpointObserver: BreakpointObserver) {
     this.breakpointObserver.observe([Breakpoints.Handset]).subscribe((result) => {

@@ -1,4 +1,12 @@
-import { Component, ViewEncapsulation, Output, EventEmitter } from '@angular/core';
+import {
+  Component,
+  ViewEncapsulation,
+  Output,
+  EventEmitter,
+  Input,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,9 +27,10 @@ export interface NavItem {
   styleUrl: './sidebar.component.scss',
   encapsulation: ViewEncapsulation.None,
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnChanges {
+  @Input() isMini = false;
   @Output() navItemClick = new EventEmitter<void>();
-  isMini = false;
+  @Output() toggleMini = new EventEmitter<void>();
   navItems: NavItem[] = [
     { label: 'ホーム', path: '/', icon: 'home' },
     { label: '従業員手続き', path: '/employee-procedures', icon: 'person' },
@@ -29,11 +38,24 @@ export class SidebarComponent {
     { label: '設定', path: '/settings', icon: 'settings' },
   ];
 
+  isLabelVisible = true;
+  private widthTransitionMs = 200;
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['isMini']) {
+      if (!this.isMini) {
+        this.isLabelVisible = true;
+      } else {
+        this.isLabelVisible = false;
+      }
+    }
+  }
+
   onNavItemClick() {
     this.navItemClick.emit();
   }
 
-  toggleMini() {
-    this.isMini = !this.isMini;
+  onToggleMini() {
+    this.toggleMini.emit();
   }
 }

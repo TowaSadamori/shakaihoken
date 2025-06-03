@@ -9,6 +9,26 @@ body {
   font-family: Roboto, 'Helvetica Neue', sans-serif;
 }
 
+.sidebar,
+.app-sidenav {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+}
+// .mat-sidenav,
+// .mat-sidenav-container,
+// .mat-sidenav-content {
+//   height: 100vh !important;
+//   min-height: 100vh !important;
+//   max-height: 100vh !important;
+// }
+.sidebar::-webkit-scrollbar,
+.app-sidenav::-webkit-scrollbar,
+.mat-sidenav::-webkit-scrollbar,
+.mat-sidenav-container::-webkit-scrollbar {
+  display: none !important;
+}
+
 .sidebar {
   width: 200px;
   background: #1976d2;
@@ -16,6 +36,8 @@ body {
   padding: 24px 0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
   color: #fff;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 /* Materialのリストテキスト・アイコンを強制的に白・太字に */
@@ -71,4 +93,12 @@ body,
   --mdc-list-item-one-line-container-height: 48px !important;
   --mdc-list-item-two-line-container-height: 48px !important;
   --mdc-list-item-three-line-container-height: 48px !important;
+}
+
+.mat-drawer-inner-container {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+.mat-drawer-inner-container::-webkit-scrollbar {
+  display: none !important;
 }

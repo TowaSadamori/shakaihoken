@@ -1,12 +1,27 @@
 .sidebar {
   width: 200px;
+  display: flex;
+  flex-direction: column;
   background: #1976d2;
-  height: calc(100vh - 64px);
-  padding: 24px 0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
   color: #fff;
-  transition: width 0.2s;
-  position: relative;
+  height: 100vh;
+  padding: 0;
+  box-shadow: none;
+  border-right: none;
+  overflow: hidden;
+}
+
+.sidebar.mini {
+  width: 56px;
+}
+
+/* スクロールバーを完全に非表示 */
+.sidebar::-webkit-scrollbar {
+  display: none !important;
+}
+.sidebar {
+  -ms-overflow-style: none; /* IE, Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 .sidebar ul {
@@ -26,7 +41,10 @@
   font-size: 1.1rem;
   display: flex;
   align-items: center;
-  padding: 10px 24px;
+  justify-content: flex-start;
+  flex-direction: row;
+  padding: 10px 16px;
+  gap: 1em;
   border-radius: 4px 0 0 4px;
   transition: background 0.2s;
 }
@@ -52,8 +70,29 @@
   background: #1565c0;
 }
 
-mat-icon {
-  margin-right: 12px;
+.sidebar .mat-icon {
+  min-width: 40px;
+  text-align: center;
+  margin-right: 0;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar .sidebar-label {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar.mini .mat-icon {
+  margin: 0 auto;
+  display: block;
+}
+.sidebar.mini a {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .sidebar .mat-mdc-list-item,
@@ -110,68 +149,46 @@ mat-icon {
   background: #1565c0 !important;
 }
 
+.sidebar-list-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 0 0 0;
+}
+
 .sidebar-toggle {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  background: #1565c0 !important;
-  color: #fff !important;
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-  min-width: 56px;
-  height: 48px;
-  border-radius: 24px;
+  width: 100%;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  background: #1565c0;
+  color: #fff;
+  border: none;
   cursor: pointer;
-  padding: 0 20px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  gap: 8px;
-  overflow: visible;
-  pointer-events: auto;
-}
-
-.sidebar-toggle:hover {
-  background: #1976d2 !important;
-}
-
-.sidebar-toggle .mat-icon {
-  font-size: 32px !important;
-  color: #fff !important;
-  line-height: 1;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .toggle-label {
-  margin-left: 4px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #fff;
-  white-space: nowrap;
+  margin-left: 8px;
 }
 
-.sidebar.mini {
-  width: 56px !important;
+.sidebar-label,
+.toggle-label {
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 
-.sidebar.mini .sidebar-toggle {
-  justify-content: center;
-  padding: 0;
-  min-width: 56px;
-}
-
+.sidebar.mini .sidebar-label,
 .sidebar.mini .toggle-label {
-  display: none !important;
+  display: none;
+}
+
+.sidebar:not(.mini) .sidebar-label,
+.sidebar:not(.mini) .toggle-label {
+  opacity: 1;
+  transform: scaleX(1);
+  pointer-events: auto;
 }
 
 /* ハンバーガーメニュー（menuアイコン）をsidebar内で非表示にする */

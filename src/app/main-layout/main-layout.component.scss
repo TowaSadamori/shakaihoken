@@ -3,10 +3,50 @@
   min-height: calc(100vh - 64px); /* ヘッダー分を引く */
 }
 
+.main-layout {
+  display: flex;
+  height: calc(100vh - 64px); /* ヘッダー高さ分引く */
+}
+
 .content {
-  flex: 1;
-  padding: 24px;
+  flex: 1 1 0;
+  min-width: 0;
   background: #f5f5f5;
-  min-height: 100vh;
+  padding: 24px 24px 0 24px;
   box-sizing: border-box;
+}
+
+::ng-deep .mat-sidenav-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+// .sidenav-container {
+//   width: 100vw;
+//   height: 100vh;
+//   display: flex;
+// }
+
+.sidebar {
+  min-height: 0;
+}
+
+.app-root-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  flex: 0 0 64px;
+  height: 64px;
+  z-index: 10;
+}
+
+.body-area {
+  flex: 1 1 0;
+  display: flex;
+  min-height: 0;
 }
