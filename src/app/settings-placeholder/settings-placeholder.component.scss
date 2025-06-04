@@ -15,3 +15,27 @@
 .placeholder p {
   color: #555;
 }
+
+.main-create-account-btn {
+  display: block;
+  margin: 32px auto 0 auto;
+  padding: 20px 48px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #1976d2;
+  background: #fff;
+  border: 2px solid #1976d2;
+  border-radius: 32px;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    color 0.2s;
+
+  &:hover {
+    background: #e3f0fc;
+    color: #1565c0;
+    box-shadow: 0 4px 16px rgba(25, 118, 210, 0.16);
+  }
+}

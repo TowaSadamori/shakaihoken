@@ -11,6 +11,11 @@
           <mat-icon>{{ item.icon }}</mat-icon>
           <span class="sidebar-label" *ngIf="isLabelVisible">{{ item.label }}</span>
         </a>
+        <ng-container *ngIf="item.label === '設定' && !isMini">
+          <button class="create-account-btn" (click)="goToCreateAccount()">
+            <span class="sidebar-label align-with-settings">アカウント作成</span>
+          </button>
+        </ng-container>
       </li>
     </ul>
   </div>

@@ -196,3 +196,27 @@
 .sidebar .mat-icon.menu-icon {
   display: none !important;
 }
+
+.create-account-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+  outline: none;
+
+  &:hover {
+    background: #1565c0;
+  }
+}
+
+.align-with-settings {
+  margin-left: 40px;
+}

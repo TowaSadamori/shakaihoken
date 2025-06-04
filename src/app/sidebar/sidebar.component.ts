@@ -58,4 +58,8 @@ export class SidebarComponent implements OnChanges {
   onToggleMini() {
     this.toggleMini.emit();
   }
+
+  goToCreateAccount() {
+    window.location.href = '/create-account';
+  }
 }
