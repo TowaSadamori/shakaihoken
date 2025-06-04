@@ -1,14 +1,25 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { RegisterComponent } from '../register/register.component';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-create-account',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, RegisterComponent, MatDialogModule],
   template: `
     <div class="create-account-container">
       <h2>アカウント作成ページ</h2>
+      <button (click)="openRegisterDialog()" class="main-create-account-btn">アカウント作成</button>
+      <!-- アカウント一覧表示エリア（仮） -->
+      <div class="account-list-placeholder">
+        <h3>作成済みアカウント一覧（サンプル）</h3>
+        <ul>
+          <li>山田 太郎（管理者）</li>
+          <li>佐藤 花子（従業員）</li>
+        </ul>
+      </div>
       <button routerLink="/settings">設定に戻る</button>
     </div>
   `,
@@ -18,6 +29,24 @@ import { RouterModule } from '@angular/router';
         padding: 32px;
         text-align: center;
       }
+      .main-create-account-btn {
+        margin-bottom: 32px;
+      }
+      .account-list-placeholder {
+        margin: 32px auto;
+        max-width: 400px;
+        background: #f5f5f5;
+        border-radius: 12px;
+        padding: 24px;
+        text-align: left;
+      }
+      .account-list-placeholder h3 {
+        margin-top: 0;
+        color: #1976d2;
+      }
+      .account-list-placeholder ul {
+        padding-left: 1.2em;
+      }
       button {
         margin-top: 24px;
         padding: 8px 24px;
@@ -26,4 +55,13 @@ import { RouterModule } from '@angular/router';
     `,
   ],
 })
-export class CreateAccountComponent {}
+export class CreateAccountComponent {
+  constructor(private dialog: MatDialog) {}
+
+  openRegisterDialog() {
+    this.dialog.open(RegisterComponent, {
+      width: '400px',
+      disableClose: false,
+    });
+  }
+}
