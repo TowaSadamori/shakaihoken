@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogRef } from '@angular/material/dialog';
+import { AuthService } from '../auth.service';
 
 @Component({
   selector: 'app-register',
@@ -26,7 +27,8 @@ export class RegisterComponent {
 
   constructor(
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<RegisterComponent>
+    private dialogRef: MatDialogRef<RegisterComponent>,
+    private authService: AuthService
   ) {
     this.registerForm = this.fb.group(
       {
@@ -46,11 +48,15 @@ export class RegisterComponent {
     return password === confirmPassword ? null : { passwordMismatch: true };
   }
 
-  onSubmit() {
+  async onSubmit() {
     if (this.registerForm.valid) {
-      // 登録処理は後で実装
-      console.log(this.registerForm.value);
-      this.dialogRef.close();
+      const { name, email, password, role } = this.registerForm.value;
+      try {
+        await this.authService.registerUser(email, password, name, role);
+        this.dialogRef.close(true);
+      } catch (err) {
+        console.error('登録エラー', err);
+      }
     } else {
       this.registerForm.markAllAsTouched();
     }

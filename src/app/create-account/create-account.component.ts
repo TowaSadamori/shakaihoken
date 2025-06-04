@@ -3,6 +3,15 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { RegisterComponent } from '../register/register.component';
+import { getFirestore, collection, getDocs, Firestore } from 'firebase/firestore';
+
+interface User {
+  uid: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: Date | string;
+}
 
 @Component({
   selector: 'app-create-account',
@@ -12,12 +21,14 @@ import { RegisterComponent } from '../register/register.component';
     <div class="create-account-container">
       <h2>アカウント作成ページ</h2>
       <button (click)="openRegisterDialog()" class="main-create-account-btn">アカウント作成</button>
-      <!-- アカウント一覧表示エリア（仮） -->
       <div class="account-list-placeholder">
-        <h3>作成済みアカウント一覧（サンプル）</h3>
+        <h3>作成済みアカウント一覧</h3>
         <ul>
-          <li>山田 太郎（管理者）</li>
-          <li>佐藤 花子（従業員）</li>
+          <li *ngFor="let user of users">
+            {{ user.name }}（{{ user.role === 'admin' ? '管理者' : '従業員' }}）<br /><small>{{
+              user.email
+            }}</small>
+          </li>
         </ul>
       </div>
       <button routerLink="/settings">設定に戻る</button>
@@ -56,12 +67,28 @@ import { RegisterComponent } from '../register/register.component';
   ],
 })
 export class CreateAccountComponent {
-  constructor(private dialog: MatDialog) {}
+  users: User[] = [];
+  db: Firestore;
+
+  constructor(private dialog: MatDialog) {
+    // FirebaseのFirestoreインスタンスを取得
+    this.db = getFirestore();
+    this.loadUsers();
+  }
+
+  async loadUsers() {
+    const usersCol = collection(this.db, 'users');
+    const userSnapshot = await getDocs(usersCol);
+    this.users = userSnapshot.docs.map((doc) => doc.data() as User);
+  }
 
   openRegisterDialog() {
-    this.dialog.open(RegisterComponent, {
+    const dialogRef = this.dialog.open(RegisterComponent, {
       width: '400px',
       disableClose: false,
+    });
+    dialogRef.afterClosed().subscribe(() => {
+      this.loadUsers(); // ダイアログ閉じたら一覧を再取得
     });
   }
 }
