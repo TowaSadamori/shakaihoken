@@ -1,0 +1,11 @@
+<div class="confirm-dialog-container">
+  <div class="icon-wrapper">
+    <mat-icon [ngStyle]="{ color: iconColor, 'font-size': '48px' }">{{ icon }}</mat-icon>
+  </div>
+  <h2 class="dialog-title">{{ title }}</h2>
+  <div class="dialog-message">{{ message }}</div>
+  <div class="dialog-actions">
+    <button mat-stroked-button (click)="onCancel()">{{ cancelText }}</button>
+    <button mat-flat-button color="primary" (click)="onConfirm()">{{ confirmText }}</button>
+  </div>
+</div>

@@ -1,0 +1,53 @@
+:host ::ng-deep .mat-dialog-container {
+  overflow-x: hidden !important;
+  max-width: 90vw;
+}
+
+.confirm-dialog-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px 24px 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  background: #fff;
+  max-width: 400px;
+  max-height: none;
+  overflow: visible;
+  overflow-x: hidden;
+}
+
+.icon-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dialog-title {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+  color: #d2193e;
+}
+
+.dialog-message {
+  text-align: center;
+  font-size: 1.1rem;
+  margin-bottom: 24px;
+  color: #333;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+button[mat-stroked-button],
+button[mat-flat-button] {
+  min-width: 80px;
+  font-size: 1rem;
+}

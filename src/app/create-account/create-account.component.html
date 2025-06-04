@@ -1,0 +1,51 @@
+<div class="create-account-container">
+  <h2>アカウント作成ページ</h2>
+  <button (click)="openRegisterDialog()" class="main-create-account-btn">アカウント作成</button>
+  <div *ngIf="lastCreatedAccount" class="created-account-info">
+    <p>作成したアカウント情報</p>
+    <ul>
+      <li><strong>ID（メールアドレス）:</strong> {{ lastCreatedAccount.email }}</li>
+      <li><strong>パスワード:</strong> {{ lastCreatedAccount.password }}</li>
+    </ul>
+  </div>
+  <div class="account-list-placeholder">
+    <h3>作成済みアカウント一覧</h3>
+    <table class="account-table">
+      <thead>
+        <tr>
+          <th>操作</th>
+          <th>姓</th>
+          <th>名</th>
+          <th>権限</th>
+          <th>生年月日</th>
+          <th>メールアドレス</th>
+          <th>パスワード</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users.slice().reverse()">
+          <td>
+            <button (click)="editUser(user)">編集</button>
+            <button (click)="deleteUser(user)">削除</button>
+          </td>
+          <td>{{ user.lastName || '--' }}</td>
+          <td>{{ user.firstName || '--' }}</td>
+          <td>{{ user.role === 'admin' ? '管理者' : '従業員' }}</td>
+          <td>{{ user.birthDate ? (user.birthDate | date: 'yyyy/MM/dd') : '--' }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.password || '--' }}</td>
+        </tr>
+        <tr *ngIf="lastCreatedAccount">
+          <td>--</td>
+          <td>{{ lastCreatedAccount.lastName }}</td>
+          <td>{{ lastCreatedAccount.firstName }}</td>
+          <td>--</td>
+          <td>{{ lastCreatedAccount.birthDate | date: 'yyyy/MM/dd' }}</td>
+          <td>{{ lastCreatedAccount.email }}</td>
+          <td>{{ lastCreatedAccount.password }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <button routerLink="/settings">設定に戻る</button>
+</div>

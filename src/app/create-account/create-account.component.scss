@@ -1,0 +1,64 @@
+.create-account-container {
+  padding: 32px;
+  text-align: center;
+}
+.main-create-account-btn {
+  margin-bottom: 32px;
+}
+.account-list-placeholder {
+  margin: 32px auto;
+  max-width: 900px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+.account-list-placeholder h3 {
+  margin-top: 0;
+  color: #1976d2;
+}
+.account-list-placeholder ul {
+  padding-left: 1.2em;
+}
+button {
+  margin-top: 24px;
+  padding: 8px 24px;
+  font-size: 16px;
+}
+.created-account-info {
+  margin: 24px auto;
+  max-width: 400px;
+  background: #e3f2fd;
+  border-radius: 12px;
+  padding: 16px;
+  color: #1565c0;
+  text-align: left;
+}
+.account-table {
+  width: 100%;
+  max-width: 700px;
+  margin: 24px auto;
+  border-collapse: collapse;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  th,
+  td {
+    border: 1px solid #bbb;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 1rem;
+    min-width: 120px;
+    word-break: break-all;
+  }
+
+  th {
+    background: #f0f3f7;
+    font-weight: bold;
+    font-size: 1.05rem;
+  }
+
+  tr:nth-child(even) td {
+    background: #fafbfc;
+  }
+}
