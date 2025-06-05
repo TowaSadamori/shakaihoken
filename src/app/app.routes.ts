@@ -5,8 +5,10 @@ import { EmployeeProceduresPlaceholderComponent } from './employee-procedures-pl
 import { EmployerProceduresPlaceholderComponent } from './employer-procedures-placeholder/employer-procedures-placeholder.component';
 import { SettingsPlaceholderComponent } from './settings-placeholder/settings-placeholder.component';
 import { CreateAccountComponent } from './create-account/create-account.component';
+import { LoginComponent } from './login/login.component';
 
 export const routes: Routes = [
+  { path: 'login', component: LoginComponent },
   {
     path: '',
     component: MainLayoutComponent,

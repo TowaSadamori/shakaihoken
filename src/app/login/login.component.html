@@ -1,0 +1,38 @@
+<div class="login-layout">
+  <div class="login-left">
+    <div class="login-logo">社会保険管理システム</div>
+    <div class="login-title">ログイン</div>
+  </div>
+  <div class="login-right">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div>
+        <label for="email">メールアドレス</label>
+        <input id="email" type="email" formControlName="email" />
+        <div
+          *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid"
+          class="error"
+        >
+          <span *ngIf="loginForm.get('email')?.errors?.['required']">メールアドレスは必須です</span>
+          <span *ngIf="loginForm.get('email')?.errors?.['email']"
+            >正しいメールアドレスを入力してください</span
+          >
+        </div>
+      </div>
+      <div>
+        <label for="password">パスワード</label>
+        <input id="password" type="password" formControlName="password" />
+        <div
+          *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
+          class="error"
+        >
+          <span *ngIf="loginForm.get('password')?.errors?.['required']">パスワードは必須です</span>
+          <span *ngIf="loginForm.get('password')?.errors?.['minlength']"
+            >6文字以上で入力してください</span
+          >
+        </div>
+      </div>
+      <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+      <button type="submit" [disabled]="loading">ログイン</button>
+    </form>
+  </div>
+</div>

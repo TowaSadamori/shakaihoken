@@ -6,6 +6,7 @@ import {
   UserCredential,
   updateEmail,
   updatePassword,
+  signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { environment } from '../../environments/environment';
@@ -72,5 +73,9 @@ export class AuthService {
   ): Promise<void> {
     const updateUser = httpsCallable(functions, 'updateUserByAdmin');
     await updateUser({ uid, email, password, updateFields });
+  }
+
+  async login(email: string, password: string): Promise<UserCredential> {
+    return signInWithEmailAndPassword(auth, email, password);
   }
 }
