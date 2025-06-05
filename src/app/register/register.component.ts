@@ -63,6 +63,7 @@ export class RegisterComponent implements AfterViewInit {
   }
 
   async onSubmit() {
+    console.log('onSubmit called', this.registerForm.value, this.registerForm.valid);
     if (this.registerForm.valid) {
       const {
         lastName,
@@ -76,7 +77,7 @@ export class RegisterComponent implements AfterViewInit {
         role,
       } = this.registerForm.value;
       try {
-        await this.authService.registerUser(
+        await this.authService.registerUserByAdmin(
           email,
           password,
           '',
@@ -94,6 +95,7 @@ export class RegisterComponent implements AfterViewInit {
       }
     } else {
       this.registerForm.markAllAsTouched();
+      console.log('Form errors:', this.registerForm.errors, this.registerForm.value);
     }
   }
 

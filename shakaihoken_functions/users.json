@@ -1,0 +1,22 @@
+{"users": [
+{
+  "localId": "DYmJKQuhnGdPNv2ypNJFbWiMr6X2",
+  "email": "test@sadamori.net",
+  "emailVerified": false,
+  "passwordHash": "nIDunH5OwNYmmEDh+Cwcb0Uh80nGITBHtgl56nEPCxTbQBVXtno6ygYT/QeFhIFCXGHsUi86osM8XaKTrm+DHA==",
+  "salt": "w38vPkZduOnWrA==",
+  "lastSignedInAt": "1749101412641",
+  "createdAt": "1749025234926",
+  "customAttributes": "{\"admin\":true}",
+  "providerUserInfo": []
+},
+{
+  "localId": "XmMnDRK2GtSh2xW4RgES2Iyu7Hk2",
+  "email": "test1@sadamori.net",
+  "emailVerified": false,
+  "passwordHash": "sGhRWojuoLP1XdbtLhl3EeUOOblbCMnpl8+hlUcU9FnB+qhTSC/GXPviVsSjqunahOXRdUJh5RwvLIwK+BeH1w==",
+  "salt": "HT9XfnMoXSq5Cw==",
+  "lastSignedInAt": "1749093943260",
+  "createdAt": "1749093943260",
+  "providerUserInfo": []
+}]}

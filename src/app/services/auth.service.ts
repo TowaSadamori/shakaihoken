@@ -15,7 +15,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 const app = initializeApp(environment.firebase);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const functions = getFunctions(app);
+const functions = getFunctions(app, 'asia-northeast1');
 
 @Injectable({
   providedIn: 'root',
@@ -93,5 +93,33 @@ export class AuthService {
       return { lastName: data['lastName'], firstName: data['firstName'] };
     }
     return null;
+  }
+
+  async registerUserByAdmin(
+    email: string,
+    password: string,
+    name: string,
+    role: string,
+    lastName: string,
+    firstName: string,
+    lastNameKana: string,
+    firstNameKana: string,
+    birthDate: string,
+    gender: string
+  ): Promise<{ success: boolean; uid?: string }> {
+    const createUser = httpsCallable(functions, 'createUserByAdmin');
+    const result = await createUser({
+      email,
+      password,
+      name,
+      role,
+      lastName,
+      firstName,
+      lastNameKana,
+      firstNameKana,
+      birthDate,
+      gender,
+    });
+    return result.data as { success: boolean; uid?: string };
   }
 }

@@ -8,9 +8,8 @@ describe('ConfirmDeleteDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ConfirmDeleteDialogComponent]
-    })
-    .compileComponents();
+      imports: [ConfirmDeleteDialogComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ConfirmDeleteDialogComponent);
     component = fixture.componentInstance;

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -8,6 +8,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { EditUserDialogComponent } from '../edit-user-dialog/edit-user-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../services/auth.service';
+import { getAuth } from 'firebase/auth';
 
 export interface User {
   uid: string;
@@ -31,7 +32,7 @@ export interface User {
   templateUrl: './create-account.component.html',
   styleUrls: ['./create-account.component.scss'],
 })
-export class CreateAccountComponent {
+export class CreateAccountComponent implements OnInit {
   users: User[] = [];
   db: Firestore;
   lastCreatedAccount: {
@@ -47,6 +48,12 @@ export class CreateAccountComponent {
     private authService: AuthService
   ) {
     this.db = getFirestore();
+    this.loadUsers();
+  }
+
+  ngOnInit() {
+    const auth = getAuth();
+    console.log('Current UID:', auth.currentUser?.uid);
     this.loadUsers();
   }
 
