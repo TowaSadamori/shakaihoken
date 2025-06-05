@@ -8,11 +8,13 @@ import {
   updatePassword,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
-import { environment } from '../environments/environment';
+import { environment } from '../../environments/environment';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const app = initializeApp(environment.firebase);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app);
 
 @Injectable({
   providedIn: 'root',
@@ -60,5 +62,15 @@ export class AuthService {
     if (password) {
       await updatePassword(user, password);
     }
+  }
+
+  async updateUserByAdmin(
+    uid: string,
+    email?: string,
+    password?: string,
+    updateFields?: Record<string, string | number | boolean | null | undefined>
+  ): Promise<void> {
+    const updateUser = httpsCallable(functions, 'updateUserByAdmin');
+    await updateUser({ uid, email, password, updateFields });
   }
 }

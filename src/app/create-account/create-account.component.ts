@@ -3,11 +3,11 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { RegisterComponent } from '../register/register.component';
-import { getFirestore, collection, getDocs, Firestore, updateDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, Firestore, doc } from 'firebase/firestore';
 import { MatNativeDateModule } from '@angular/material/core';
 import { EditUserDialogComponent } from '../edit-user-dialog/edit-user-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
-import { AuthService } from '../auth.service';
+import { AuthService } from '../services/auth.service';
 
 export interface User {
   uid: string;
@@ -91,23 +91,22 @@ export class CreateAccountComponent {
     });
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result) {
-        const userRef = doc(this.db, 'users', user.uid);
-        await updateDoc(userRef, {
-          lastName: result.lastName,
-          firstName: result.firstName,
-          birthDate:
-            result.birthDate instanceof Date ? formatDateToYMD(result.birthDate) : result.birthDate,
-          email: result.email,
-          password: result.password,
-          role: result.role,
-        });
-        // Authにも反映
         try {
-          await this.authService.updateCurrentUser(result.email, result.password);
+          await this.authService.updateUserByAdmin(user.uid, result.email, result.password, {
+            lastName: result.lastName,
+            firstName: result.firstName,
+            birthDate:
+              result.birthDate instanceof Date
+                ? formatDateToYMD(result.birthDate)
+                : result.birthDate,
+            email: result.email,
+            password: result.password,
+            role: result.role,
+          });
+          await this.loadUsers();
         } catch (e) {
-          console.error('Auth update error:', e);
+          console.error('管理者によるユーザー更新エラー:', e);
         }
-        await this.loadUsers();
       }
     });
   }
