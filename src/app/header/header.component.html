@@ -3,4 +3,8 @@
     <mat-icon>menu</mat-icon>
   </button>
   <div class="app-title">社会保険管理システム</div>
+  <div class="header-user" *ngIf="user as u">
+    <span class="user-email">{{ userName }}</span>
+    <button class="logout-btn" (click)="logout()">ログアウト</button>
+  </div>
 </header>

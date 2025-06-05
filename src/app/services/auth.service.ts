@@ -8,7 +8,7 @@ import {
   updatePassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { environment } from '../../environments/environment';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
@@ -77,5 +77,21 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<UserCredential> {
     return signInWithEmailAndPassword(auth, email, password);
+  }
+
+  async logout(): Promise<void> {
+    await auth.signOut();
+  }
+
+  async getCurrentUserProfile(): Promise<{ lastName: string; firstName: string } | null> {
+    const user = getAuth().currentUser;
+    if (!user) return null;
+    const db = getFirestore();
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      return { lastName: data['lastName'], firstName: data['firstName'] };
+    }
+    return null;
   }
 }
