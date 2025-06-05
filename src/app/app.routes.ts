@@ -6,12 +6,14 @@ import { EmployerProceduresPlaceholderComponent } from './employer-procedures-pl
 import { SettingsPlaceholderComponent } from './settings-placeholder/settings-placeholder.component';
 import { CreateAccountComponent } from './create-account/create-account.component';
 import { LoginComponent } from './login/login.component';
+import { authGuard } from './services/auth.guard';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   {
     path: '',
     component: MainLayoutComponent,
+    canActivate: [authGuard],
     children: [
       { path: '', component: HomeComponent },
       { path: 'employee-procedures', component: EmployeeProceduresPlaceholderComponent },
