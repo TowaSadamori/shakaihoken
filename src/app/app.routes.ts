@@ -8,6 +8,7 @@ import { CreateAccountComponent } from './create-account/create-account.componen
 import { LoginComponent } from './login/login.component';
 import { authGuard } from './services/auth.guard';
 import { RegisterCompanyComponent } from './register-company/register-company.component';
+import { PasswordResetComponent } from '../../shakaihoken_functions/password-reset/password-reset.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -24,4 +25,5 @@ export const routes: Routes = [
       { path: 'create-account', component: CreateAccountComponent },
     ],
   },
+  { path: 'password-reset', component: PasswordResetComponent },
 ];

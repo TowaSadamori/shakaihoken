@@ -65,4 +65,8 @@ export class LoginComponent {
   navigateToRegisterCompany() {
     this.router.navigate(['/register-company']);
   }
+
+  navigateToPasswordReset() {
+    this.router.navigate(['/password-reset']);
+  }
 }

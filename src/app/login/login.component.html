@@ -35,6 +35,17 @@
       <button type="submit" [disabled]="loading">ログイン</button>
     </form>
 
+    <div class="password-reset-link">
+      <a
+        tabindex="0"
+        role="button"
+        (click)="navigateToPasswordReset()"
+        (keyup.enter)="navigateToPasswordReset()"
+      >
+        パスワードを忘れた方はこちら
+      </a>
+    </div>
+
     <div class="divider-container">
       <div class="divider"></div>
       <span class="divider-text">または</span>
