@@ -19,7 +19,7 @@
     <table class="account-table">
       <thead>
         <tr>
-          <th *ngIf="currentUserRole === 'admin'">操作</th>
+          <th *ngIf="currentUserRole === 'admin' || currentUserRole === 'employee_user'">操作</th>
           <th>姓</th>
           <th>名</th>
           <th>権限</th>
@@ -30,10 +30,23 @@
       </thead>
       <tbody>
         <tr *ngFor="let user of users.slice().reverse()">
-          <td *ngIf="currentUserRole === 'admin'">
+          <td
+            *ngIf="
+              currentUserRole === 'admin' ||
+              (currentUserRole === 'employee_user' && user.uid === currentUid)
+            "
+          >
             <button (click)="editUser(user)">編集</button>
-            <button (click)="deleteUser(user)">削除</button>
+            <button *ngIf="currentUserRole === 'admin'" (click)="deleteUser(user)">削除</button>
           </td>
+          <td
+            *ngIf="
+              !(
+                currentUserRole === 'admin' ||
+                (currentUserRole === 'employee_user' && user.uid === currentUid)
+              )
+            "
+          ></td>
           <td>{{ user.lastName || '--' }}</td>
           <td>{{ user.firstName || '--' }}</td>
           <td>{{ user.role === 'admin' ? '管理者' : '従業員' }}</td>
@@ -42,7 +55,7 @@
           <td>{{ user.password || '--' }}</td>
         </tr>
         <tr *ngIf="lastCreatedAccount">
-          <td>--</td>
+          <td *ngIf="currentUserRole === 'admin' || currentUserRole === 'employee_user'">--</td>
           <td>{{ lastCreatedAccount.lastName }}</td>
           <td>{{ lastCreatedAccount.firstName }}</td>
           <td>--</td>

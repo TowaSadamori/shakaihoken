@@ -75,37 +75,86 @@
       正しいメールアドレスを入力してください。
     </mat-error>
   </mat-form-field>
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>パスワード</mat-label>
-    <input matInput type="password" formControlName="password" required minlength="6" />
-    <mat-error
-      *ngIf="editForm.get('password')?.touched && editForm.get('password')?.hasError('required')"
-    >
-      パスワードは必須です。
-    </mat-error>
-    <mat-error
-      *ngIf="editForm.get('password')?.touched && editForm.get('password')?.hasError('minlength')"
-    >
-      6文字以上で入力してください。
-    </mat-error>
-  </mat-form-field>
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>パスワード（確認）</mat-label>
-    <input matInput type="password" formControlName="confirmPassword" required minlength="6" />
-    <mat-error
-      *ngIf="
-        editForm.get('confirmPassword')?.touched &&
-        editForm.get('confirmPassword')?.hasError('required')
-      "
-    >
-      確認用パスワードは必須です。
-    </mat-error>
-    <mat-error
-      *ngIf="editForm.errors?.['passwordMismatch'] && editForm.get('confirmPassword')?.touched"
-    >
-      パスワードが一致しません。
-    </mat-error>
-  </mat-form-field>
+  <!-- パスワード関連の説明と入力欄（従業員本人のみ表示） -->
+  <div *ngIf="isSelfEmployee" class="password-section">
+    <p class="explanation">
+      ※ メールアドレスやパスワードを変更する場合は、<b>現在のパスワード</b>の入力が必要です。
+    </p>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>現在のパスワード</mat-label>
+      <input matInput type="password" formControlName="currentPassword" required />
+      <mat-error
+        *ngIf="editForm.get('currentPassword')?.touched && editForm.get('currentPassword')?.invalid"
+      >
+        現在のパスワードは必須です。
+      </mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>新しいパスワード</mat-label>
+      <input matInput type="password" formControlName="password" required minlength="6" />
+      <mat-error
+        *ngIf="editForm.get('password')?.touched && editForm.get('password')?.hasError('required')"
+      >
+        新しいパスワードは必須です。
+      </mat-error>
+      <mat-error
+        *ngIf="editForm.get('password')?.touched && editForm.get('password')?.hasError('minlength')"
+      >
+        6文字以上で入力してください。
+      </mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>新しいパスワード（確認）</mat-label>
+      <input matInput type="password" formControlName="confirmPassword" required minlength="6" />
+      <mat-error
+        *ngIf="
+          editForm.get('confirmPassword')?.touched &&
+          editForm.get('confirmPassword')?.hasError('required')
+        "
+      >
+        確認用パスワードは必須です。
+      </mat-error>
+      <mat-error
+        *ngIf="editForm.errors?.['passwordMismatch'] && editForm.get('confirmPassword')?.touched"
+      >
+        パスワードが一致しません。
+      </mat-error>
+    </mat-form-field>
+  </div>
+  <div *ngIf="!isSelfEmployee">
+    <!-- 管理者が他ユーザーを編集する場合のパスワード欄（従来通り） -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>パスワード</mat-label>
+      <input matInput type="password" formControlName="password" required minlength="6" />
+      <mat-error
+        *ngIf="editForm.get('password')?.touched && editForm.get('password')?.hasError('required')"
+      >
+        パスワードは必須です。
+      </mat-error>
+      <mat-error
+        *ngIf="editForm.get('password')?.touched && editForm.get('password')?.hasError('minlength')"
+      >
+        6文字以上で入力してください。
+      </mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>パスワード（確認）</mat-label>
+      <input matInput type="password" formControlName="confirmPassword" required minlength="6" />
+      <mat-error
+        *ngIf="
+          editForm.get('confirmPassword')?.touched &&
+          editForm.get('confirmPassword')?.hasError('required')
+        "
+      >
+        確認用パスワードは必須です。
+      </mat-error>
+      <mat-error
+        *ngIf="editForm.errors?.['passwordMismatch'] && editForm.get('confirmPassword')?.touched"
+      >
+        パスワードが一致しません。
+      </mat-error>
+    </mat-form-field>
+  </div>
   <mat-form-field appearance="outline" class="full-width">
     <mat-label>アカウント種別</mat-label>
     <mat-select formControlName="role" required>

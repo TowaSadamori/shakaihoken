@@ -28,23 +28,26 @@ import type { User } from '../create-account/create-account.component';
 })
 export class EditUserDialogComponent {
   editForm: FormGroup;
+  isSelfEmployee = false;
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EditUserDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: User
+    @Inject(MAT_DIALOG_DATA) public data: { user: User; currentUid: string }
   ) {
+    this.isSelfEmployee = data.user.uid === data.currentUid && data.user.role === 'employee_user';
     this.editForm = this.fb.group(
       {
-        lastName: [data.lastName, [Validators.required]],
-        firstName: [data.firstName, [Validators.required]],
-        lastNameKana: [data.lastNameKana, [Validators.required]],
-        firstNameKana: [data.firstNameKana, [Validators.required]],
-        birthDate: [data.birthDate, [Validators.required]],
-        gender: [data.gender, [Validators.required]],
-        email: [data.email, [Validators.required, Validators.email]],
-        password: [data.password, [Validators.required, Validators.minLength(6)]],
-        confirmPassword: [data.password, [Validators.required, Validators.minLength(6)]],
-        role: [data.role, [Validators.required]],
+        lastName: [data.user.lastName, [Validators.required]],
+        firstName: [data.user.firstName, [Validators.required]],
+        lastNameKana: [data.user.lastNameKana, [Validators.required]],
+        firstNameKana: [data.user.firstNameKana, [Validators.required]],
+        birthDate: [data.user.birthDate, [Validators.required]],
+        gender: [data.user.gender, [Validators.required]],
+        email: [data.user.email, [Validators.required, Validators.email]],
+        password: [data.user.password, [Validators.required, Validators.minLength(6)]],
+        confirmPassword: [data.user.password, [Validators.required, Validators.minLength(6)]],
+        role: [data.user.role, [Validators.required]],
+        currentPassword: ['', this.isSelfEmployee ? [Validators.required] : []],
       },
       { validators: this.passwordMatchValidator }
     );
@@ -56,9 +59,11 @@ export class EditUserDialogComponent {
   }
   onSave() {
     if (this.editForm.valid) {
+      console.log('onSave called', this.editForm.value);
       this.dialogRef.close(this.editForm.value);
     } else {
       this.editForm.markAllAsTouched();
+      console.log('onSave invalid', this.editForm.errors, this.editForm.value);
     }
   }
   onCancel() {
