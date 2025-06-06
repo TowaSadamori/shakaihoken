@@ -49,6 +49,7 @@ export class CreateAccountComponent implements OnInit {
     firstName: string;
     birthDate: Date | string;
   } | null = null;
+  shouldShowLastCreatedAccount = false;
 
   constructor(
     private dialog: MatDialog,
@@ -93,11 +94,18 @@ export class CreateAccountComponent implements OnInit {
       .map((doc) => doc.data() as User)
       .filter((user) => user.companyId === companyId);
 
+    const isValidUser = (user: User) =>
+      !!user.uid && !!user.email && !!user.lastName && !!user.firstName && !!user.role;
+
     if (currentRole === 'employee_user') {
-      this.users = allUsers.filter((user) => user.uid === currentUid);
+      this.users = allUsers.filter((user) => user.uid === currentUid && isValidUser(user));
     } else {
-      this.users = allUsers;
+      this.users = allUsers.filter(isValidUser);
     }
+    // lastCreatedAccountの行を表示するか判定
+    this.shouldShowLastCreatedAccount =
+      !!this.lastCreatedAccount &&
+      !this.users.some((user) => user.email === this.lastCreatedAccount?.email);
   }
 
   async openRegisterDialog() {
@@ -126,6 +134,12 @@ export class CreateAccountComponent implements OnInit {
           firstName: result.firstName,
           birthDate: result.birthDate,
         };
+        // lastCreatedAccountの行を表示するか判定
+        this.shouldShowLastCreatedAccount = !this.users.some(
+          (user) => user.email === this.lastCreatedAccount?.email
+        );
+      } else {
+        this.shouldShowLastCreatedAccount = false;
       }
     });
   }

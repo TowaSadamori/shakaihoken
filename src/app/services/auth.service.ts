@@ -34,6 +34,9 @@ export class AuthService {
   ): Promise<UserCredential> {
     const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
     const user = userCredential.user;
+    if (!user.uid || !user.email || !lastName || !firstName || !role) {
+      throw new Error('必須項目が未入力です');
+    }
     await setDoc(doc(this.firestore, 'users', user.uid), {
       uid: user.uid,
       email: user.email,
@@ -144,6 +147,9 @@ export class AuthService {
     );
     const uid = userCredential.user?.uid;
     if (!uid) throw new Error('ユーザー作成に失敗しました');
+    if (!uid || !form.email || !form.lastName || !form.firstName || !form.role) {
+      throw new Error('必須項目が未入力です');
+    }
     await setDoc(doc(this.firestore, 'users', uid), {
       uid,
       companyId,

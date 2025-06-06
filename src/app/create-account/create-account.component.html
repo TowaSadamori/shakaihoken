@@ -29,26 +29,28 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let user of users.slice().reverse()">
-          <td *ngIf="currentUserRole !== 'employee_user'">
-            <button *ngIf="currentRole !== 'employee_user'" (click)="editUser(user)">編集</button>
-            <button *ngIf="currentUserRole === 'admin'" (click)="deleteUser(user)">削除</button>
-          </td>
-          <td>{{ user.lastName || '--' }}</td>
-          <td>{{ user.firstName || '--' }}</td>
-          <td>{{ user.role === 'admin' ? '管理者' : '従業員' }}</td>
-          <td>{{ user.birthDate ? (user.birthDate | date: 'yyyy/MM/dd') : '--' }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.password || '--' }}</td>
-        </tr>
-        <tr *ngIf="lastCreatedAccount">
+        <ng-container *ngFor="let user of users.slice().reverse()">
+          <tr *ngIf="user.uid && user.email && user.lastName && user.firstName && user.role">
+            <td *ngIf="currentUserRole !== 'employee_user'">
+              <button *ngIf="currentRole !== 'employee_user'" (click)="editUser(user)">編集</button>
+              <button *ngIf="currentUserRole === 'admin'" (click)="deleteUser(user)">削除</button>
+            </td>
+            <td>{{ user.lastName || '--' }}</td>
+            <td>{{ user.firstName || '--' }}</td>
+            <td>{{ user.role === 'admin' ? '管理者' : '従業員' }}</td>
+            <td>{{ user.birthDate ? (user.birthDate | date: 'yyyy/MM/dd') : '--' }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.password || '--' }}</td>
+          </tr>
+        </ng-container>
+        <tr *ngIf="shouldShowLastCreatedAccount">
           <td *ngIf="currentUserRole !== 'employee_user'">--</td>
-          <td>{{ lastCreatedAccount.lastName }}</td>
-          <td>{{ lastCreatedAccount.firstName }}</td>
+          <td>{{ lastCreatedAccount?.lastName }}</td>
+          <td>{{ lastCreatedAccount?.firstName }}</td>
           <td>--</td>
-          <td>{{ lastCreatedAccount.birthDate | date: 'yyyy/MM/dd' }}</td>
-          <td>{{ lastCreatedAccount.email }}</td>
-          <td>{{ lastCreatedAccount.password }}</td>
+          <td>{{ lastCreatedAccount?.birthDate | date: 'yyyy/MM/dd' }}</td>
+          <td>{{ lastCreatedAccount?.email }}</td>
+          <td>{{ lastCreatedAccount?.password }}</td>
         </tr>
       </tbody>
     </table>

@@ -87,6 +87,10 @@ export const updateUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
     }
     if (updateFields && Object.keys(updateFields).length > 0) {
       await admin.firestore().collection('users').doc(uid).update(updateFields);
+      // roleが'admin'に変更された場合はadmin権限を付与
+      if (updateFields.role === 'admin') {
+        await admin.auth().setCustomUserClaims(uid, { admin: true });
+      }
     }
     return { success: true };
   } catch (error) {
@@ -123,6 +127,7 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       email,
       password,
     });
+    await admin.auth().setCustomUserClaims(userRecord.uid, { admin: true });
     await admin.firestore().collection('users').doc(userRecord.uid).set({
       uid: userRecord.uid,
       email,
