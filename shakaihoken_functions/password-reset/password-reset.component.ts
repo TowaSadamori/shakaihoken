@@ -37,6 +37,7 @@ export class PasswordResetComponent {
     this.loading = true;
     const email = this.resetForm.value.email;
     try {
+      this.auth.languageCode = 'ja';
       await sendPasswordResetEmail(this.auth, email);
       this.message = 'パスワードリセット用のメールを送信しました。メールをご確認ください。';
     } catch (e: unknown) {
