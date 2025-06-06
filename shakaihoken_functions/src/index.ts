@@ -48,6 +48,7 @@ interface CreateUserRequest {
   birthDate: string;
   gender: string;
   role: string;
+  companyId: string;
 }
 
 export const deleteUserByAdmin = onCall({ region: 'asia-northeast1' }, async (request) => {
@@ -100,6 +101,7 @@ export const updateUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
 // 管理者によるユーザー作成
 
 export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (request) => {
+  console.log('createUserByAdmin request.data:', request.data);
   const {
     email,
     password,
@@ -110,6 +112,7 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
     birthDate,
     gender,
     role,
+    companyId,
   } = request.data as CreateUserRequest;
   const token = request.auth?.token as Record<string, unknown> | undefined;
   if (!request.auth || !token?.admin) {
@@ -131,6 +134,7 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       birthDate,
       gender,
       role,
+      companyId,
       createdAt: new Date(),
     });
     return { success: true, uid: userRecord.uid };

@@ -1,11 +1,11 @@
-import { Component, AfterViewInit, NgZone } from '@angular/core';
+import { Component, AfterViewInit, NgZone, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { AuthService } from '../services/auth.service';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -37,7 +37,8 @@ export class RegisterComponent implements AfterViewInit {
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<RegisterComponent>,
     private authService: AuthService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    @Inject(MAT_DIALOG_DATA) public data: { companyId: string }
   ) {
     this.registerForm = this.fb.group(
       {
@@ -51,6 +52,7 @@ export class RegisterComponent implements AfterViewInit {
         password: ['', [Validators.required, Validators.minLength(6)]],
         confirmPassword: ['', [Validators.required]],
         role: ['employee_user', [Validators.required]],
+        companyId: [this.data.companyId, [Validators.required]],
       },
       { validators: this.passwordMatchValidator }
     );
@@ -75,19 +77,20 @@ export class RegisterComponent implements AfterViewInit {
         email,
         password,
         role,
+        companyId,
       } = this.registerForm.value;
       try {
         await this.authService.registerUserByAdmin(
           email,
           password,
-          '',
           role,
           lastName,
           firstName,
           lastNameKana,
           firstNameKana,
           birthDate,
-          gender
+          gender,
+          companyId
         );
         this.dialogRef.close({ email, password });
       } catch (err) {

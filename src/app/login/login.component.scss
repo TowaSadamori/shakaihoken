@@ -49,6 +49,8 @@
 .login-form {
   width: 100%;
   max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
@@ -114,6 +116,66 @@
   }
 }
 
+.login-form input,
+.login-form button[type='submit'] {
+  width: 100%;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+.divider-container {
+  display: flex;
+  align-items: center;
+  margin: 32px 0 16px 0;
+  justify-content: center;
+}
+
+.divider {
+  flex: 1;
+  height: 1px;
+  background: #ccc;
+}
+
+.divider-text {
+  margin: 0 16px;
+  color: #888;
+  font-size: 14px;
+}
+
+.register-company-btn {
+  width: 100%;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 14px 0;
+  border: 2px solid #0058a3;
+  background: #fff;
+  color: #0058a3;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 24px;
+  margin-top: 8px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+  display: block;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.register-company-btn:hover {
+  background: #0058a3;
+  color: #fff;
+}
+
+.register-company-btn-wrapper {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
 @media (max-width: 900px) {
   .login-layout {
     flex-direction: column;
@@ -126,5 +188,12 @@
   }
   .login-right {
     padding: 0 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .register-company-btn {
+    font-size: 15px;
+    padding: 12px 0;
   }
 }

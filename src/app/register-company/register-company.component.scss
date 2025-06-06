@@ -1,0 +1,167 @@
+.register-company-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #f9f9f9;
+  position: relative;
+}
+
+h2 {
+  margin-bottom: 32px;
+  color: #0058a3;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  padding: 32px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+.form-row > div {
+  flex: 1;
+}
+
+.register-form label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+  font-size: 15px;
+  color: #0058a3;
+}
+
+.register-form input,
+.register-form select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1.5px solid #bdbdbd;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-bottom: 2px;
+  transition: border 0.2s;
+  background: #fafcff;
+  box-sizing: border-box;
+}
+
+.register-form input:focus,
+.register-form select:focus {
+  border: 2px solid #1976d2;
+  outline: none;
+}
+
+.error {
+  color: #e53935;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.form-buttons button {
+  flex: 1;
+  padding: 12px 0;
+  border: 2px solid #0058a3;
+  background: #fff;
+  color: #0058a3;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 24px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.form-buttons button:hover {
+  background: #0058a3;
+  color: #fff;
+}
+
+@media (max-width: 800px) {
+  .card {
+    padding: 12px 2vw 8px 2vw;
+    max-width: 98vw;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .back-btn {
+    position: static;
+    margin-top: 12px;
+    width: 100%;
+    display: block;
+  }
+}
+
+.register-desc {
+  font-size: 1.05rem;
+  color: #333;
+  margin-bottom: 24px;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.card-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+}
+
+.back-btn {
+  align-self: flex-end;
+  margin-bottom: 8px;
+  padding: 12px 38px;
+  border: 2px solid #0058a3;
+  background: #fff;
+  color: #0058a3;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 24px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-right: 0;
+}
+.back-btn:hover {
+  background: #0058a3;
+  color: #fff;
+}
+
+@media (max-width: 800px) {
+  .card-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+  .back-btn {
+    align-self: stretch;
+    margin-bottom: 12px;
+    width: 100%;
+    display: block;
+  }
+}

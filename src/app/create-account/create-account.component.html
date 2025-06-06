@@ -1,6 +1,12 @@
 <div class="create-account-container">
   <h2>アカウント作成ページ</h2>
-  <button (click)="openRegisterDialog()" class="main-create-account-btn">アカウント作成</button>
+  <button
+    *ngIf="currentUserRole === 'admin'"
+    (click)="openRegisterDialog()"
+    class="main-create-account-btn"
+  >
+    アカウント作成
+  </button>
   <div *ngIf="lastCreatedAccount" class="created-account-info">
     <p>作成したアカウント情報</p>
     <ul>
@@ -13,7 +19,7 @@
     <table class="account-table">
       <thead>
         <tr>
-          <th>操作</th>
+          <th *ngIf="currentUserRole === 'admin'">操作</th>
           <th>姓</th>
           <th>名</th>
           <th>権限</th>
@@ -24,7 +30,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let user of users.slice().reverse()">
-          <td>
+          <td *ngIf="currentUserRole === 'admin'">
             <button (click)="editUser(user)">編集</button>
             <button (click)="deleteUser(user)">削除</button>
           </td>

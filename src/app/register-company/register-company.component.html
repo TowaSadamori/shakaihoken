@@ -1,0 +1,116 @@
+<div class="register-company-container">
+  <h2>新規会社（管理者）アカウント作成</h2>
+  <div class="register-desc">
+    すでにログイン用アカウントをお持ちの企業の方は、<br />
+    社内の人事担当者までお問い合わせください。
+  </div>
+  <div class="card-row">
+    <button class="back-btn" (click)="goBack()">戻る</button>
+    <div class="card">
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+        <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+        <div *ngIf="successMessage" class="success-message">{{ successMessage }}</div>
+        <div>
+          <label for="companyName">会社名</label>
+          <input id="companyName" type="text" formControlName="companyName" />
+          <div class="error" *ngIf="submitted && f['companyName'].errors">
+            <span *ngIf="f['companyName'].errors['required']">会社名は必須です</span>
+            <span *ngIf="f['companyName'].errors['maxLength']">50文字以内で入力してください</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="lastName">姓</label>
+            <input id="lastName" type="text" formControlName="lastName" />
+            <div class="error" *ngIf="submitted && f['lastName'].errors">
+              <span *ngIf="f['lastName'].errors['required']">姓は必須です</span>
+              <span *ngIf="f['lastName'].errors['maxLength']">20文字以内で入力してください</span>
+            </div>
+          </div>
+          <div>
+            <label for="firstName">名</label>
+            <input id="firstName" type="text" formControlName="firstName" />
+            <div class="error" *ngIf="submitted && f['firstName'].errors">
+              <span *ngIf="f['firstName'].errors['required']">名は必須です</span>
+              <span *ngIf="f['firstName'].errors['maxLength']">20文字以内で入力してください</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="lastNameKana">姓（フリガナ）</label>
+            <input id="lastNameKana" type="text" formControlName="lastNameKana" />
+            <div class="error" *ngIf="submitted && f['lastNameKana'].errors">
+              <span *ngIf="f['lastNameKana'].errors['required']">姓（フリガナ）は必須です</span>
+              <span *ngIf="f['lastNameKana'].errors['katakana']">カタカナで入力してください</span>
+            </div>
+          </div>
+          <div>
+            <label for="firstNameKana">名（フリガナ）</label>
+            <input id="firstNameKana" type="text" formControlName="firstNameKana" />
+            <div class="error" *ngIf="submitted && f['firstNameKana'].errors">
+              <span *ngIf="f['firstNameKana'].errors['required']">名（フリガナ）は必須です</span>
+              <span *ngIf="f['firstNameKana'].errors['katakana']">カタカナで入力してください</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="birthDate">生年月日</label>
+            <input id="birthDate" type="date" formControlName="birthDate" />
+            <div class="error" *ngIf="submitted && f['birthDate'].errors">
+              <span *ngIf="f['birthDate'].errors['required']">生年月日は必須です</span>
+            </div>
+          </div>
+          <div>
+            <label for="gender">性別</label>
+            <select id="gender" formControlName="gender">
+              <option value="">選択してください</option>
+              <option value="male">男性</option>
+              <option value="female">女性</option>
+            </select>
+            <div class="error" *ngIf="submitted && f['gender'].errors">
+              <span *ngIf="f['gender'].errors['required']">性別は必須です</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label for="email">メールアドレス</label>
+          <input id="email" type="email" formControlName="email" />
+          <div class="error" *ngIf="submitted && f['email'].errors">
+            <span *ngIf="f['email'].errors['required']">メールアドレスは必須です</span>
+            <span *ngIf="f['email'].errors['email']">正しいメールアドレスを入力してください</span>
+          </div>
+        </div>
+        <div>
+          <label for="password">パスワード</label>
+          <input id="password" type="password" formControlName="password" />
+          <div class="error" *ngIf="submitted && f['password'].errors">
+            <span *ngIf="f['password'].errors['required']">パスワードは必須です</span>
+            <span *ngIf="f['password'].errors['minlength']">6文字以上で入力してください</span>
+          </div>
+        </div>
+        <div>
+          <label for="confirmPassword">パスワード（確認）</label>
+          <input id="confirmPassword" type="password" formControlName="confirmPassword" />
+          <div
+            class="error"
+            *ngIf="
+              submitted &&
+              (f['confirmPassword'].errors || registerForm.errors?.['passwordMismatch'])
+            "
+          >
+            <span *ngIf="f['confirmPassword'].errors?.['required']"
+              >確認用パスワードは必須です</span
+            >
+            <span *ngIf="registerForm.errors?.['passwordMismatch']">パスワードが一致しません</span>
+          </div>
+        </div>
+        <input type="hidden" formControlName="role" />
+        <div class="form-buttons">
+          <button type="submit" [disabled]="loading">アカウント作成</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

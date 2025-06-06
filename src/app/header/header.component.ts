@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
-import { User, getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
 @Component({
   selector: 'app-header',
@@ -18,7 +18,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   user: User | null = null;
   userName = '';
+  companyName = '';
   private unsubscribe: (() => void) | null = null;
+  private auth = getAuth();
 
   constructor(
     private authService: AuthService,
@@ -26,8 +28,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    const auth = getAuth();
-    this.unsubscribe = onAuthStateChanged(auth, async (user) => {
+    this.unsubscribe = onAuthStateChanged(this.auth, async (user) => {
       this.user = user;
       if (user) {
         const profile = await this.authService.getCurrentUserProfile();
@@ -36,8 +37,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
         } else {
           this.userName = user.email || '';
         }
+        this.companyName = (await this.authService.getCurrentUserCompanyName()) || '';
       } else {
         this.userName = '';
+        this.companyName = '';
       }
     });
   }

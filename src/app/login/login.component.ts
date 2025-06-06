@@ -61,4 +61,8 @@ export class LoginComponent {
     }
     return 'ログインに失敗しました';
   }
+
+  navigateToRegisterCompany() {
+    this.router.navigate(['/register-company']);
+  }
 }

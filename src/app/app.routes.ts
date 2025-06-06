@@ -7,9 +7,11 @@ import { SettingsPlaceholderComponent } from './settings-placeholder/settings-pl
 import { CreateAccountComponent } from './create-account/create-account.component';
 import { LoginComponent } from './login/login.component';
 import { authGuard } from './services/auth.guard';
+import { RegisterCompanyComponent } from './register-company/register-company.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
+  { path: 'register-company', component: RegisterCompanyComponent },
   {
     path: '',
     component: MainLayoutComponent,

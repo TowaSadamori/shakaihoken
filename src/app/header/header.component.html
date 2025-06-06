@@ -4,6 +4,8 @@
   </button>
   <div class="app-title">社会保険管理システム</div>
   <div class="header-user" *ngIf="user as u">
+    <span class="company-name" *ngIf="companyName">{{ companyName }}</span>
+    <span *ngIf="companyName && userName"> / </span>
     <span class="user-email">{{ userName }}</span>
     <button class="logout-btn" (click)="logout()">ログアウト</button>
   </div>

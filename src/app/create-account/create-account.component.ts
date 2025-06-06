@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { RegisterComponent } from '../register/register.component';
-import { getFirestore, collection, getDocs, Firestore, doc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { MatNativeDateModule } from '@angular/material/core';
 import { EditUserDialogComponent } from '../edit-user-dialog/edit-user-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../services/auth.service';
-import { getAuth } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 export interface User {
   uid: string;
@@ -23,6 +24,7 @@ export interface User {
   password?: string;
   birthDate?: Date | string;
   name?: string;
+  companyId?: string;
 }
 
 @Component({
@@ -34,7 +36,8 @@ export interface User {
 })
 export class CreateAccountComponent implements OnInit {
   users: User[] = [];
-  db: Firestore;
+  db = getFirestore();
+  auth = getAuth();
   lastCreatedAccount: {
     email: string;
     password: string;
@@ -42,40 +45,61 @@ export class CreateAccountComponent implements OnInit {
     firstName: string;
     birthDate: Date | string;
   } | null = null;
+  functions = getFunctions(undefined, 'asia-northeast1');
+  currentUserRole = '';
 
   constructor(
     private dialog: MatDialog,
     private authService: AuthService
   ) {
-    this.db = getFirestore();
     this.loadUsers();
   }
 
-  ngOnInit() {
-    const auth = getAuth();
-    console.log('Current UID:', auth.currentUser?.uid);
+  async ngOnInit() {
+    if (this.auth.currentUser) {
+      const userDocRef = doc(this.db, 'users', this.auth.currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data() as User;
+        this.currentUserRole = data.role || '';
+      }
+    }
     this.loadUsers();
   }
 
   async loadUsers() {
+    // まず現在ユーザーのcompanyIdを取得
+    let companyId = '';
+    if (this.auth.currentUser) {
+      const userDocRef = doc(this.db, 'users', this.auth.currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data() as User;
+        companyId = data.companyId || '';
+      }
+    }
     const usersCol = collection(this.db, 'users');
     const userSnapshot = await getDocs(usersCol);
-    this.users = userSnapshot.docs.map((doc) => {
-      const data = doc.data() as User;
-      return {
-        ...data,
-        lastName: data.lastName || '',
-        firstName: data.firstName || '',
-        birthDate: data.birthDate ? new Date(data.birthDate) : '',
-        password: data.password || '',
-      };
-    });
+    this.users = userSnapshot.docs
+      .map((doc) => doc.data() as User)
+      .filter((user) => user.companyId === companyId);
   }
 
-  openRegisterDialog() {
+  async openRegisterDialog() {
+    let companyId = '';
+    if (this.auth.currentUser) {
+      const userDocRef = doc(this.db, 'users', this.auth.currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data() as User;
+        companyId = data.companyId || '';
+      }
+    }
+    console.log('openRegisterDialogで渡すcompanyId:', companyId);
     const dialogRef = this.dialog.open(RegisterComponent, {
       width: '400px',
       disableClose: false,
+      data: { companyId },
     });
     dialogRef.afterClosed().subscribe((result) => {
       this.loadUsers();
@@ -132,10 +156,14 @@ export class CreateAccountComponent implements OnInit {
     });
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result) {
-        // Firestoreからユーザー削除
-        const userRef = doc(this.db, 'users', user.uid);
-        await (await import('firebase/firestore')).deleteDoc(userRef);
-        await this.loadUsers();
+        // Cloud Functions経由でAuthユーザーとFirestoreユーザーを削除
+        const deleteUserByAdmin = httpsCallable(this.functions, 'deleteUserByAdmin');
+        try {
+          await deleteUserByAdmin({ uid: user.uid });
+          await this.loadUsers();
+        } catch (e) {
+          console.error('ユーザー削除エラー:', e);
+        }
       }
     });
   }

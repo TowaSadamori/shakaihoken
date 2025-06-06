@@ -34,5 +34,15 @@
       <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
       <button type="submit" [disabled]="loading">ログイン</button>
     </form>
+
+    <div class="divider-container">
+      <div class="divider"></div>
+      <span class="divider-text">または</span>
+      <div class="divider"></div>
+    </div>
+
+    <button class="register-company-btn" (click)="navigateToRegisterCompany()">
+      新規会社（管理者）アカウント作成
+    </button>
   </div>
 </div>
