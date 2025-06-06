@@ -43,7 +43,10 @@ export class EditUserDialogComponent {
         firstNameKana: [data.user.firstNameKana, [Validators.required]],
         birthDate: [data.user.birthDate, [Validators.required]],
         gender: [data.user.gender, [Validators.required]],
-        email: [data.user.email, [Validators.required, Validators.email]],
+        email: [
+          data.user.email,
+          this.isSelfEmployee ? [] : [Validators.required, Validators.email],
+        ],
         password: [data.user.password, [Validators.required, Validators.minLength(6)]],
         confirmPassword: [data.user.password, [Validators.required, Validators.minLength(6)]],
         role: [data.user.role, [Validators.required]],
@@ -57,13 +60,21 @@ export class EditUserDialogComponent {
     const confirmPassword = form.get('confirmPassword')?.value;
     return password === confirmPassword ? null : { passwordMismatch: true };
   }
-  onSave() {
+  async onSave() {
     if (this.editForm.valid) {
-      console.log('onSave called', this.editForm.value);
-      this.dialogRef.close(this.editForm.value);
+      if (this.isSelfEmployee) {
+        const firestoreValues = { ...this.editForm.getRawValue() };
+        delete firestoreValues.email;
+        delete firestoreValues.password;
+        delete firestoreValues.confirmPassword;
+        delete firestoreValues.currentPassword;
+        this.dialogRef.close(firestoreValues);
+      } else {
+        this.dialogRef.close(this.editForm.getRawValue());
+      }
     } else {
       this.editForm.markAllAsTouched();
-      console.log('onSave invalid', this.editForm.errors, this.editForm.value);
+      console.log('onSave invalid', this.editForm.errors, this.editForm.getRawValue());
     }
   }
   onCancel() {

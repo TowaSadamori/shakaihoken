@@ -4,19 +4,12 @@ import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { RegisterComponent } from '../register/register.component';
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
-import {
-  getAuth,
-  updateEmail,
-  updatePassword,
-  sendEmailVerification,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-} from 'firebase/auth';
 import { MatNativeDateModule } from '@angular/material/core';
 import { EditUserDialogComponent } from '../edit-user-dialog/edit-user-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../services/auth.service';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getAuth, Auth } from 'firebase/auth';
 
 export interface User {
   uid: string;
@@ -44,7 +37,11 @@ export interface User {
 export class CreateAccountComponent implements OnInit {
   users: User[] = [];
   db = getFirestore();
-  auth = getAuth();
+  functions = getFunctions(undefined, 'asia-northeast1');
+  currentUserRole = '';
+  currentUid = '';
+  currentRole = '';
+  auth: Auth | null = null;
   lastCreatedAccount: {
     email: string;
     password: string;
@@ -52,20 +49,17 @@ export class CreateAccountComponent implements OnInit {
     firstName: string;
     birthDate: Date | string;
   } | null = null;
-  functions = getFunctions(undefined, 'asia-northeast1');
-  currentUserRole = '';
-  currentUid = '';
-  currentRole = '';
 
   constructor(
     private dialog: MatDialog,
     private authService: AuthService
   ) {
+    this.auth = getAuth();
     this.loadUsers();
   }
 
   async ngOnInit() {
-    if (this.auth.currentUser) {
+    if (this.auth && this.auth.currentUser) {
       const userDocRef = doc(this.db, 'users', this.auth.currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
       if (userDocSnap.exists()) {
@@ -83,7 +77,7 @@ export class CreateAccountComponent implements OnInit {
     let companyId = '';
     let currentUid = this.currentUid;
     let currentRole = this.currentRole;
-    if (this.auth.currentUser) {
+    if (this.auth && this.auth.currentUser) {
       currentUid = this.auth.currentUser.uid;
       const userDocRef = doc(this.db, 'users', currentUid);
       const userDocSnap = await getDoc(userDocRef);
@@ -108,7 +102,7 @@ export class CreateAccountComponent implements OnInit {
 
   async openRegisterDialog() {
     let companyId = '';
-    if (this.auth.currentUser) {
+    if (this.auth && this.auth.currentUser) {
       const userDocRef = doc(this.db, 'users', this.auth.currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
       if (userDocSnap.exists()) {
@@ -145,45 +139,22 @@ export class CreateAccountComponent implements OnInit {
       if (result) {
         try {
           if (this.currentRole === 'employee_user' && user.uid === this.currentUid) {
-            // 再認証
-            const currentUser = this.auth.currentUser;
-            if (currentUser) {
-              try {
-                const credential = EmailAuthProvider.credential(
-                  user.email,
-                  result.currentPassword // フォームから取得
-                );
-                await reauthenticateWithCredential(currentUser, credential);
-              } catch (e) {
-                alert('再認証に失敗しました。現在のパスワードが正しいかご確認ください。');
-                throw e;
-              }
-              if (result.email && result.email !== user.email) {
-                try {
-                  await updateEmail(currentUser, result.email);
-                  await sendEmailVerification(currentUser);
-                  alert(
-                    'メールアドレスを変更しました。新しいメールアドレスの認証を完了してください。'
-                  );
-                } catch (e) {
-                  alert('メールアドレスの変更には認証が必要です。再ログイン後にお試しください。');
-                  throw e;
-                }
-              }
-              if (result.password && result.password !== user.password) {
-                await updatePassword(currentUser, result.password);
-              }
-            }
+            // Firestoreに保存する値からパスワード系だけ除外し、emailは元の値をセット
+            const firestoreValues = { ...result };
+            firestoreValues.email = user.email;
+            delete firestoreValues.password;
+            delete firestoreValues.confirmPassword;
+            delete firestoreValues.currentPassword;
             const userDocRef = doc(this.db, 'users', user.uid);
             await setDoc(
               userDocRef,
               {
                 ...user,
-                ...result,
+                ...firestoreValues,
                 birthDate:
-                  result.birthDate instanceof Date
-                    ? formatDateToYMD(result.birthDate)
-                    : result.birthDate,
+                  firestoreValues.birthDate instanceof Date
+                    ? formatDateToYMD(firestoreValues.birthDate)
+                    : firestoreValues.birthDate,
               },
               { merge: true }
             );
@@ -193,12 +164,14 @@ export class CreateAccountComponent implements OnInit {
             await this.authService.updateUserByAdmin(user.uid, result.email, result.password, {
               lastName: result.lastName,
               firstName: result.firstName,
+              lastNameKana: result.lastNameKana,
+              firstNameKana: result.firstNameKana,
               birthDate:
                 result.birthDate instanceof Date
                   ? formatDateToYMD(result.birthDate)
                   : result.birthDate,
+              gender: result.gender,
               email: result.email,
-              password: result.password,
               role: result.role,
             });
           }
