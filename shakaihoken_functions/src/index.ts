@@ -87,9 +87,11 @@ export const updateUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
     }
     if (updateFields && Object.keys(updateFields).length > 0) {
       await admin.firestore().collection('users').doc(uid).update(updateFields);
-      // roleが'admin'に変更された場合はadmin権限を付与
+      // roleが'admin'ならadmin権限を付与、そうでなければadmin権限を外す
       if (updateFields.role === 'admin') {
         await admin.auth().setCustomUserClaims(uid, { admin: true });
+      } else if (updateFields.role) {
+        await admin.auth().setCustomUserClaims(uid, { admin: false });
       }
     }
     return { success: true };
@@ -117,9 +119,11 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
     gender,
     role,
     companyId,
-  } = request.data as CreateUserRequest;
+    isFirstAdmin, // 新規会社用管理者作成時のみtrue
+  } = request.data as CreateUserRequest & { isFirstAdmin?: boolean };
   const token = request.auth?.token as Record<string, unknown> | undefined;
-  if (!request.auth || !token?.admin) {
+  // isFirstAdminかつroleがadminならadmin権限なしでもOK
+  if (!request.auth || (!token?.admin && !(role === 'admin' && isFirstAdmin))) {
     throw new Error('管理者のみ実行可能');
   }
   try {
@@ -127,7 +131,12 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       email,
       password,
     });
-    await admin.auth().setCustomUserClaims(userRecord.uid, { admin: true });
+    // roleが'admin'ならadmin権限を付与、そうでなければadmin権限を外す
+    if (role === 'admin') {
+      await admin.auth().setCustomUserClaims(userRecord.uid, { admin: true });
+    } else {
+      await admin.auth().setCustomUserClaims(userRecord.uid, { admin: false });
+    }
     await admin.firestore().collection('users').doc(userRecord.uid).set({
       uid: userRecord.uid,
       email,
