@@ -198,6 +198,16 @@ export class CreateAccountComponent implements OnInit {
               result.password,
               updateFields
             );
+            // ここで現在ユーザーのroleを再取得してcurrentUserRoleとcurrentRoleを更新
+            if (this.auth && this.auth.currentUser) {
+              const userDocRef = doc(this.db, 'users', this.auth.currentUser.uid);
+              const userDocSnap = await getDoc(userDocRef);
+              if (userDocSnap.exists()) {
+                const data = userDocSnap.data() as User;
+                this.currentUserRole = data.role || '';
+                this.currentRole = data.role || '';
+              }
+            }
           }
           await this.loadUsers();
         } catch (e) {
