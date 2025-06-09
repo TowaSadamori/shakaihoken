@@ -175,19 +175,29 @@ export class CreateAccountComponent implements OnInit {
           } else {
             // 管理者による編集
             console.log('管理者編集', result);
-            await this.authService.updateUserByAdmin(user.uid, result.email, result.password, {
-              lastName: result.lastName,
-              firstName: result.firstName,
-              lastNameKana: result.lastNameKana,
-              firstNameKana: result.firstNameKana,
-              birthDate:
+            const updateFields: Record<string, string | number | boolean | null | undefined> = {};
+            if (result.lastName !== undefined) updateFields['lastName'] = result.lastName;
+            if (result.firstName !== undefined) updateFields['firstName'] = result.firstName;
+            if (result.lastNameKana !== undefined)
+              updateFields['lastNameKana'] = result.lastNameKana;
+            if (result.firstNameKana !== undefined)
+              updateFields['firstNameKana'] = result.firstNameKana;
+            if (result.birthDate !== undefined) {
+              updateFields['birthDate'] =
                 result.birthDate instanceof Date
                   ? formatDateToYMD(result.birthDate)
-                  : result.birthDate,
-              gender: result.gender,
-              email: result.email,
-              role: result.role,
-            });
+                  : result.birthDate;
+            }
+            if (result.gender !== undefined) updateFields['gender'] = result.gender;
+            if (result.email !== undefined) updateFields['email'] = result.email;
+            if (result.role !== undefined) updateFields['role'] = result.role;
+            if (result.password !== undefined) updateFields['password'] = result.password;
+            await this.authService.updateUserByAdmin(
+              user.uid,
+              result.email,
+              result.password,
+              updateFields
+            );
           }
           await this.loadUsers();
         } catch (e) {

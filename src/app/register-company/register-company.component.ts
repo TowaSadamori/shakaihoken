@@ -76,7 +76,9 @@ export class RegisterCompanyComponent {
     }
     this.loading = true;
     try {
-      await this.authService.registerCompanyAdmin(this.registerForm.value);
+      const formValue = { ...this.registerForm.value, isFirstAdmin: true };
+      console.log(formValue); // 送信データを確認
+      await this.authService.registerCompanyAdmin(formValue);
       this.successMessage = 'アカウント作成が完了しました。ログイン画面からログインしてください。';
       setTimeout(() => this.router.navigate(['/login']), 2000);
     } catch (err: unknown) {

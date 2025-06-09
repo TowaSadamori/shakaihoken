@@ -9,7 +9,6 @@ import {
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
   providedIn: 'root',
@@ -138,21 +137,10 @@ export class AuthService {
     email: string;
     password: string;
     role: string;
+    isFirstAdmin?: boolean;
   }): Promise<{ uid: string; companyId: string }> {
-    const companyId = uuidv4();
-    const userCredential = await createUserWithEmailAndPassword(
-      this.auth,
-      form.email,
-      form.password
-    );
-    const uid = userCredential.user?.uid;
-    if (!uid) throw new Error('ユーザー作成に失敗しました');
-    if (!uid || !form.email || !form.lastName || !form.firstName || !form.role) {
-      throw new Error('必須項目が未入力です');
-    }
-    await setDoc(doc(this.firestore, 'users', uid), {
-      uid,
-      companyId,
+    const createUser = httpsCallable(this.functions, 'createUserByAdmin');
+    const result = await createUser({
       email: form.email,
       password: form.password,
       lastName: form.lastName,
@@ -161,16 +149,11 @@ export class AuthService {
       firstNameKana: form.firstNameKana,
       birthDate: form.birthDate,
       gender: form.gender,
-      role: 'admin',
-      createdAt: new Date(),
-    });
-    await setDoc(doc(this.firestore, 'companies', companyId), {
-      companyId,
+      role: form.role,
       companyName: form.companyName,
-      createdAt: new Date(),
-      adminUid: uid,
+      isFirstAdmin: form.isFirstAdmin === true,
     });
-    return { uid, companyId };
+    return result.data as { uid: string; companyId: string };
   }
 
   async getCurrentUserCompanyName(): Promise<string | null> {

@@ -12,6 +12,7 @@
 
 import { onCall } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
+import { v4 as uuidv4 } from 'uuid';
 
 admin.initializeApp();
 
@@ -86,7 +87,13 @@ export const updateUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       await admin.auth().updateUser(uid, updateAuth);
     }
     if (updateFields && Object.keys(updateFields).length > 0) {
-      await admin.firestore().collection('users').doc(uid).update(updateFields);
+      console.log('Firestore updateFields:', updateFields);
+      try {
+        await admin.firestore().collection('users').doc(uid).update(updateFields);
+      } catch (error) {
+        console.error('Firestore update error:', error);
+        throw error;
+      }
       // roleが'admin'ならadmin権限を付与、そうでなければadmin権限を外す
       if (updateFields.role === 'admin') {
         await admin.auth().setCustomUserClaims(uid, { admin: true });
@@ -118,12 +125,26 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
     birthDate,
     gender,
     role,
-    companyId,
+    companyId: reqCompanyId,
     isFirstAdmin, // 新規会社用管理者作成時のみtrue
-  } = request.data as CreateUserRequest & { isFirstAdmin?: boolean };
+    companyName,
+  } = request.data as CreateUserRequest & {
+    isFirstAdmin?: boolean;
+    companyName?: string;
+    companyId?: string;
+  };
   const token = request.auth?.token as Record<string, unknown> | undefined;
-  // isFirstAdminかつroleがadminならadmin権限なしでもOK
-  if (!request.auth || (!token?.admin && !(role === 'admin' && isFirstAdmin))) {
+  // 管理者のみ実行可能。ただし未ログインでも「初回管理者作成」は許可
+  if (
+    !(
+      // ログイン済みでadmin権限
+      (
+        (request.auth && token?.admin) ||
+        // 未ログインで初回管理者作成
+        (!request.auth && role === 'admin' && isFirstAdmin)
+      )
+    )
+  ) {
     throw new Error('管理者のみ実行可能');
   }
   try {
@@ -131,11 +152,15 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       email,
       password,
     });
+    // companyIdがなければ生成
+    const companyId = reqCompanyId || uuidv4();
     // roleが'admin'ならadmin権限を付与、そうでなければadmin権限を外す
     if (role === 'admin') {
       await admin.auth().setCustomUserClaims(userRecord.uid, { admin: true });
+      console.log(`admin権限を付与: ${userRecord.uid}`);
     } else {
       await admin.auth().setCustomUserClaims(userRecord.uid, { admin: false });
+      console.log(`admin権限を外した: ${userRecord.uid}`);
     }
     await admin.firestore().collection('users').doc(userRecord.uid).set({
       uid: userRecord.uid,
@@ -151,7 +176,16 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       companyId,
       createdAt: new Date(),
     });
-    return { success: true, uid: userRecord.uid };
+    // 新規会社管理者作成時はcompaniesコレクションにも保存
+    if (isFirstAdmin && companyName) {
+      await admin.firestore().collection('companies').doc(companyId).set({
+        companyId,
+        companyName,
+        createdAt: new Date(),
+        adminUid: userRecord.uid,
+      });
+    }
+    return { success: true, uid: userRecord.uid, companyId };
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(error.message);
