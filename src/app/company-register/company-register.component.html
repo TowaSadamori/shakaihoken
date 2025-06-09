@@ -29,7 +29,10 @@
     <tr *ngFor="let company of companies">
       <td>{{ company.branchNumber }}</td>
       <td>
-        <a [routerLink]="['/office-detail', company.id]" class="office-link">{{ company.name }}</a>
+        <a *ngIf="isAdmin" [routerLink]="['/office-detail', company.id]" class="office-link">{{
+          company.name
+        }}</a>
+        <span *ngIf="!isAdmin">{{ company.name }}</span>
       </td>
       <td>{{ company.addressPrefecture }}</td>
     </tr>

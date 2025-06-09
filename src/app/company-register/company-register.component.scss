@@ -41,3 +41,23 @@ h2 {
   margin-top: 2.5rem;
   margin-bottom: 2.5rem;
 }
+
+.large-btn {
+  font-size: 1.2rem;
+  padding: 0.8rem 2.2rem;
+  min-width: 120px;
+  min-height: 48px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  letter-spacing: 0.04em;
+}
+.large-btn.mat-raised-button[color='primary'] {
+  background: #1976d2;
+  color: #fff;
+}
+.large-btn.mat-stroked-button {
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+}
