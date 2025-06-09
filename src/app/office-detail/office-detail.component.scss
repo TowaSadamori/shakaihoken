@@ -45,10 +45,56 @@
   margin-bottom: 1.5rem;
   justify-content: center;
 }
+.office-detail-actions button {
+  font-size: 1.2rem;
+  padding: 0.8rem 2.2rem;
+  min-width: 120px;
+  min-height: 48px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  letter-spacing: 0.04em;
+}
+.office-detail-actions button.mat-raised-button[color='primary'] {
+  background: #1976d2;
+  color: #fff;
+}
+.office-detail-actions button.mat-raised-button[color='warn'] {
+  background: #e53935;
+  color: #fff;
+}
+.office-detail-actions button.mat-stroked-button {
+  font-size: 1.2rem;
+  padding: 0.8rem 2.2rem;
+  min-width: 120px;
+  min-height: 48px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  letter-spacing: 0.04em;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+  margin-bottom: 1.5rem;
+}
 h2 {
   text-align: center;
   font-size: 2.2rem;
   margin: 1.5rem 0 2rem 0;
   font-weight: 700;
   letter-spacing: 0.05em;
+}
+.back-button {
+  font-size: 1.2rem;
+  padding: 0.8rem 2.2rem;
+  min-width: 120px;
+  min-height: 48px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  letter-spacing: 0.04em;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+  margin-bottom: 1.5rem;
 }
