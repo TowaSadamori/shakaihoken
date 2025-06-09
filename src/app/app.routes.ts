@@ -21,6 +21,13 @@ export const routes: Routes = [
       { path: '', component: HomeComponent },
       { path: 'employee-procedures', component: EmployeeProceduresPlaceholderComponent },
       { path: 'employer-procedures', component: EmployerProceduresPlaceholderComponent },
+      {
+        path: 'company-register',
+        loadComponent: () =>
+          import('./company-register/company-register.component').then(
+            (m) => m.CompanyRegisterComponent
+          ),
+      },
       { path: 'settings', component: SettingsPlaceholderComponent },
       { path: 'create-account', component: CreateAccountComponent },
     ],
