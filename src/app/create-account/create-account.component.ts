@@ -25,6 +25,8 @@ export interface User {
   birthDate?: Date | string;
   name?: string;
   companyId?: string;
+  employeeNumber?: string | number;
+  branchNumber?: string | number;
 }
 
 @Component({

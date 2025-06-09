@@ -20,6 +20,8 @@
       <thead>
         <tr>
           <th *ngIf="currentUserRole !== 'employee_user'">操作</th>
+          <th>従業員No.</th>
+          <th>事業所No.</th>
           <th>姓</th>
           <th>名</th>
           <th>権限</th>
@@ -35,6 +37,8 @@
               <button *ngIf="currentRole !== 'employee_user'" (click)="editUser(user)">編集</button>
               <button *ngIf="currentUserRole === 'admin'" (click)="deleteUser(user)">削除</button>
             </td>
+            <td>{{ user.employeeNumber || '--' }}</td>
+            <td>{{ user.branchNumber || '--' }}</td>
             <td>{{ user.lastName || '--' }}</td>
             <td>{{ user.firstName || '--' }}</td>
             <td>{{ user.role === 'admin' ? '管理者' : '従業員' }}</td>
@@ -45,6 +49,8 @@
         </ng-container>
         <tr *ngIf="shouldShowLastCreatedAccount">
           <td *ngIf="currentUserRole !== 'employee_user'">--</td>
+          <td>--</td>
+          <td>--</td>
           <td>{{ lastCreatedAccount?.lastName }}</td>
           <td>{{ lastCreatedAccount?.firstName }}</td>
           <td>--</td>
