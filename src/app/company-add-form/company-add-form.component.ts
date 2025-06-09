@@ -1,9 +1,26 @@
-import { Component } from '@angular/core';
+import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  updateDoc,
+  doc,
+} from 'firebase/firestore';
 import { MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import type { Company } from '../company-register/company-register.component';
+
+interface CompanyDialogData {
+  office?: Company;
+  officeId?: string;
+  isEdit?: boolean;
+}
 
 @Component({
   selector: 'app-company-add-form',
@@ -19,7 +36,8 @@ export class CompanyAddFormComponent {
 
   constructor(
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<CompanyAddFormComponent>
+    private dialogRef: MatDialogRef<CompanyAddFormComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: CompanyDialogData
   ) {
     this.companyForm = this.fb.group({
       name: ['', Validators.required],
@@ -42,6 +60,59 @@ export class CompanyAddFormComponent {
       bankNumber: ['', Validators.required],
       bankHolder: ['', Validators.required],
     });
+    // 編集時は初期値をセット
+    if (data && data.isEdit && data.office) {
+      const office = { ...data.office };
+      // establishedDateの変換
+      if (office.establishedDate) {
+        const d: unknown = office.establishedDate;
+        let dateStr = '';
+        if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+          dateStr = d;
+        } else if (d instanceof Date) {
+          dateStr = d.toISOString().slice(0, 10);
+        } else if (isTimestamp(d)) {
+          dateStr = d.toDate().toISOString().slice(0, 10);
+        } else if (typeof d === 'string') {
+          const parsed = new Date(
+            Date.parse(
+              d
+                .replace(/(\d{4})年(\d{1,2})月(\d{1,2})日/, '$1-$2-$3')
+                .replace(' UTC+9', 'T00:00:00+09:00')
+            )
+          );
+          if (!isNaN(parsed.getTime())) {
+            dateStr = parsed.toISOString().slice(0, 10);
+          }
+        }
+        office.establishedDate = dateStr;
+      }
+      // abolishedDateの変換
+      if (office.abolishedDate) {
+        const d: unknown = office.abolishedDate;
+        let dateStr = '';
+        if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+          dateStr = d;
+        } else if (d instanceof Date) {
+          dateStr = d.toISOString().slice(0, 10);
+        } else if (isTimestamp(d)) {
+          dateStr = d.toDate().toISOString().slice(0, 10);
+        } else if (typeof d === 'string') {
+          const parsed = new Date(
+            Date.parse(
+              d
+                .replace(/(\d{4})年(\d{1,2})月(\d{1,2})日/, '$1-$2-$3')
+                .replace(' UTC+9', 'T00:00:00+09:00')
+            )
+          );
+          if (!isNaN(parsed.getTime())) {
+            dateStr = parsed.toISOString().slice(0, 10);
+          }
+        }
+        office.abolishedDate = dateStr;
+      }
+      this.companyForm.patchValue(office);
+    }
   }
 
   async onSubmit() {
@@ -49,8 +120,22 @@ export class CompanyAddFormComponent {
     this.loading = true;
     this.errorMsg = '';
     try {
-      const auth = getAuth();
       const db = getFirestore();
+      if (this.data && this.data.isEdit && this.data.officeId) {
+        // 編集時: updateDocでFirestoreを更新
+        const officeDocRef = doc(db, 'offices', this.data.officeId);
+        const formValue = this.companyForm.value;
+        await updateDoc(officeDocRef, {
+          ...formValue,
+          address: formValue.addressPrefecture + formValue.addressDetail,
+          establishedDate: formValue.establishedDate ? new Date(formValue.establishedDate) : null,
+          abolishedDate: formValue.abolishedDate ? new Date(formValue.abolishedDate) : null,
+          employeeCount: Number(formValue.employeeCount),
+        });
+        this.dialogRef.close(true);
+        return;
+      }
+      const auth = getAuth();
       const user = auth.currentUser;
       if (!user) throw new Error('ログイン情報が取得できません');
       // ユーザーのcompanyId取得
@@ -111,4 +196,13 @@ export class CompanyAddFormComponent {
   onCancel() {
     this.dialogRef.close(false);
   }
+}
+
+function isTimestamp(obj: unknown): obj is { toDate: () => Date } {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'toDate' in obj &&
+    typeof (obj as { toDate: unknown }).toDate === 'function'
+  );
 }

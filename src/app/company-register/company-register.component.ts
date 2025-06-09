@@ -20,11 +20,11 @@ export interface Company {
   ownerName?: string;
   phone?: string;
   businessType?: string;
-  establishedDate?: Date;
+  establishedDate?: string | Date | null;
   employeeCount?: number;
   applyType?: string;
   beforeChange?: string;
-  abolishedDate?: Date;
+  abolishedDate?: string | Date | null;
   abolishedReason?: string;
   bankName?: string;
   bankBranch?: string;

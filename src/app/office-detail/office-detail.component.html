@@ -2,7 +2,7 @@
 
 <div class="office-detail-container" *ngIf="officeData">
   <div class="office-detail-actions">
-    <button mat-raised-button color="primary">編集</button>
+    <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
     <button mat-raised-button color="warn" (click)="onDelete()">削除</button>
   </div>
   <h2>{{ officeData?.name }}</h2>

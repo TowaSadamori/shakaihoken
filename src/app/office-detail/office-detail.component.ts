@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { TimestampToDatePipe } from '../timestamp-to-date.pipe';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { CompanyAddFormComponent } from '../company-add-form/company-add-form.component';
 
 @Component({
   selector: 'app-office-detail',
@@ -58,6 +59,20 @@ export class OfficeDetailComponent implements OnInit {
         const officeDocRef = doc(db, 'offices', this.officeId);
         await deleteDoc(officeDocRef);
         this.router.navigate(['/company-register']);
+      }
+    });
+  }
+
+  async onEdit() {
+    if (!this.officeData) return;
+    const dialogRef = this.dialog.open(CompanyAddFormComponent, {
+      width: '600px',
+      data: { office: this.officeData, officeId: this.officeId, isEdit: true },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        // 編集後のリロードや再取得処理をここに追加予定
+        window.location.reload(); // 仮実装: 編集後にリロード
       }
     });
   }
