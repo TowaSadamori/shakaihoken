@@ -1,2 +1,35 @@
-<button mat-raised-button color="accent" class="large-btn" (click)="goHome()">ホームに戻る</button>
-<p>company-register works!</p>
+<div class="top-action-bar">
+  <button mat-stroked-button color="basic" class="large-btn" (click)="goHome()">
+    ホームに戻る
+  </button>
+  <button
+    *ngIf="isAdmin"
+    mat-raised-button
+    color="primary"
+    class="large-btn"
+    (click)="onAddCompany()"
+  >
+    事業所追加
+  </button>
+</div>
+
+<h2>事業所情報一覧</h2>
+<table class="company-table">
+  <thead>
+    <tr>
+      <th>No.</th>
+      <th>事業所名称</th>
+      <th>事業所所在地</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngIf="companies.length === 0">
+      <td colspan="3" style="text-align: center; color: #888">データがありません</td>
+    </tr>
+    <tr *ngFor="let company of companies">
+      <td>{{ company.branchNumber }}</td>
+      <td>{{ company.name }}</td>
+      <td>{{ company.addressPrefecture }}</td>
+    </tr>
+  </tbody>
+</table>

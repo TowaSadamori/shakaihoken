@@ -1,0 +1,151 @@
+<form [formGroup]="companyForm" class="company-form" (ngSubmit)="onSubmit()">
+  <h2>事業所追加</h2>
+  <div *ngIf="errorMsg" class="error-msg">{{ errorMsg }}</div>
+  <div *ngIf="loading" class="loading-msg">保存中...</div>
+  <div class="form-row">
+    <label for="name">事業所名称 *</label>
+    <input id="name" formControlName="name" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="addressPrefecture">事業所所在地（都道府県） *</label>
+    <select id="addressPrefecture" formControlName="addressPrefecture">
+      <option value="">選択してください</option>
+      <option value="北海道">北海道</option>
+      <option value="青森県">青森県</option>
+      <option value="岩手県">岩手県</option>
+      <option value="宮城県">宮城県</option>
+      <option value="秋田県">秋田県</option>
+      <option value="山形県">山形県</option>
+      <option value="福島県">福島県</option>
+      <option value="茨城県">茨城県</option>
+      <option value="栃木県">栃木県</option>
+      <option value="群馬県">群馬県</option>
+      <option value="埼玉県">埼玉県</option>
+      <option value="千葉県">千葉県</option>
+      <option value="東京都">東京都</option>
+      <option value="神奈川県">神奈川県</option>
+      <option value="新潟県">新潟県</option>
+      <option value="富山県">富山県</option>
+      <option value="石川県">石川県</option>
+      <option value="福井県">福井県</option>
+      <option value="山梨県">山梨県</option>
+      <option value="長野県">長野県</option>
+      <option value="岐阜県">岐阜県</option>
+      <option value="静岡県">静岡県</option>
+      <option value="愛知県">愛知県</option>
+      <option value="三重県">三重県</option>
+      <option value="滋賀県">滋賀県</option>
+      <option value="京都府">京都府</option>
+      <option value="大阪府">大阪府</option>
+      <option value="兵庫県">兵庫県</option>
+      <option value="奈良県">奈良県</option>
+      <option value="和歌山県">和歌山県</option>
+      <option value="鳥取県">鳥取県</option>
+      <option value="島根県">島根県</option>
+      <option value="岡山県">岡山県</option>
+      <option value="広島県">広島県</option>
+      <option value="山口県">山口県</option>
+      <option value="徳島県">徳島県</option>
+      <option value="香川県">香川県</option>
+      <option value="愛媛県">愛媛県</option>
+      <option value="高知県">高知県</option>
+      <option value="福岡県">福岡県</option>
+      <option value="佐賀県">佐賀県</option>
+      <option value="長崎県">長崎県</option>
+      <option value="熊本県">熊本県</option>
+      <option value="大分県">大分県</option>
+      <option value="宮崎県">宮崎県</option>
+      <option value="鹿児島県">鹿児島県</option>
+      <option value="沖縄県">沖縄県</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="addressDetail">事業所所在地（都道府県以下） *</label>
+    <input id="addressDetail" formControlName="addressDetail" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="code">事業所整理記号/番号</label>
+    <input id="code" formControlName="code" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="corporationNumber">法人番号</label>
+    <input id="corporationNumber" formControlName="corporationNumber" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="ownerName">事業主氏名（代表者氏名）</label>
+    <input id="ownerName" formControlName="ownerName" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="phone">事業所の電話番号</label>
+    <input id="phone" formControlName="phone" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="businessType">事業の種類（業種）</label>
+    <input id="businessType" formControlName="businessType" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="establishedDate">設立年月日</label>
+    <input id="establishedDate" formControlName="establishedDate" type="date" />
+  </div>
+  <div class="form-row">
+    <label for="employeeCount">常時使用する従業員数</label>
+    <input id="employeeCount" formControlName="employeeCount" type="number" />
+  </div>
+  <div class="form-row">
+    <label for="applyType">適用区分（強制・任意）</label>
+    <select id="applyType" formControlName="applyType">
+      <option value="">選択してください</option>
+      <option value="強制">強制</option>
+      <option value="任意">任意</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="beforeChange">変更前の情報</label>
+    <input id="beforeChange" formControlName="beforeChange" type="text" />
+  </div>
+  <div class="form-row form-row-note">
+    <span class="form-note"
+      >※ 名称・所在地・事業主氏名などの変更があった場合のみ入力してください</span
+    >
+  </div>
+  <div class="form-row">
+    <label for="abolishedDate">事業所廃止（休止）年月日</label>
+    <input id="abolishedDate" formControlName="abolishedDate" type="date" />
+  </div>
+  <div class="form-row form-row-note">
+    <span class="form-note">※ 廃止・休止の場合のみ入力してください</span>
+  </div>
+  <div class="form-row">
+    <label for="abolishedReason">廃止理由</label>
+    <input id="abolishedReason" formControlName="abolishedReason" type="text" />
+  </div>
+  <div class="form-row form-row-note">
+    <span class="form-note">※ 廃止・休止の場合のみ入力してください</span>
+  </div>
+  <div class="form-row">
+    <label for="bankName">金融機関名</label>
+    <input id="bankName" formControlName="bankName" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="bankBranch">支店名</label>
+    <input id="bankBranch" formControlName="bankBranch" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="bankType">口座種別</label>
+    <input id="bankType" formControlName="bankType" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="bankNumber">口座番号</label>
+    <input id="bankNumber" formControlName="bankNumber" type="text" />
+  </div>
+  <div class="form-row">
+    <label for="bankHolder">口座名義</label>
+    <input id="bankHolder" formControlName="bankHolder" type="text" />
+  </div>
+  <div class="form-actions">
+    <button mat-raised-button color="primary" type="submit" [disabled]="companyForm.invalid">
+      保存
+    </button>
+    <button mat-button type="button" (click)="onCancel()">キャンセル</button>
+  </div>
+</form>
