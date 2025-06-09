@@ -150,6 +150,10 @@ export class CreateAccountComponent implements OnInit {
       data: { user, currentUid: this.currentUid },
     });
     dialogRef.afterClosed().subscribe(async (result) => {
+      if (result === 'deleted') {
+        await this.deleteUser(user);
+        return;
+      }
       if (result) {
         try {
           if (this.currentRole === 'employee_user' && user.uid === this.currentUid) {

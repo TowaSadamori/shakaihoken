@@ -6,8 +6,10 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'fi
 import { MatDialog } from '@angular/material/dialog';
 import { CompanyAddFormComponent } from '../company-add-form/company-add-form.component';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 
 export interface Company {
+  id: string;
   name: string;
   address: string;
   addressPrefecture?: string;
@@ -36,7 +38,7 @@ export interface Company {
 @Component({
   selector: 'app-company-register',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './company-register.component.html',
   styleUrl: './company-register.component.scss',
 })
@@ -86,6 +88,7 @@ export class CompanyRegisterComponent implements OnInit {
       this.companies = companiesSnap.docs.map((doc) => {
         const data = doc.data();
         return {
+          id: doc.id,
           name: data['name'] || '',
           address: data['address'] || '',
           addressPrefecture: data['addressPrefecture'] || '',

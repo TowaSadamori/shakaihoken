@@ -8,6 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatDialog } from '@angular/material/dialog';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import type { User } from '../create-account/create-account.component';
 
 @Component({
@@ -32,7 +34,8 @@ export class EditUserDialogComponent {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EditUserDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { user: User; currentUid: string }
+    @Inject(MAT_DIALOG_DATA) public data: { user: User; currentUid: string },
+    private dialog: MatDialog
   ) {
     this.isSelfEmployee = data.user.uid === data.currentUid && data.user.role === 'employee_user';
     this.editForm = this.fb.group(
@@ -79,5 +82,23 @@ export class EditUserDialogComponent {
   }
   onCancel() {
     this.dialogRef.close();
+  }
+  async onDelete() {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      disableClose: true,
+      data: {
+        title: '削除確認',
+        message: '本当に削除しますか？',
+        confirmText: 'はい',
+        cancelText: 'いいえ',
+        icon: 'warning',
+        iconColor: '#e53935',
+      },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.dialogRef.close('deleted');
+      }
+    });
   }
 }

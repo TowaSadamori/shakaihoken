@@ -30,6 +30,11 @@ export const routes: Routes = [
       },
       { path: 'settings', component: SettingsPlaceholderComponent },
       { path: 'create-account', component: CreateAccountComponent },
+      {
+        path: 'office-detail/:id',
+        loadComponent: () =>
+          import('./office-detail/office-detail.component').then((m) => m.OfficeDetailComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
