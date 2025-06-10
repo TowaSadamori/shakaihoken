@@ -65,6 +65,60 @@ export class PrefectureDetailComponent {
     { code: '47', name: '沖縄' },
   ];
 
+  // ダミーデータ: 写真のカラム構成に合わせて拡張
+  insuranceTable = [
+    {
+      grade: 1,
+      standardSalary: '58,000',
+      salaryRange: '58,000 ～ 63,000',
+      nonNursingRate: '9.91%',
+      nonNursingTotal: 5747.8,
+      nonNursingHalf: 2873.9,
+      nursingRate: '11.50%',
+      nursingTotal: 6670.0,
+      nursingHalf: 3335.0,
+      pensionRate: '18.300%',
+      pensionTotal: 8082.0,
+      pensionHalf: 4052.0,
+    },
+    {
+      grade: 2,
+      standardSalary: '68,000',
+      salaryRange: '63,000 ～ 73,000',
+      nonNursingRate: '9.91%',
+      nonNursingTotal: 6738.8,
+      nonNursingHalf: 3369.4,
+      nursingRate: '11.50%',
+      nursingTotal: 7820.0,
+      nursingHalf: 3910.0,
+      pensionRate: '18.300%',
+      pensionTotal: 8976.0,
+      pensionHalf: 4488.0,
+    },
+    // ... 必要に応じて追加
+  ];
+
+  // 厚生年金保険料（等級が異なる場合）のダミーデータ
+  pensionTable = [
+    {
+      grade: 1,
+      standardSalary: '58,000',
+      salaryRange: '58,000 ～ 63,000',
+      pensionRate: '18.300%',
+      pensionTotal: 8082.0,
+      pensionHalf: 4052.0,
+    },
+    {
+      grade: 2,
+      standardSalary: '68,000',
+      salaryRange: '63,000 ～ 73,000',
+      pensionRate: '18.300%',
+      pensionTotal: 8976.0,
+      pensionHalf: 4488.0,
+    },
+    // ... 必要に応じて追加
+  ];
+
   constructor(
     private router: Router,
     private route: ActivatedRoute

@@ -15,4 +15,66 @@
   令和7年3月分（4月納付分）からの健康保険・厚生年金保険の保険料額表
 </h2>
 <hr class="pref-detail-title-hr" />
-<!-- ここに今後詳細内容を追加 -->
+
+<!-- CSV取り込み後のデータ表示領域 -->
+<div class="imported-csv-area">
+  <div class="imported-csv-table-title">健康保険・介護保険料額表</div>
+  <table class="imported-csv-table">
+    <thead>
+      <tr>
+        <th rowspan="4">等級</th>
+        <th rowspan="4">標準報酬月額</th>
+        <th rowspan="4">報酬月額</th>
+        <th colspan="2">
+          全国健康保険協会管掌健康保険料<br />介護保険第2号被保険者に該当しない場合
+        </th>
+        <th colspan="2">全国健康保険協会管掌健康保険料<br />介護保険第2号被保険者に該当する場合</th>
+      </tr>
+      <tr>
+        <th colspan="2" class="rate-cell">9.91%</th>
+        <th colspan="2" class="rate-cell">11.50%</th>
+      </tr>
+      <tr>
+        <th>全額</th>
+        <th>折半額</th>
+        <th>全額</th>
+        <th>折半額</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of insuranceTable">
+        <td>{{ row.grade }}</td>
+        <td>{{ row.standardSalary }}</td>
+        <td>{{ row.salaryRange }}</td>
+        <td>{{ row.nonNursingTotal | number }}</td>
+        <td>{{ row.nonNursingHalf | number }}</td>
+        <td>{{ row.nursingTotal | number }}</td>
+        <td>{{ row.nursingHalf | number }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="imported-csv-table-title">厚生年金保険料額表（等級が異なる場合）</div>
+  <table class="imported-csv-table">
+    <thead>
+      <tr>
+        <th>等級</th>
+        <th>標準報酬月額</th>
+        <th>報酬月額</th>
+        <th>保険料率</th>
+        <th>全額</th>
+        <th>折半額</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of pensionTable">
+        <td>{{ row.grade }}</td>
+        <td>{{ row.standardSalary }}</td>
+        <td>{{ row.salaryRange }}</td>
+        <td>{{ row.pensionRate }}</td>
+        <td>{{ row.pensionTotal | number }}</td>
+        <td>{{ row.pensionHalf | number }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
