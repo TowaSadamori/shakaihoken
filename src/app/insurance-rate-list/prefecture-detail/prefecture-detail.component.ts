@@ -71,7 +71,7 @@ export class PrefectureDetailComponent {
 
   // ダミーデータ: 写真のカラム構成に合わせて拡張
   insuranceTable: {
-    grade: number;
+    grade: string;
     standardSalary: string;
     salaryRange: string;
     nonNursingRate: string;
@@ -157,22 +157,20 @@ export class PrefectureDetailComponent {
     const dataRows = rows.filter((r) => r[0] && r[0].match(/^\d+(（\d+）)?/));
 
     // 健康保険・介護保険用
-    this.insuranceTable = dataRows
-      .filter((r) => !r[0].includes('（'))
-      .map((r) => ({
-        grade: Number(r[0]),
-        standardSalary: r[1],
-        salaryRange: `${r[1]} ～ ${r[4]}`,
-        nonNursingRate: nonNursingRate,
-        nonNursingTotal: parseFloat(r[5]?.replace(/,/g, '')),
-        nonNursingHalf: parseFloat(r[6]?.replace(/,/g, '')),
-        nursingRate: nursingRate,
-        nursingTotal: parseFloat(r[7]?.replace(/,/g, '')),
-        nursingHalf: parseFloat(r[8]?.replace(/,/g, '')),
-        pensionRate: '',
-        pensionTotal: 0,
-        pensionHalf: 0,
-      }));
+    this.insuranceTable = dataRows.map((r) => ({
+      grade: r[0],
+      standardSalary: r[1],
+      salaryRange: `${r[1]} ～ ${r[4]}`,
+      nonNursingRate: nonNursingRate,
+      nonNursingTotal: parseFloat(r[5]?.replace(/,/g, '')),
+      nonNursingHalf: parseFloat(r[6]?.replace(/,/g, '')),
+      nursingRate: nursingRate,
+      nursingTotal: parseFloat(r[7]?.replace(/,/g, '')),
+      nursingHalf: parseFloat(r[8]?.replace(/,/g, '')),
+      pensionRate: '',
+      pensionTotal: 0,
+      pensionHalf: 0,
+    }));
 
     // 厚生年金用
     this.pensionTable = dataRows
