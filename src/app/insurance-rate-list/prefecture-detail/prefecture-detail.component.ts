@@ -1,11 +1,14 @@
 import { Component } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { CsvImportComponent } from './insurance-rate-csv-import.component';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import Papa from 'papaparse';
 
 @Component({
   selector: 'app-prefecture-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CsvImportComponent],
   templateUrl: './prefecture-detail.component.html',
   styleUrl: './prefecture-detail.component.scss',
 })
@@ -13,6 +16,7 @@ export class PrefectureDetailComponent {
   year: string | null = null;
   prefecture: string | null = null;
   prefectureName: string | null = null;
+  showCsvImport = false;
 
   // 都道府県コードと名称の対応表
   static PREF_LIST = [
@@ -66,68 +70,61 @@ export class PrefectureDetailComponent {
   ];
 
   // ダミーデータ: 写真のカラム構成に合わせて拡張
-  insuranceTable = [
-    {
-      grade: 1,
-      standardSalary: '58,000',
-      salaryRange: '58,000 ～ 63,000',
-      nonNursingRate: '9.91%',
-      nonNursingTotal: 5747.8,
-      nonNursingHalf: 2873.9,
-      nursingRate: '11.50%',
-      nursingTotal: 6670.0,
-      nursingHalf: 3335.0,
-      pensionRate: '18.300%',
-      pensionTotal: 8082.0,
-      pensionHalf: 4052.0,
-    },
-    {
-      grade: 2,
-      standardSalary: '68,000',
-      salaryRange: '63,000 ～ 73,000',
-      nonNursingRate: '9.91%',
-      nonNursingTotal: 6738.8,
-      nonNursingHalf: 3369.4,
-      nursingRate: '11.50%',
-      nursingTotal: 7820.0,
-      nursingHalf: 3910.0,
-      pensionRate: '18.300%',
-      pensionTotal: 8976.0,
-      pensionHalf: 4488.0,
-    },
-    // ... 必要に応じて追加
-  ];
+  insuranceTable: {
+    grade: number;
+    standardSalary: string;
+    salaryRange: string;
+    nonNursingRate: string;
+    nonNursingTotal: number;
+    nonNursingHalf: number;
+    nursingRate: string;
+    nursingTotal: number;
+    nursingHalf: number;
+    pensionRate: string;
+    pensionTotal: number;
+    pensionHalf: number;
+  }[] = [];
 
   // 厚生年金保険料（等級が異なる場合）のダミーデータ
-  pensionTable = [
-    {
-      grade: 1,
-      standardSalary: '58,000',
-      salaryRange: '58,000 ～ 63,000',
-      pensionRate: '18.300%',
-      pensionTotal: 8082.0,
-      pensionHalf: 4052.0,
-    },
-    {
-      grade: 2,
-      standardSalary: '68,000',
-      salaryRange: '63,000 ～ 73,000',
-      pensionRate: '18.300%',
-      pensionTotal: 8976.0,
-      pensionHalf: 4488.0,
-    },
-    // ... 必要に応じて追加
-  ];
+  pensionTable: {
+    grade: number;
+    standardSalary: string;
+    salaryRange: string;
+    pensionRate: string;
+    pensionTotal: number;
+    pensionHalf: number;
+  }[] = [];
+
+  rates: {
+    nonNursingRate: string;
+    nursingRate: string;
+    pensionRate: string;
+  } = { nonNursingRate: '', nursingRate: '', pensionRate: '' };
 
   constructor(
     private router: Router,
     private route: ActivatedRoute
   ) {
-    this.route.paramMap.subscribe((params) => {
+    this.route.paramMap.subscribe(async (params) => {
       this.year = params.get('year');
       this.prefecture = params.get('prefecture');
       this.prefectureName =
         PrefectureDetailComponent.PREF_LIST.find((p) => p.code === this.prefecture)?.name || '';
+      // Firestoreからデータ取得
+      if (this.year && this.prefectureName) {
+        const db = getFirestore();
+        const docRef = doc(
+          db,
+          `insurance_rates/${this.year}/prefectures/${this.prefectureName}/rate_table/main`
+        );
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          this.insuranceTable = data['insuranceTable'] || [];
+          this.pensionTable = data['pensionTable'] || [];
+          this.rates = data['rates'] || { nonNursingRate: '', nursingRate: '', pensionRate: '' };
+        }
+      }
     });
   }
 
@@ -136,6 +133,74 @@ export class PrefectureDetailComponent {
       this.router.navigate(['/insurance-rate-list', this.year]);
     } else {
       this.router.navigate(['/insurance-rate-list']);
+    }
+  }
+
+  openCsvImport() {
+    this.showCsvImport = true;
+  }
+  closeCsvImport() {
+    this.showCsvImport = false;
+  }
+  async onCsvImported(csvText: string) {
+    const result = Papa.parse<string[]>(csvText, { skipEmptyLines: true });
+    const rows = result.data;
+
+    // 保険料率の抽出
+    const rateRow = rows.find((r) => r.some((cell) => cell.match(/\d+\.\d+%/)));
+    const nonNursingRate = rateRow?.[5] || '';
+    const nursingRate = rateRow?.[7] || '';
+    const pensionRate = rateRow?.[9] || '';
+    this.rates = { nonNursingRate, nursingRate, pensionRate };
+
+    // データ行の抽出（等級が数字または数字＋（数字）で始まる行のみ）
+    const dataRows = rows.filter((r) => r[0] && r[0].match(/^\d+(（\d+）)?/));
+
+    // 健康保険・介護保険用
+    this.insuranceTable = dataRows
+      .filter((r) => !r[0].includes('（'))
+      .map((r) => ({
+        grade: Number(r[0]),
+        standardSalary: r[1],
+        salaryRange: `${r[1]} ～ ${r[4]}`,
+        nonNursingRate: nonNursingRate,
+        nonNursingTotal: parseFloat(r[5]?.replace(/,/g, '')),
+        nonNursingHalf: parseFloat(r[6]?.replace(/,/g, '')),
+        nursingRate: nursingRate,
+        nursingTotal: parseFloat(r[7]?.replace(/,/g, '')),
+        nursingHalf: parseFloat(r[8]?.replace(/,/g, '')),
+        pensionRate: '',
+        pensionTotal: 0,
+        pensionHalf: 0,
+      }));
+
+    // 厚生年金用
+    this.pensionTable = dataRows
+      .filter((r) => r[0].includes('（'))
+      .map((r) => ({
+        grade: Number(r[0].match(/（(\d+)）/)?.[1] || '0'),
+        standardSalary: r[1],
+        salaryRange: `${r[1]} ～ ${r[4]}`,
+        pensionRate: pensionRate,
+        pensionTotal: parseFloat(r[9]?.replace(/,/g, '')),
+        pensionHalf: parseFloat(r[10]?.replace(/,/g, '')),
+      }));
+
+    this.showCsvImport = false;
+
+    // Firestore保存
+    const db = getFirestore();
+    if (this.year && this.prefectureName) {
+      const docRef = doc(
+        db,
+        `insurance_rates/${this.year}/prefectures/${this.prefectureName}/rate_table/main`
+      );
+      await setDoc(docRef, {
+        insuranceTable: this.insuranceTable,
+        pensionTable: this.pensionTable,
+        rates: this.rates,
+        updatedAt: new Date(),
+      });
     }
   }
 }

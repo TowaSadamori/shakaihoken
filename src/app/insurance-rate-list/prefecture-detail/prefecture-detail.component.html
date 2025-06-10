@@ -3,7 +3,7 @@
     <button type="button" class="back-pref-list-btn" (click)="goBackToPrefList()">
       年度一覧に戻る
     </button>
-    <button type="button" class="import-csv-btn">CSV取り込み</button>
+    <button type="button" class="import-csv-btn" (click)="openCsvImport()">CSV取り込み</button>
   </div>
   <div class="pref-detail-prefname-center">
     <span *ngIf="year" class="pref-detail-year">{{ year }}年度</span>
@@ -31,8 +31,8 @@
         <th colspan="2">全国健康保険協会管掌健康保険料<br />介護保険第2号被保険者に該当する場合</th>
       </tr>
       <tr>
-        <th colspan="2" class="rate-cell">9.91%</th>
-        <th colspan="2" class="rate-cell">11.50%</th>
+        <th colspan="2" class="rate-cell">{{ rates.nonNursingRate }}</th>
+        <th colspan="2" class="rate-cell">{{ rates.nursingRate }}</th>
       </tr>
       <tr>
         <th>全額</th>
@@ -54,7 +54,7 @@
     </tbody>
   </table>
 
-  <div class="imported-csv-table-title">厚生年金保険料額表（等級が異なる場合）</div>
+  <div class="imported-csv-table-title">厚生年金保険料額表</div>
   <table class="imported-csv-table">
     <thead>
       <tr>
@@ -78,3 +78,9 @@
     </tbody>
   </table>
 </div>
+
+<app-csv-import
+  [open]="showCsvImport"
+  (closeModal)="closeCsvImport()"
+  (csvImported)="onCsvImported($event)"
+></app-csv-import>
