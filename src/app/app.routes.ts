@@ -42,6 +42,20 @@ export const routes: Routes = [
             (m) => m.InsuranceRateListComponent
           ),
       },
+      {
+        path: 'insurance-rate-list/:year',
+        loadComponent: () =>
+          import(
+            './insurance-rate-list/insurance-rate-pref-list/insurance-rate-pref-list.component'
+          ).then((m) => m.InsuranceRatePrefListComponent),
+      },
+      {
+        path: 'insurance-rate-list/:year/:prefecture',
+        loadComponent: () =>
+          import('./insurance-rate-list/prefecture-detail/prefecture-detail.component').then(
+            (m) => m.PrefectureDetailComponent
+          ),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },

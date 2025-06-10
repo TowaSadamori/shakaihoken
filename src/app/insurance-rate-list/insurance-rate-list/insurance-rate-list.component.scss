@@ -1,15 +1,60 @@
-.back-home-btn {
-  margin: 16px 0;
-}
+.back-home-btn,
 .add-year-btn {
-  margin: 16px 0 16px 16px;
+  margin: 24px 0 0 24px;
+  padding: 6px 20px;
+  font-size: 1.1rem;
+  background: #fff;
+  border: 1.5px solid #1976d2;
+  color: #1976d2;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.back-home-btn:hover,
+.add-year-btn:hover {
+  background: #1976d2;
+  color: #fff;
 }
 .year-select-panel {
-  margin: 8px 0 16px 16px;
+  margin: 16px 0 24px 0;
   border: 1px solid #ccc;
-  padding: 8px;
+  padding: 16px;
+  background: #fafbfc;
+  border-radius: 6px;
+  max-width: 420px;
 }
 .year-select-caption {
   color: #888;
   font-size: 12px;
+  margin-bottom: 8px;
+}
+.year-select-panel label {
+  margin-right: 8px;
+}
+.year-select-panel select,
+.year-select-panel input[type='number'] {
+  margin-right: 8px;
+  padding: 2px 6px;
+  font-size: 1em;
+}
+.year-select-panel button {
+  margin-left: 8px;
+}
+.error-message {
+  color: #d32f2f;
+  font-size: 14px;
+  margin-top: 8px;
+}
+ul {
+  margin-top: 16px;
+  padding-left: 20px;
+  font-size: 1.1rem !important;
+}
+ul li {
+  margin-bottom: 6px;
+}
+ul li a {
+  font-size: 1.1rem !important;
 }

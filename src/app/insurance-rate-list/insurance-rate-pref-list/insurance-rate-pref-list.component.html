@@ -1,0 +1,16 @@
+<button type="button" (click)="goBack()" class="back-btn">戻る</button>
+<div class="pref-list-title">令和7年3月分（4月納付分）からの健康保険・厚生年金保険の保険料額表</div>
+<hr class="pref-list-title-hr" />
+<div class="pref-area-list">
+  <div *ngFor="let area of prefectureAreas" class="pref-area-row">
+    <span class="pref-area-label">{{ area.area }}</span>
+    <span class="pref-area-prefs">
+      <ng-container *ngFor="let pref of area.prefectures; let last = last">
+        <a [routerLink]="['/insurance-rate-list', year, pref.code]" class="pref-link">{{
+          pref.name
+        }}</a
+        ><span *ngIf="!last">｜</span>
+      </ng-container>
+    </span>
+  </div>
+</div>

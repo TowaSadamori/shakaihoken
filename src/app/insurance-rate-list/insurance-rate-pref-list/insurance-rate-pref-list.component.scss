@@ -1,0 +1,73 @@
+.pref-list-title {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  margin: 32px 0 8px 0;
+}
+.pref-list-title-hr {
+  border: none;
+  border-top: 4px solid #b71c1c;
+  width: 90%;
+  margin: 0 auto 24px auto;
+}
+.pref-area-list {
+  margin: 0 0 24px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.pref-area-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+  width: fit-content;
+}
+.pref-area-label {
+  min-width: 130px;
+  font-weight: bold;
+  color: #333;
+  display: inline-block;
+  text-align: right;
+}
+.pref-area-prefs {
+  display: inline-block;
+  margin-left: 8px;
+}
+.pref-link {
+  color: #0097a7;
+  text-decoration: underline;
+  margin: 0 2px;
+  font-weight: 500;
+}
+.pref-list-notes {
+  margin-top: 24px;
+  font-size: 1rem;
+  color: #444;
+}
+.excel-link {
+  color: #0097a7;
+  text-decoration: underline;
+  font-weight: bold;
+}
+.note {
+  font-size: 0.95em;
+  color: #1976d2;
+}
+.back-btn {
+  margin: 24px 0 0 24px;
+  padding: 6px 20px;
+  font-size: 1.1rem;
+  background: #fff;
+  border: 1.5px solid #1976d2;
+  color: #1976d2;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.back-btn:hover {
+  background: #1976d2;
+  color: #fff;
+}

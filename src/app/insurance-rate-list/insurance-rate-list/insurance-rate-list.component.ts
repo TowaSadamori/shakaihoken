@@ -24,7 +24,6 @@ export class InsuranceRateListComponent implements OnInit {
   eras = [
     { label: '令和', value: 'reiwa', start: 2019 },
     { label: '平成', value: 'heisei', start: 1989 },
-    { label: '昭和', value: 'showa', start: 1926 },
   ];
   selectedEra = 'reiwa';
   eraYear = 1;

@@ -1,7 +1,6 @@
 <button type="button" (click)="goHome()" class="back-home-btn">ホームに戻る</button>
 <button type="button" (click)="toggleYearSelect()" class="add-year-btn">年度追加</button>
 <div *ngIf="showYearSelect" class="year-select-panel">
-  <div class="year-select-caption">年度追加UI表示中</div>
   <label for="era-select">元号を選択：</label>
   <select id="era-select" [(ngModel)]="selectedEra">
     <option *ngFor="let era of eras" [value]="era.value">{{ era.label }}</option>
