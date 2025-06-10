@@ -11,6 +11,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import type { User } from '../create-account/create-account.component';
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 
 @Component({
   selector: 'app-edit-user-dialog',
@@ -31,6 +32,8 @@ import type { User } from '../create-account/create-account.component';
 export class EditUserDialogComponent {
   editForm: FormGroup;
   isSelfEmployee = false;
+  offices: { branchNumber: string | number; name: string }[] = [];
+  db = getFirestore();
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EditUserDialogComponent>,
@@ -54,9 +57,12 @@ export class EditUserDialogComponent {
         confirmPassword: [data.user.password, [Validators.required, Validators.minLength(6)]],
         role: [data.user.role, [Validators.required]],
         currentPassword: ['', this.isSelfEmployee ? [Validators.required] : []],
+        employeeNumber: [data.user.employeeNumber],
+        branchNumber: [data.user.branchNumber],
       },
       { validators: this.passwordMatchValidator }
     );
+    this.loadOffices();
   }
   passwordMatchValidator(form: FormGroup) {
     const password = form.get('password')?.value;
@@ -65,6 +71,23 @@ export class EditUserDialogComponent {
   }
   async onSave() {
     if (this.editForm.valid) {
+      const employeeNumber = String(this.editForm.get('employeeNumber')?.value ?? '').trim();
+      const companyId = this.data.user.companyId;
+      const uid = this.data.user.uid;
+      if (employeeNumber) {
+        const usersCol = collection(this.db, 'users');
+        const q = query(
+          usersCol,
+          where('companyId', '==', companyId),
+          where('employeeNumber', '==', employeeNumber)
+        );
+        const snapshot = await getDocs(q);
+        const duplicate = snapshot.docs.find((doc) => doc.id !== uid);
+        if (duplicate) {
+          this.editForm.get('employeeNumber')?.setErrors({ duplicate: true });
+          return;
+        }
+      }
       if (this.isSelfEmployee) {
         const firestoreValues = { ...this.editForm.getRawValue() };
         delete firestoreValues.email;
@@ -99,6 +122,20 @@ export class EditUserDialogComponent {
       if (result) {
         this.dialogRef.close('deleted');
       }
+    });
+  }
+  async loadOffices() {
+    const companyId = this.data.user.companyId;
+    if (!companyId) return;
+    const officesCol = collection(this.db, 'offices');
+    const q = query(officesCol, where('companyId', '==', companyId));
+    const snapshot = await getDocs(q);
+    this.offices = snapshot.docs.map((doc) => {
+      const d = doc.data() as { branchNumber?: string | number; name?: string };
+      return {
+        branchNumber: d.branchNumber ?? '',
+        name: d.name ?? '',
+      };
     });
   }
 }

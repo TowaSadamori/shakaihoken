@@ -198,6 +198,10 @@ export class CreateAccountComponent implements OnInit {
             if (result.email !== undefined) updateFields['email'] = result.email;
             if (result.role !== undefined) updateFields['role'] = result.role;
             if (result.password !== undefined) updateFields['password'] = result.password;
+            if (result.branchNumber !== undefined)
+              updateFields['branchNumber'] = result.branchNumber;
+            if (result.employeeNumber !== undefined)
+              updateFields['employeeNumber'] = result.employeeNumber;
             await this.authService.updateUserByAdmin(
               user.uid,
               result.email,

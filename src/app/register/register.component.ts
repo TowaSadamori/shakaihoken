@@ -11,6 +11,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 
 @Component({
   selector: 'app-register',
@@ -32,6 +33,8 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 })
 export class RegisterComponent implements AfterViewInit {
   registerForm: FormGroup;
+  offices: { branchNumber: string | number; name: string }[] = [];
+  db = getFirestore();
 
   constructor(
     private fb: FormBuilder,
@@ -53,9 +56,27 @@ export class RegisterComponent implements AfterViewInit {
         confirmPassword: ['', [Validators.required]],
         role: ['employee_user', [Validators.required]],
         companyId: [this.data.companyId, [Validators.required]],
+        employeeNumber: ['', []],
+        branchNumber: ['', []],
       },
       { validators: this.passwordMatchValidator }
     );
+    this.loadOffices();
+  }
+
+  async loadOffices() {
+    const companyId = this.data.companyId;
+    if (!companyId) return;
+    const officesCol = collection(this.db, 'offices');
+    const q = query(officesCol, where('companyId', '==', companyId));
+    const snapshot = await getDocs(q);
+    this.offices = snapshot.docs.map((doc) => {
+      const d = doc.data() as { branchNumber?: string | number; name?: string };
+      return {
+        branchNumber: d.branchNumber ?? '',
+        name: d.name ?? '',
+      };
+    });
   }
 
   passwordMatchValidator(form: FormGroup) {
@@ -65,8 +86,26 @@ export class RegisterComponent implements AfterViewInit {
   }
 
   async onSubmit() {
-    console.log('onSubmit called', this.registerForm.value, this.registerForm.valid);
     if (this.registerForm.valid) {
+      const employeeNumber = String(this.registerForm.get('employeeNumber')?.value ?? '').trim();
+      const companyIdForm = this.registerForm.get('companyId')?.value;
+      if (employeeNumber) {
+        const { getFirestore, collection, getDocs, query, where } = await import(
+          'firebase/firestore'
+        );
+        const db = getFirestore();
+        const usersCol = collection(db, 'users');
+        const q = query(
+          usersCol,
+          where('companyId', '==', companyIdForm),
+          where('employeeNumber', '==', employeeNumber)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          this.registerForm.get('employeeNumber')?.setErrors({ duplicate: true });
+          return;
+        }
+      }
       const {
         lastName,
         firstName,

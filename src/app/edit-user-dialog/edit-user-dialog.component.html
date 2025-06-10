@@ -1,6 +1,21 @@
 <h2 mat-dialog-title>アカウント編集</h2>
 <form [formGroup]="editForm" (ngSubmit)="onSave()" class="register-form">
   <mat-form-field appearance="outline" class="full-width">
+    <mat-label>従業員No.</mat-label>
+    <input matInput formControlName="employeeNumber" />
+    <mat-error *ngIf="editForm.get('employeeNumber')?.hasError('duplicate')">
+      この従業員No.は既に使われています
+    </mat-error>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>事業所No.</mat-label>
+    <mat-select formControlName="branchNumber">
+      <mat-option *ngFor="let office of offices" [value]="office.branchNumber">
+        {{ office.branchNumber }} - {{ office.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="full-width">
     <mat-label>姓</mat-label>
     <input matInput formControlName="lastName" required />
     <mat-error *ngIf="editForm.get('lastName')?.touched && editForm.get('lastName')?.invalid">
