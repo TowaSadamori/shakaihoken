@@ -35,6 +35,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./office-detail/office-detail.component').then((m) => m.OfficeDetailComponent),
       },
+      {
+        path: 'insurance-rate-list',
+        loadComponent: () =>
+          import('./insurance-rate-list/insurance-rate-list/insurance-rate-list.component').then(
+            (m) => m.InsuranceRateListComponent
+          ),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
