@@ -1,1 +1,18 @@
-<p>prefecture-detail works!</p>
+<div class="pref-detail-header">
+  <div class="pref-detail-header-left">
+    <button type="button" class="back-pref-list-btn" (click)="goBackToPrefList()">
+      年度一覧に戻る
+    </button>
+    <button type="button" class="import-csv-btn">CSV取り込み</button>
+  </div>
+  <div class="pref-detail-prefname-center">
+    <span *ngIf="year" class="pref-detail-year">{{ year }}年度</span>
+    <span *ngIf="year && prefectureName">　</span>
+    <span *ngIf="prefectureName">{{ prefectureName }}</span>
+  </div>
+</div>
+<h2 class="pref-detail-main-title">
+  令和7年3月分（4月納付分）からの健康保険・厚生年金保険の保険料額表
+</h2>
+<hr class="pref-detail-title-hr" />
+<!-- ここに今後詳細内容を追加 -->

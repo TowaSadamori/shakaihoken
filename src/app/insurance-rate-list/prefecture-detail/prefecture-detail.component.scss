@@ -1,0 +1,90 @@
+.pref-detail-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  margin: 32px 0 0 0;
+  position: relative;
+  width: 100%;
+}
+.pref-detail-header-left {
+  display: flex;
+  gap: 16px;
+  margin-left: 32px;
+}
+.pref-detail-prefname-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1976d2;
+  display: flex;
+  align-items: center;
+  height: 48px;
+}
+.pref-detail-year {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1976d2;
+}
+.back-pref-list-btn,
+.import-csv-btn {
+  padding: 6px 20px;
+  font-size: 1.1rem;
+  background: #fff;
+  border: 1.5px solid #1976d2;
+  color: #1976d2;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.back-pref-list-btn:hover,
+.import-csv-btn:hover {
+  background: #1976d2;
+  color: #fff;
+}
+.pref-detail-prefname {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1976d2;
+  margin-left: 32px;
+  margin-right: 32px;
+  flex: 0 1 auto;
+  text-align: center;
+  min-width: 350px;
+  max-width: 500px;
+  display: flex;
+  justify-content: center;
+}
+.pref-detail-main-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 32px 0 8px 0;
+}
+.pref-detail-title-hr {
+  border: none;
+  border-top: 4px solid #b71c1c;
+  width: 96%;
+  margin: 0 auto 24px auto;
+}
+.pref-detail-subtitle {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 32px;
+  color: #1976d2;
+}
+.pref-detail-title {
+  margin: 32px 0 24px 32px;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+.pref-detail-message {
+  margin-left: 32px;
+  margin-top: 16px;
+  font-size: 1.1rem;
+}
