@@ -1,0 +1,40 @@
+.back-btn {
+  display: inline-block;
+  margin: 32px 0 24px 48px;
+  font-size: 1rem;
+  padding: 10px 32px;
+  min-width: 140px;
+  min-height: 44px;
+  border-radius: 4px;
+  font-weight: bold;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+  letter-spacing: 0.04em;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border 0.2s;
+  cursor: pointer;
+  text-align: center;
+}
+.back-btn:hover {
+  background: #1565c0;
+  color: #fff;
+  border-color: #1565c0;
+}
+
+.detail-title {
+  margin: 64px 0 24px 0;
+  font-size: 1.6rem;
+  color: #222;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-align: center;
+  border-bottom: 4px solid #b71c1c;
+  padding-bottom: 8px;
+  width: 80%;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
