@@ -1,3 +1,28 @@
-<button class="back-btn" [routerLink]="['/employee-procedures']">戻る</button>
-
-<p>insured-person-form works!</p>
+<div class="insured-person-form-container">
+  <button class="back-btn" [routerLink]="['/employee-procedures']">戻る</button>
+  <h2 class="form-title">被保険者本人の個人情報・被扶養者に関する情報の一覧</h2>
+  <table class="insured-table">
+    <thead>
+      <tr>
+        <th>従業員番号</th>
+        <th>事業所番号</th>
+        <th>氏名</th>
+        <th>被保険者本人の個人情報</th>
+        <th>被扶養者に関する情報</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let user of users">
+        <td>{{ user.employeeNumber || '' }}</td>
+        <td>{{ user.branchNumber || '' }}</td>
+        <td>{{ user.lastName + user.firstName }}</td>
+        <td>
+          <a href="#">{{ user.lastName + user.firstName }}さんの個人情報</a>
+        </td>
+        <td>
+          <a href="#">{{ user.lastName + user.firstName }}さんの被扶養者に関する情報</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

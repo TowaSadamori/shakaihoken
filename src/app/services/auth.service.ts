@@ -169,4 +169,13 @@ export class AuthService {
     const companyData = companyDoc.data();
     return companyData['companyName'] || null;
   }
+
+  async getCurrentUserCompanyId(): Promise<string | null> {
+    const user = this.auth.currentUser;
+    if (!user) return null;
+    const userDoc = await getDoc(doc(this.firestore, 'users', user.uid));
+    if (!userDoc.exists()) return null;
+    const userData = userDoc.data();
+    return userData['companyId'] || null;
+  }
 }
