@@ -63,6 +63,13 @@ export const routes: Routes = [
             (m) => m.PrefectureDetailComponent
           ),
       },
+      {
+        path: 'employee-salary-bonus/detail/:employeeId',
+        loadComponent: () =>
+          import(
+            './employee-salary-bonus/employee-salary-bonus-detail/employee-salary-bonus-detail.component'
+          ).then((m) => m.EmployeeSalaryBonusDetailComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },

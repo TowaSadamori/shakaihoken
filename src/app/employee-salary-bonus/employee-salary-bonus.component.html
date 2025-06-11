@@ -25,7 +25,13 @@
         <td>{{ emp.grade }}</td>
         <td>{{ emp.standardMonthlySalary }}</td>
         <td>{{ emp.monthlySalary }}</td>
-        <td><a class="detail-link" href="#">詳細を見る</a></td>
+        <td>
+          <a
+            class="detail-link"
+            [routerLink]="['/employee-salary-bonus/detail', emp.employeeNumber]"
+            >詳細を見る</a
+          >
+        </td>
       </tr>
     </tbody>
   </table>

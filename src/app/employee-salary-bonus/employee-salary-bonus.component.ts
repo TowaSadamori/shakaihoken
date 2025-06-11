@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { getFirestore, collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
@@ -17,7 +17,7 @@ interface Employee {
 @Component({
   selector: 'app-employee-salary-bonus',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './employee-salary-bonus.component.html',
   styleUrl: './employee-salary-bonus.component.scss',
 })
