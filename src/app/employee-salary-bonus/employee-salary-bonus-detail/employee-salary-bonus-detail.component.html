@@ -24,7 +24,7 @@
     賞与列を削除
   </button>
 </div>
-<div class="csv-table-container">
+<div class="csv-table-container" *ngIf="salaryTableReady">
   <table class="csv-table">
     <thead>
       <tr>
@@ -72,7 +72,9 @@
               </ng-template>
             </ng-container>
             <ng-template #normalCell>
-              <ng-container *ngIf="isNumeric(salaryTable[row][col]); else rawCell">
+              <ng-container
+                *ngIf="salaryTable[row] && isNumeric(salaryTable[row][col]); else rawCell"
+              >
                 {{ formatMoney(salaryTable[row][col]) }}
               </ng-container>
               <ng-template #rawCell>

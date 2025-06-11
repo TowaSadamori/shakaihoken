@@ -94,6 +94,42 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
   years: string[] = [];
   isEditMode = false;
   editSalaryTable: SalaryTable | null = null;
+  integerRows = [
+    '基本給',
+    '諸手当',
+    '役職手当',
+    '職務手当',
+    '資格手当',
+    '技能手当',
+    '家族手当',
+    '扶養手当',
+    '住宅手当',
+    '地域手当',
+    '通勤手当（通勤費）',
+    '時間外勤務手当（残業手当）',
+    '深夜勤務手当',
+    '休日勤務手当',
+    '宿直・日直手当（一定の基準を超える場合）',
+    '調整手当',
+    '奨励手当',
+    '皆勤手当',
+    '精勤手当',
+    'その他（金銭支給）',
+    '食事代',
+    '食券',
+    '社宅',
+    '寮費',
+    '通勤定期券',
+    '回数券',
+    '被服',
+    'その他（現物支給）',
+    '欠勤控除額',
+    '合計',
+    '出勤日数',
+    '欠勤日数',
+  ];
+  editErrorMessage = '';
+  salaryTableReady = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -147,6 +183,7 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
   }
 
   async loadSalaryTable() {
+    this.salaryTableReady = false;
     if (!this.companyId || !this.employeeId || !this.selectedYear) return;
     const db = getFirestore();
     const yearRef = doc(
@@ -161,7 +198,11 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
     const docSnap = await getDoc(yearRef);
     if (docSnap.exists()) {
       this.salaryTable = docSnap.data()['salaryTable'] || {};
-      // 賞与列の自動表示
+      for (const row of this.rows) {
+        if (!this.salaryTable[row]) {
+          this.salaryTable[row] = {};
+        }
+      }
       let maxBonus = 0;
       for (let i = 0; i < this.bonusColumns.length; i++) {
         const col = this.bonusColumns[i];
@@ -171,7 +212,6 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
       }
       this.visibleBonusCount = maxBonus;
     } else {
-      // データがなければ全行・全列の枠だけnullで初期化
       this.salaryTable = {};
       const allColumns = [...this.baseColumns, ...this.bonusColumns];
       for (const row of this.rows) {
@@ -181,6 +221,7 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
         }
       }
     }
+    this.salaryTableReady = true;
   }
 
   // 年度切り替え時に再取得
@@ -301,6 +342,12 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
         }
       }
     }
+    // rows全てにsalaryTable[row]が必ず存在するよう補完
+    for (const row of this.rows) {
+      if (!this.salaryTable[row]) {
+        this.salaryTable[row] = {};
+      }
+    }
     this.recalcTotals();
     this.saveSalaryTable();
   }
@@ -318,9 +365,31 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
 
   async saveEdit() {
     if (!this.editSalaryTable) return;
+    // バリデーション: 整数のみ許容の行で小数点や空欄があればエラー
+    for (const row of this.integerRows) {
+      if (!this.editSalaryTable[row]) continue;
+      for (const col of this.columns) {
+        const val = this.editSalaryTable[row][col];
+        if (val === null || val === undefined || val === '') {
+          this.editErrorMessage = `「${row}」の「${col}」は空欄にできません。0以上の整数を入力してください。`;
+          return;
+        }
+        if (!/^[0-9]+$/.test(String(val))) {
+          this.editErrorMessage = `「${row}」の「${col}」は整数のみ入力可能です。小数点や記号は使えません。`;
+          return;
+        }
+      }
+    }
     this.salaryTable = JSON.parse(JSON.stringify(this.editSalaryTable));
+    // rows全てにsalaryTable[row]が必ず存在するよう補完
+    for (const row of this.rows) {
+      if (!this.salaryTable[row]) {
+        this.salaryTable[row] = {};
+      }
+    }
     this.isEditMode = false;
     this.editSalaryTable = null;
+    this.editErrorMessage = '';
     this.recalcTotals();
     await this.saveSalaryTable();
   }
