@@ -72,9 +72,21 @@
 }
 
 .csv-table-container {
-  margin: 32px auto;
-  max-width: 1800px;
   overflow-x: auto;
+  width: 100%;
+}
+
+.csv-table {
+  width: 100%;
+  table-layout: fixed;
+  font-size: 12px;
+}
+
+.csv-table th,
+.csv-table td {
+  padding: 2px 4px;
+  min-width: 40px;
+  word-break: break-all;
 }
 
 .csv-table {
@@ -86,7 +98,6 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   font-family: 'Segoe UI', 'Meiryo', 'sans-serif';
-  font-size: 1rem;
 }
 .csv-table th,
 .csv-table td {
