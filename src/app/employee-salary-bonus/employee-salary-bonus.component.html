@@ -1,1 +1,30 @@
 <button class="home-button" (click)="goHome()">HOMEに戻る</button>
+
+<div class="employee-table-container">
+  <table class="employee-table">
+    <thead>
+      <tr>
+        <th>従業員番号</th>
+        <th>名前</th>
+        <th>事業所番号</th>
+        <th>事業所所在地</th>
+        <th>等級</th>
+        <th>標準月額報酬</th>
+        <th>報酬月額</th>
+        <th>詳細</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let emp of employees">
+        <td>{{ emp.employeeNumber }}</td>
+        <td>{{ emp.name }}</td>
+        <td>{{ emp.officeNumber }}</td>
+        <td>{{ emp.officeAddress }}</td>
+        <td>{{ emp.grade }}</td>
+        <td>{{ emp.standardMonthlySalary }}</td>
+        <td>{{ emp.monthlySalary }}</td>
+        <td><a class="detail-link" href="#">詳細を見る</a></td>
+      </tr>
+    </tbody>
+  </table>
+</div>

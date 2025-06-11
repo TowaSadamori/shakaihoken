@@ -14,3 +14,49 @@
 .home-button:hover {
   background: #1565c0;
 }
+
+.employee-table-container {
+  margin: 32px 0 0 24px;
+  overflow-x: auto;
+}
+
+.employee-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 900px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Meiryo', 'sans-serif';
+}
+.employee-table th,
+.employee-table td {
+  padding: 12px 16px;
+  border: 1px solid #bdbdbd;
+  text-align: left;
+  background: #fff;
+}
+.employee-table th {
+  background: #e3f0fb;
+  color: #1976d2;
+  font-weight: bold;
+}
+.employee-table tbody tr:nth-child(even) td {
+  background: #f7fafd;
+}
+.employee-table tbody tr:hover td {
+  background: #e3f0fb;
+}
+.employee-table tr:last-child td {
+  border-bottom: 1px solid #bdbdbd;
+}
+.detail-link {
+  color: #1976d2;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: bold;
+}
+.detail-link:hover {
+  color: #1565c0;
+}
