@@ -1,5 +1,8 @@
-<button type="button" (click)="goHome()" class="back-home-btn">ホームに戻る</button>
-<button type="button" (click)="toggleYearSelect()" class="add-year-btn">年度追加</button>
+<h2 class="insurance-rate-title">保険料マスタ年度一覧</h2>
+<div class="insurance-rate-action-bar">
+  <button type="button" (click)="goHome()" class="back-home-btn">ホームに戻る</button>
+  <button type="button" (click)="toggleYearSelect()" class="add-year-btn">年度追加</button>
+</div>
 <div *ngIf="showYearSelect" class="year-select-panel">
   <label for="era-select">元号を選択：</label>
   <select id="era-select" [(ngModel)]="selectedEra">
@@ -18,7 +21,7 @@
   <button type="button" (click)="addYear()">追加</button>
   <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
 </div>
-<ul>
+<ul class="insurance-rate-year-list">
   <li *ngFor="let year of years">
     <a [routerLink]="['/insurance-rate-list', year]"
       >{{ toWareki(year) }}（{{ year }}年）年度保険料額表</a

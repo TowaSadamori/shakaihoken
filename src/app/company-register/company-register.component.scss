@@ -1,3 +1,18 @@
+.company-table-title {
+  margin: 32px 0 24px 0;
+  font-size: 1.6rem;
+  color: #222;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-align: center;
+  border-bottom: 4px solid #b71c1c;
+  padding-bottom: 8px;
+  width: 80%;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .company-table {
   width: auto;
   min-width: 400px;
@@ -6,13 +21,14 @@
   border-collapse: collapse;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  font-size: 1rem;
 }
 .company-table th,
 .company-table td {
   border: 1px solid #bdbdbd;
   padding: 0.5rem 0.8rem;
-  text-align: left;
-  min-width: 120px;
+  text-align: center;
+  min-width: 80px;
 }
 .company-table th {
   background: #e3f2fd;
@@ -20,6 +36,10 @@
   position: sticky;
   top: 0;
   z-index: 1;
+  font-size: 1.05rem;
+}
+.company-table td {
+  font-size: 0.98rem;
 }
 .company-table tr:hover {
   background: #f1f8e9;
@@ -37,27 +57,48 @@ h2 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 2rem;
-  margin-top: 2.5rem;
-  margin-bottom: 2.5rem;
+  gap: 32px;
+  margin-top: 32px;
+  margin-bottom: 32px;
 }
 
 .large-btn {
-  font-size: 1.2rem;
-  padding: 0.8rem 2.2rem;
-  min-width: 120px;
-  min-height: 48px;
-  border-radius: 8px;
-  font-weight: 600;
+  font-size: 1rem;
+  padding: 10px 32px;
+  min-width: 140px;
+  min-height: 44px;
+  border-radius: 4px;
+  font-weight: bold;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   letter-spacing: 0.04em;
+  border: none;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border 0.2s;
+  cursor: pointer;
 }
-.large-btn.mat-raised-button[color='primary'] {
+.large-btn.mat-raised-button[color='primary'],
+.large-btn.primary {
   background: #1976d2;
   color: #fff;
 }
-.large-btn.mat-stroked-button {
+.large-btn.mat-stroked-button,
+.large-btn.outline {
   border: 2px solid #1976d2;
   color: #1976d2;
   background: #fff;
+}
+.large-btn:hover {
+  background: #1565c0;
+  color: #fff;
+  border-color: #1565c0;
+}
+.office-link {
+  color: #1976d2;
+  text-decoration: underline;
+  font-weight: bold;
+}
+.office-link:hover {
+  color: #1565c0;
 }

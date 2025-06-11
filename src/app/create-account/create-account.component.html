@@ -1,5 +1,5 @@
 <div class="create-account-container">
-  <h2>アカウント作成ページ</h2>
+  <h2 class="account-table-title">アカウント作成ページ</h2>
   <button
     *ngIf="currentUserRole === 'admin'"
     (click)="openRegisterDialog()"
@@ -43,7 +43,7 @@
             <td>{{ user.firstName || '--' }}</td>
             <td>{{ user.role === 'admin' ? '管理者' : '従業員' }}</td>
             <td>{{ user.birthDate ? (user.birthDate | date: 'yyyy/MM/dd') : '--' }}</td>
-            <td>{{ user.email }}</td>
+            <td class="email-cell">{{ user.email }}</td>
             <td>{{ user.password || '--' }}</td>
           </tr>
         </ng-container>
@@ -55,7 +55,7 @@
           <td>{{ lastCreatedAccount?.firstName }}</td>
           <td>--</td>
           <td>{{ lastCreatedAccount?.birthDate | date: 'yyyy/MM/dd' }}</td>
-          <td>{{ lastCreatedAccount?.email }}</td>
+          <td class="email-cell">{{ lastCreatedAccount?.email }}</td>
           <td>{{ lastCreatedAccount?.password }}</td>
         </tr>
       </tbody>

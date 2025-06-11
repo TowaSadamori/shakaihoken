@@ -23,34 +23,74 @@
 .employee-table {
   border-collapse: collapse;
   width: 100%;
-  min-width: 900px;
+  min-width: 1100px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   font-family: 'Segoe UI', 'Meiryo', 'sans-serif';
+  font-size: 1rem;
 }
+
 .employee-table th,
 .employee-table td {
-  padding: 12px 16px;
+  padding: 10px 8px;
   border: 1px solid #bdbdbd;
-  text-align: left;
+  text-align: center;
   background: #fff;
+  height: 44px;
+  font-size: 0.98rem;
 }
+
 .employee-table th {
   background: #e3f0fb;
   color: #1976d2;
   font-weight: bold;
+  font-size: 1.05rem;
 }
+
+.employee-table td {
+  font-size: 0.98rem;
+}
+
+.employee-table th:nth-child(1),
+.employee-table td:nth-child(1) {
+  min-width: 60px;
+  max-width: 80px;
+}
+.employee-table th:nth-child(3),
+.employee-table td:nth-child(3) {
+  min-width: 80px;
+  max-width: 100px;
+}
+.employee-table th:nth-child(4),
+.employee-table td:nth-child(4) {
+  min-width: 90px;
+  max-width: 120px;
+}
+.employee-table th:nth-child(5),
+.employee-table td:nth-child(5) {
+  min-width: 60px;
+  max-width: 80px;
+}
+.employee-table th:nth-child(8),
+.employee-table td:nth-child(8) {
+  min-width: 80px;
+  max-width: 100px;
+}
+
 .employee-table tbody tr:nth-child(even) td {
   background: #f7fafd;
 }
+
 .employee-table tbody tr:hover td {
   background: #e3f0fb;
 }
+
 .employee-table tr:last-child td {
   border-bottom: 1px solid #bdbdbd;
 }
+
 .detail-link {
   color: #1976d2;
   text-decoration: underline;
@@ -59,4 +99,19 @@
 }
 .detail-link:hover {
   color: #1565c0;
+}
+
+.employee-table-title {
+  margin: 32px 0 24px 0;
+  font-size: 1.6rem;
+  color: #222;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-align: center;
+  border-bottom: 4px solid #b71c1c;
+  padding-bottom: 8px;
+  width: 80%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
