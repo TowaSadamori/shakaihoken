@@ -1,0 +1,25 @@
+.csv-import-btn {
+  font-size: 1rem;
+  padding: 10px 32px;
+  min-width: 140px;
+  min-height: 44px;
+  border-radius: 4px;
+  font-weight: bold;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+  letter-spacing: 0.04em;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border 0.2s;
+  cursor: pointer;
+  text-align: center;
+  margin-left: 0;
+  margin-right: 16px;
+}
+.csv-import-btn:hover {
+  background: #1565c0;
+  color: #fff;
+  border-color: #1565c0;
+}

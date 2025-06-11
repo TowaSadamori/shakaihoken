@@ -1,3 +1,52 @@
 <button class="back-btn" (click)="goBack()">戻る</button>
-<h2 class="detail-title">給与賞与情報詳細</h2>
+<div class="detail-title-row">
+  <h2 class="detail-title">給与賞与情報詳細 {{ employeeName }}</h2>
+  <app-employee-salary-bonus-csv-import
+    (csvImported)="parseAndApplyCsv($event)"
+  ></app-employee-salary-bonus-csv-import>
+  <select class="year-select" [(ngModel)]="selectedYear">
+    <option *ngFor="let y of years" [value]="y">{{ y }}年</option>
+  </select>
+  <button class="csv-import-btn" (click)="addBonusColumn()">賞与列を追加</button>
+  <button class="csv-import-btn" (click)="removeBonusColumn()">賞与列を削除</button>
+</div>
+<div class="csv-table-container">
+  <table class="csv-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th *ngFor="let col of columns">{{ col }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let row of rows; let i = index"
+        [ngClass]="{
+          'money-row': i >= 0 && i <= 19,
+          'goods-row': i >= 20 && i <= 27,
+          'workdays-row': i === 29,
+          'absentdays-row': i === 30,
+          'paydate-row': i === 31,
+        }"
+      >
+        <th>{{ row }}</th>
+        <td *ngFor="let col of columns">
+          <ng-container *ngIf="row === '合計'; else normalCell">
+            {{ getTotal(col) | number: '1.0-0' }}
+          </ng-container>
+          <ng-template #normalCell>
+            {{ salaryTable[row]?.[col] ?? '' }}
+          </ng-template>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 <!-- ここに詳細内容を追加予定 -->
+<input
+  #csvInput
+  type="file"
+  accept=".csv,text/csv"
+  style="display: none"
+  (change)="onCsvImport($event)"
+/>

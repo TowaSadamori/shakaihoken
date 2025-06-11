@@ -24,8 +24,17 @@
   border-color: #1565c0;
 }
 
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 24px;
+  margin-top: 64px;
+}
+
 .detail-title {
-  margin: 64px 0 24px 0;
+  margin: 0;
   font-size: 1.6rem;
   color: #222;
   font-weight: bold;
@@ -33,8 +42,133 @@
   text-align: center;
   border-bottom: 4px solid #b71c1c;
   padding-bottom: 8px;
-  width: 80%;
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
+  width: auto;
+  min-width: 400px;
+}
+
+.csv-import-btn {
+  font-size: 1rem;
+  padding: 10px 32px;
+  min-width: 140px;
+  min-height: 44px;
+  border-radius: 4px;
+  font-weight: bold;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+  letter-spacing: 0.04em;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border 0.2s;
+  cursor: pointer;
+  text-align: center;
+  margin-left: 16px;
+}
+.csv-import-btn:hover {
+  background: #1565c0;
+  color: #fff;
+  border-color: #1565c0;
+}
+
+.csv-table-container {
+  margin: 32px auto;
+  max-width: 1800px;
+  overflow-x: auto;
+}
+
+.csv-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1600px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Meiryo', 'sans-serif';
+  font-size: 1rem;
+}
+.csv-table th,
+.csv-table td {
+  padding: 8px 16px;
+  border: 1px solid #bdbdbd;
+  text-align: center;
+  background: #fff;
+  height: 36px;
+  font-size: 0.98rem;
+  min-width: 90px;
+}
+.csv-table th {
+  background: #e3f0fb;
+  color: #1976d2;
+  font-weight: bold;
+}
+.csv-table tr:nth-child(even) td {
+  background: #f7fafd;
+}
+.csv-table tr:hover td {
+  background: #e3f0fb;
+}
+.csv-table tr:last-child td {
+  border-bottom: 1px solid #bdbdbd;
+}
+.csv-table tr.money-row th,
+.csv-table tr.money-row td {
+  background: #fffbe7 !important;
+  color: #b8860b;
+  font-weight: bold;
+  border-bottom: 2px solid #ffe082;
+}
+.csv-table tr.goods-row th,
+.csv-table tr.goods-row td {
+  background: #e8f5e9 !important;
+  color: #388e3c;
+  font-weight: bold;
+  border-bottom: 2px solid #a5d6a7;
+}
+.csv-table tr.workdays-row th,
+.csv-table tr.workdays-row td {
+  background: #e3f2fd !important;
+  color: #1976d2;
+  font-weight: bold;
+  border-bottom: 2px solid #90caf9;
+}
+.csv-table tr.absentdays-row th,
+.csv-table tr.absentdays-row td {
+  background: #ffebee !important;
+  color: #c62828;
+  font-weight: bold;
+  border-bottom: 2px solid #ef9a9a;
+}
+.csv-table tr.paydate-row th,
+.csv-table tr.paydate-row td {
+  background: #ede7f6 !important;
+  color: #6a1b9a;
+  font-weight: bold;
+  border-bottom: 2px solid #b39ddb;
+}
+
+.year-select {
+  font-size: 1rem;
+  padding: 10px 32px;
+  min-width: 140px;
+  min-height: 44px;
+  border-radius: 4px;
+  font-weight: bold;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+  letter-spacing: 0.04em;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border 0.2s;
+  cursor: pointer;
+  text-align: center;
+  margin-left: 16px;
+  margin-right: 16px;
+}
+.year-select:focus {
+  outline: none;
+  border-color: #1565c0;
 }
