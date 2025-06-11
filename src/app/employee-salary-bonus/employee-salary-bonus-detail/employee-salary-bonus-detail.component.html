@@ -11,12 +11,18 @@
   </select>
 </div>
 <div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 12px">
-  <button class="csv-import-btn">編集</button>
+  <button class="csv-import-btn" *ngIf="!isEditMode" (click)="startEdit()">編集</button>
+  <button class="csv-import-btn" *ngIf="isEditMode" (click)="saveEdit()">保存</button>
+  <button class="csv-import-btn" *ngIf="isEditMode" (click)="cancelEdit()">キャンセル</button>
   <app-employee-salary-bonus-csv-import
     (csvImported)="parseAndApplyCsv($event)"
   ></app-employee-salary-bonus-csv-import>
-  <button class="csv-import-btn" (click)="addBonusColumn()">賞与列を追加</button>
-  <button class="csv-import-btn" (click)="removeBonusColumn()">賞与列を削除</button>
+  <button class="csv-import-btn" (click)="addBonusColumn()" [disabled]="isEditMode">
+    賞与列を追加
+  </button>
+  <button class="csv-import-btn" (click)="removeBonusColumn()" [disabled]="isEditMode">
+    賞与列を削除
+  </button>
 </div>
 <div class="csv-table-container">
   <table class="csv-table">
@@ -39,11 +45,35 @@
       >
         <th>{{ row }}</th>
         <td *ngFor="let col of columns">
-          <ng-container *ngIf="row === '合計'; else normalCell">
-            {{ getTotal(col) | number: '1.0-0' }}
+          <ng-container *ngIf="row === '合計'; else editableCell">
+            {{ formatMoney(salaryTable['合計'][col]) }}
           </ng-container>
-          <ng-template #normalCell>
-            {{ salaryTable[row]?.[col] ?? '' }}
+          <ng-template #editableCell>
+            <ng-container *ngIf="isEditMode; else normalCell">
+              <ng-container *ngIf="row === '支給年月日'; else numberOrTextCell">
+                <input
+                  type="date"
+                  [ngModel]="toDateInputValue(getEditCellValue(row, col))"
+                  (ngModelChange)="onDateEditChange(row, col, $event)"
+                  style="width: 100%"
+                  [disabled]="!isEditMode"
+                />
+              </ng-container>
+              <ng-template #numberOrTextCell>
+                <input
+                  type="text"
+                  [ngModel]="getEditCellValue(row, col)"
+                  (ngModelChange)="onEditCellChange(row, col, $event)"
+                  style="width: 100%"
+                  [disabled]="!isEditMode"
+                  pattern="[0-9]*"
+                  inputmode="numeric"
+                />
+              </ng-template>
+            </ng-container>
+            <ng-template #normalCell>
+              {{ salaryTable[row][col] ?? '' }}
+            </ng-template>
           </ng-template>
         </td>
       </tr>

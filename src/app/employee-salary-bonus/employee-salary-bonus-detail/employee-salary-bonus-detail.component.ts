@@ -14,6 +14,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { EmployeeSalaryBonusCsvImportComponent } from '../employee-salary-bonus-csv-import/employee-salary-bonus-csv-import.component';
+import Decimal from 'decimal.js';
 
 export type SalaryTable = Record<string, Record<string, number | string | null>>;
 
@@ -91,6 +92,8 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
   salaryTable: SalaryTable = {};
   selectedYear = String(new Date().getFullYear());
   years: string[] = [];
+  isEditMode = false;
+  editSalaryTable: SalaryTable | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -257,12 +260,107 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
         } else if (val === '') {
           this.salaryTable[rowName][colName] = null;
         } else if (!isNaN(Number(val))) {
-          this.salaryTable[rowName][colName] = Number(val);
+          this.salaryTable[rowName][colName] = val;
         } else {
           this.salaryTable[rowName][colName] = val;
         }
       }
     }
+    this.recalcTotals();
     this.saveSalaryTable();
+  }
+
+  startEdit() {
+    this.isEditMode = true;
+    // deep copy
+    this.editSalaryTable = JSON.parse(JSON.stringify(this.salaryTable));
+  }
+
+  cancelEdit() {
+    this.isEditMode = false;
+    this.editSalaryTable = null;
+  }
+
+  async saveEdit() {
+    if (!this.editSalaryTable) return;
+    this.salaryTable = JSON.parse(JSON.stringify(this.editSalaryTable));
+    this.isEditMode = false;
+    this.editSalaryTable = null;
+    this.recalcTotals();
+    await this.saveSalaryTable();
+  }
+
+  editCellInput(event: Event, row: string, col: string) {
+    if (!this.editSalaryTable || !this.editSalaryTable[row]) return;
+    const input = event.target as HTMLInputElement;
+    let val = input.value;
+    // 半角数字のみ許可
+    val = val.replace(/[^0-9]/g, '');
+    this.editSalaryTable[row][col] = val;
+  }
+
+  // 日付フォーマット変換
+  toDateInputValue(val: string | null | undefined): string {
+    if (!val) return '';
+    // YYYY/MM/DD -> YYYY-MM-DD
+    return val.replace(/\//g, '-');
+  }
+  fromDateInputValue(val: string | null | undefined): string {
+    if (!val) return '';
+    // YYYY-MM-DD -> YYYY/MM/DD
+    return val.replace(/-/g, '/');
+  }
+  getEditCellValue(row: string, col: string): string {
+    return this.editSalaryTable &&
+      this.editSalaryTable[row] &&
+      this.editSalaryTable[row][col] != null
+      ? String(this.editSalaryTable[row][col])
+      : '';
+  }
+  onEditCellChange(row: string, col: string, value: string) {
+    if (this.editSalaryTable && this.editSalaryTable[row]) {
+      this.editSalaryTable[row][col] = value.replace(/[^0-9]/g, '');
+    }
+  }
+  onDateEditChange(row: string, col: string, value: string) {
+    if (this.editSalaryTable && this.editSalaryTable[row]) {
+      this.editSalaryTable[row][col] = this.fromDateInputValue(value);
+    }
+  }
+
+  // 金額を3桁ごとにカンマ、小数点以下にはカンマを付けない
+  formatMoney(val: string | number | null | undefined): string {
+    if (val === null || val === undefined || val === '') return '';
+    const dec = new Decimal(val.toString().replace(/,/g, ''));
+    const parts = dec.toFixed().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.length === 2 ? `${parts[0]}.${parts[1]}` : parts[0];
+  }
+
+  // 合計計算（Decimalで正確に）
+  recalcTotals() {
+    for (const col of [...this.baseColumns, ...this.bonusColumns]) {
+      let sum = new Decimal(0);
+      for (const row of this.rows) {
+        if (
+          row === '合計' ||
+          row === '出勤日数' ||
+          row === '欠勤日数' ||
+          row === '支給年月日' ||
+          row === '欠勤控除額'
+        )
+          continue;
+        const val = this.salaryTable[row][col];
+        if (val !== null && val !== undefined && val !== '') {
+          sum = sum.plus(new Decimal(val.toString().replace(/,/g, '')));
+        }
+      }
+      // 欠勤控除額を引く
+      const minus = this.salaryTable['欠勤控除額'][col];
+      if (minus !== null && minus !== undefined && minus !== '') {
+        sum = sum.minus(new Decimal(minus.toString().replace(/,/g, '')));
+      }
+      this.salaryTable['合計'][col] = sum.toString();
+    }
   }
 }
