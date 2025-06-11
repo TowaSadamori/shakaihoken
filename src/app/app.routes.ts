@@ -20,6 +20,13 @@ export const routes: Routes = [
     children: [
       { path: '', component: HomeComponent },
       { path: 'employee-procedures', component: EmployeeProceduresPlaceholderComponent },
+      {
+        path: 'employee-salary-bonus',
+        loadComponent: () =>
+          import('./employee-salary-bonus/employee-salary-bonus.component').then(
+            (m) => m.EmployeeSalaryBonusComponent
+          ),
+      },
       { path: 'employer-procedures', component: EmployerProceduresPlaceholderComponent },
       {
         path: 'company-register',

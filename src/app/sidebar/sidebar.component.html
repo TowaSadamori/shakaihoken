@@ -8,7 +8,12 @@
           [routerLinkActiveOptions]="{ exact: true }"
           (click)="onNavItemClick()"
         >
-          <mat-icon>{{ item.icon }}</mat-icon>
+          <ng-container *ngIf="item.icon; else emptyIcon">
+            <mat-icon>{{ item.icon }}</mat-icon>
+          </ng-container>
+          <ng-template #emptyIcon>
+            <span class="icon-placeholder"></span>
+          </ng-template>
           <span class="sidebar-label" *ngIf="isLabelVisible">{{ item.label }}</span>
         </a>
         <ng-container *ngIf="item.label === '設定' && !isMini">
