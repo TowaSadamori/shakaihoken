@@ -234,6 +234,40 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
   }
 
   parseAndApplyCsv(csv: string) {
+    const integerRows = [
+      '基本給',
+      '諸手当',
+      '役職手当',
+      '職務手当',
+      '資格手当',
+      '技能手当',
+      '家族手当',
+      '扶養手当',
+      '住宅手当',
+      '地域手当',
+      '通勤手当（通勤費）',
+      '時間外勤務手当（残業手当）',
+      '深夜勤務手当',
+      '休日勤務手当',
+      '宿直・日直手当（一定の基準を超える場合）',
+      '調整手当',
+      '奨励手当',
+      '皆勤手当',
+      '精勤手当',
+      'その他（金銭支給）',
+      '食事代',
+      '食券',
+      '社宅',
+      '寮費',
+      '通勤定期券',
+      '回数券',
+      '被服',
+      'その他（現物支給）',
+      '欠勤控除額',
+      '合計',
+      '出勤日数',
+      '欠勤日数',
+    ];
     const lines = csv.trim().split(/\r?\n/);
     if (lines.length < 2) return;
     const headers = lines[0].split(',').map((h) => h.trim());
@@ -259,8 +293,9 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
           this.salaryTable[rowName][colName] = val;
         } else if (val === '') {
           this.salaryTable[rowName][colName] = null;
-        } else if (!isNaN(Number(val))) {
-          this.salaryTable[rowName][colName] = val;
+        } else if (!isNaN(Number(val)) && integerRows.includes(rowName)) {
+          // 整数のみ許容の行は小数点以下を切り捨てて文字列で保存
+          this.salaryTable[rowName][colName] = String(Math.floor(Number(val)));
         } else {
           this.salaryTable[rowName][colName] = val;
         }
