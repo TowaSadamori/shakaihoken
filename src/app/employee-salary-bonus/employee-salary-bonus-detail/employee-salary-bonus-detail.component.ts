@@ -363,4 +363,8 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
       this.salaryTable['合計'][col] = sum.toString();
     }
   }
+
+  isNumeric(val: string | number | null | undefined): boolean {
+    return typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val));
+  }
 }
