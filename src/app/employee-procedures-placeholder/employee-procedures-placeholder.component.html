@@ -2,7 +2,9 @@
   <h2>従業員手続き画面（プレースホルダー）</h2>
   <p>ここに従業員手続きの機能が実装されます。</p>
   <div class="employee-buttons">
-    <button class="employee-btn">被保険者本人の個人情報</button>
+    <button class="employee-btn" [routerLink]="['/employee-procedures/insured-person-form']">
+      被保険者本人の個人情報
+    </button>
     <button class="employee-btn">被扶養者に関する情報</button>
     <button class="employee-btn" (click)="goToSalaryBonus()">給与賞与情報</button>
   </div>

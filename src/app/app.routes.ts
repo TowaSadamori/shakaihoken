@@ -21,6 +21,13 @@ export const routes: Routes = [
       { path: '', component: HomeComponent },
       { path: 'employee-procedures', component: EmployeeProceduresPlaceholderComponent },
       {
+        path: 'employee-procedures/insured-person-form',
+        loadComponent: () =>
+          import('./employee-procedures/insured-person-form/insured-person-form.component').then(
+            (m) => m.InsuredPersonFormComponent
+          ),
+      },
+      {
         path: 'employee-salary-bonus',
         loadComponent: () =>
           import('./employee-salary-bonus/employee-salary-bonus.component').then(
