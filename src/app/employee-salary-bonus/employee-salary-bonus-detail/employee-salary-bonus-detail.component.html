@@ -1,15 +1,17 @@
 <button class="back-btn" (click)="goBack()">戻る</button>
-<div class="detail-title-row">
-  <h2 class="detail-title">給与賞与情報詳細 {{ employeeName }}</h2>
-  <button class="csv-import-btn">編集</button>
-  <app-employee-salary-bonus-csv-import
-    (csvImported)="parseAndApplyCsv($event)"
-  ></app-employee-salary-bonus-csv-import>
-  <select class="year-select" [(ngModel)]="selectedYear">
-    <option *ngFor="let y of years" [value]="y">{{ y }}年</option>
-  </select>
-  <button class="csv-import-btn" (click)="addBonusColumn()">賞与列を追加</button>
-  <button class="csv-import-btn" (click)="removeBonusColumn()">賞与列を削除</button>
+<div class="detail-title-row" style="display: flex; flex-direction: column; align-items: center">
+  <h2 class="detail-title" style="margin-bottom: 12px">給与賞与情報詳細 {{ employeeName }}</h2>
+  <div style="display: flex; justify-content: center; gap: 16px">
+    <button class="csv-import-btn">編集</button>
+    <app-employee-salary-bonus-csv-import
+      (csvImported)="parseAndApplyCsv($event)"
+    ></app-employee-salary-bonus-csv-import>
+    <select class="year-select" [(ngModel)]="selectedYear">
+      <option *ngFor="let y of years" [value]="y">{{ y }}年</option>
+    </select>
+    <button class="csv-import-btn" (click)="addBonusColumn()">賞与列を追加</button>
+    <button class="csv-import-btn" (click)="removeBonusColumn()">賞与列を削除</button>
+  </div>
 </div>
 <div class="csv-table-container">
   <table class="csv-table">
