@@ -158,6 +158,15 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
     const docSnap = await getDoc(yearRef);
     if (docSnap.exists()) {
       this.salaryTable = docSnap.data()['salaryTable'] || {};
+      // 賞与列の自動表示
+      let maxBonus = 0;
+      for (let i = 0; i < this.bonusColumns.length; i++) {
+        const col = this.bonusColumns[i];
+        if (Object.values(this.salaryTable).some((row) => row && row[col] != null)) {
+          maxBonus = i + 1;
+        }
+      }
+      this.visibleBonusCount = maxBonus;
     } else {
       // データがなければ全行・全列の枠だけnullで初期化
       this.salaryTable = {};

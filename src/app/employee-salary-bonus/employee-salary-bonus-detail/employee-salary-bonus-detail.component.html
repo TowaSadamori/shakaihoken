@@ -1,6 +1,7 @@
 <button class="back-btn" (click)="goBack()">戻る</button>
 <div class="detail-title-row">
   <h2 class="detail-title">給与賞与情報詳細 {{ employeeName }}</h2>
+  <button class="csv-import-btn">編集</button>
   <app-employee-salary-bonus-csv-import
     (csvImported)="parseAndApplyCsv($event)"
   ></app-employee-salary-bonus-csv-import>
