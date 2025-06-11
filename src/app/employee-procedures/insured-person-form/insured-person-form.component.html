@@ -17,10 +17,14 @@
         <td>{{ user.branchNumber || '' }}</td>
         <td>{{ user.lastName + user.firstName }}</td>
         <td>
-          <a href="#">{{ user.lastName + user.firstName }}さんの個人情報</a>
+          <a [routerLink]="['/employee-procedures/insured-person-detail', user.uid]"
+            >{{ user.lastName + user.firstName }}さんの個人情報</a
+          >
         </td>
         <td>
-          <a href="#">{{ user.lastName + user.firstName }}さんの被扶養者に関する情報</a>
+          <a [routerLink]="['/employee-procedures/dependent-detail', user.uid]"
+            >{{ user.lastName + user.firstName }}さんの被扶養者に関する情報</a
+          >
         </td>
       </tr>
     </tbody>

@@ -77,6 +77,20 @@ export const routes: Routes = [
             './employee-salary-bonus/employee-salary-bonus-detail/employee-salary-bonus-detail.component'
           ).then((m) => m.EmployeeSalaryBonusDetailComponent),
       },
+      {
+        path: 'employee-procedures/insured-person-detail/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/insured-person-detail/insured-person-detail.component'
+          ).then((m) => m.InsuredPersonDetailComponent),
+      },
+      {
+        path: 'employee-procedures/dependent-detail/:uid',
+        loadComponent: () =>
+          import('./employee-procedures/dependent-detail/dependent-detail.component').then(
+            (m) => m.DependentDetailComponent
+          ),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
