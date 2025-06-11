@@ -1,0 +1,16 @@
+.home-button {
+  display: inline-block;
+  margin: 24px 0 16px 24px;
+  padding: 8px 24px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.home-button:hover {
+  background: #1565c0;
+}
