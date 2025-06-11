@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
+import { collection, getDocs, getFirestore, query, where, doc, getDoc } from 'firebase/firestore';
 
 export interface User {
   uid: string;
@@ -26,5 +26,11 @@ export class UserService {
     const q = query(usersCol, where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }) as User);
+  }
+
+  async getUserByUid(uid: string): Promise<User | null> {
+    const userDoc = await getDoc(doc(this.firestore, 'users', uid));
+    if (!userDoc.exists()) return null;
+    return { uid: userDoc.id, ...userDoc.data() } as User;
   }
 }
