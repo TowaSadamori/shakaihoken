@@ -3,3 +3,153 @@
 </button>
 
 <h2 class="detail-title">{{ userName }}さんの個人情報</h2>
+
+<div class="form-section">
+  <h3>被保険者本人の個人情報</h3>
+  <table class="excel-table">
+    <tbody>
+      <tr>
+        <th>姓</th>
+        <td><input id="lastName" type="text" /></td>
+      </tr>
+      <tr>
+        <th>名</th>
+        <td><input id="firstName" type="text" /></td>
+      </tr>
+      <tr>
+        <th>姓（フリガナ）</th>
+        <td><input id="lastNameKana" type="text" /></td>
+      </tr>
+      <tr>
+        <th>名（フリガナ）</th>
+        <td><input id="firstNameKana" type="text" /></td>
+      </tr>
+      <tr>
+        <th>生年月日</th>
+        <td><input id="birthDate" type="date" /></td>
+      </tr>
+      <tr>
+        <th>性別</th>
+        <td>
+          <select id="gender">
+            <option value="">選択してください</option>
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <th>個人番号（マイナンバー）</th>
+        <td><input id="myNumber" type="text" /></td>
+      </tr>
+      <tr>
+        <th>基礎年金番号</th>
+        <td><input id="pensionNumber" type="text" /></td>
+      </tr>
+      <tr>
+        <th>郵便番号</th>
+        <td><input id="zipCode" type="text" /></td>
+      </tr>
+      <tr>
+        <th>都道府県・市区町村</th>
+        <td><input id="prefectureCity" type="text" /></td>
+      </tr>
+      <tr>
+        <th>上記以下の住所</th>
+        <td><input id="addressDetail" type="text" /></td>
+      </tr>
+      <tr>
+        <th>連絡先電話番号</th>
+        <td><input id="phone" type="text" /></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="section-divider" />
+<div class="section-note">
+  <p>以下の項目はケースに応じて記入してください（該当する場合のみ）</p>
+</div>
+
+<div class="form-section">
+  <h1>被保険者本人の個人情報（ケース記入欄）</h1>
+
+  <h2>【氏名変更（訂正）届／住所変更届】</h2>
+  <table class="excel-table">
+    <tbody>
+      <tr>
+        <th>変更前の姓</th>
+        <td><input id="oldLastName" type="text" /></td>
+      </tr>
+      <tr>
+        <th>変更前の名</th>
+        <td><input id="oldFirstName" type="text" /></td>
+      </tr>
+      <tr>
+        <th>変更前の姓（フリガナ）</th>
+        <td><input id="oldLastNameKana" type="text" /></td>
+      </tr>
+      <tr>
+        <th>変更前の名（フリガナ）</th>
+        <td><input id="oldFirstNameKana" type="text" /></td>
+      </tr>
+      <tr>
+        <th>変更前の郵便番号</th>
+        <td><input id="oldZipCode" type="text" /></td>
+      </tr>
+      <tr>
+        <th>変更前の住所都道府県市区町村</th>
+        <td><input id="oldPrefectureCity" type="text" /></td>
+      </tr>
+      <tr>
+        <th>変更前の上記以下の住所</th>
+        <td><input id="oldAddressDetail" type="text" /></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="form-section">
+  <h2>【資格喪失届】【被保険者証回収不能届】【被保険者証再交付申請書】【氏名変更届】など</h2>
+  <h3>資格喪失後の連絡先住所（変更がある場合）など必要に応じて記入してください。</h3>
+  <table class="excel-table">
+    <tbody>
+      <tr>
+        <th>郵便番号</th>
+        <td><input id="lostZipCode" type="text" /></td>
+      </tr>
+      <tr>
+        <th>都道府県・市区町村</th>
+        <td><input id="lostPrefectureCity" type="text" /></td>
+      </tr>
+      <tr>
+        <th>上記以下の住所</th>
+        <td><input id="lostAddressDetail" type="text" /></td>
+      </tr>
+      <tr>
+        <th>被保険者証の記号番号</th>
+        <td><input id="insuranceNumber" type="text" /></td>
+      </tr>
+      <tr>
+        <th>回収不能理由</th>
+        <td><input id="uncollectedReason" type="text" /></td>
+      </tr>
+      <tr>
+        <th>再交付希望理由</th>
+        <td><input id="reissueReason" type="text" /></td>
+      </tr>
+      <tr>
+        <th>紛失・き損の状況</th>
+        <td><input id="damageStatus" type="text" /></td>
+      </tr>
+      <tr>
+        <th>紛失・き損の年月日</th>
+        <td><input id="damageDate" type="date" /></td>
+      </tr>
+      <tr>
+        <th>資格喪失理由</th>
+        <td><input id="lossReason" type="text" /></td>
+      </tr>
+    </tbody>
+  </table>
+</div>

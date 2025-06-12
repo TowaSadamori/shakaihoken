@@ -29,3 +29,38 @@
 .back-btn:hover {
   background: #1565c0;
 }
+
+.excel-table {
+  border-collapse: collapse;
+  width: 100%;
+  background: #fff;
+  margin: 24px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.excel-table th,
+.excel-table td {
+  border: 1px solid #bdbdbd;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 1rem;
+}
+.excel-table th {
+  background: #e3f0fb;
+  color: #1976d2;
+  font-weight: bold;
+  width: 320px;
+}
+.excel-table tr:nth-child(even) td {
+  background: #f7fafd;
+}
+.excel-table input[type='text'],
+.excel-table input[type='date'] {
+  width: 98%;
+  padding: 6px 8px;
+  font-size: 1rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
