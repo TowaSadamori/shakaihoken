@@ -26,6 +26,14 @@
   <table class="excel-table">
     <tbody>
       <tr>
+        <th>従業員番号</th>
+        <td>{{ formData.employeeNumber }}</td>
+      </tr>
+      <tr>
+        <th>カンパニーID</th>
+        <td>{{ formData.companyId }}</td>
+      </tr>
+      <tr>
         <th>姓</th>
         <td>
           <ng-container *ngIf="isEditMode; else lastNameText">

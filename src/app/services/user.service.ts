@@ -8,6 +8,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 
 export interface User {
@@ -29,6 +30,41 @@ export interface User {
   addressDetail?: string;
   phone?: string;
   // 他に必要なフィールドがあれば追加
+}
+
+// 被扶養者型
+export interface Dependent {
+  id?: string; // FirestoreのドキュメントID
+  companyId: string;
+  employeeNumber: string;
+  lastName: string;
+  firstName: string;
+  lastNameKana?: string;
+  firstNameKana?: string;
+  birthDate?: string;
+  gender?: string;
+  myNumber?: string;
+  relationship?: string;
+  relationshipOther?: string;
+  removalDate?: string;
+  removalReason?: string;
+  address?: string;
+  occupationIncome?: string;
+  livingType?: string;
+  remittance?: string;
+  nenkin3gou?: string;
+  certificationDate?: string;
+  certificationReason?: string;
+  zipCode?: string;
+  prefectureCity?: string;
+  addressDetail?: string;
+  occupation?: string;
+  income?: string;
+  incomeAmount?: string;
+  incomeType?: string;
+  incomeTypeOther?: string;
+  nenkin3gouStatus?: string;
+  nenkin3gouReason?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -57,5 +93,29 @@ export class UserService {
   async saveUser(user: User): Promise<void> {
     if (!user.uid) throw new Error('uid is required');
     await setDoc(doc(this.firestore, 'users', user.uid), user, { merge: true });
+  }
+
+  // 被扶養者一覧取得
+  async getDependents(uid: string): Promise<Dependent[]> {
+    const dependentsCol = collection(this.firestore, `users/${uid}/dependents`);
+    const snapshot = await getDocs(dependentsCol);
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Dependent);
+  }
+
+  // 被扶養者保存（新規・更新）
+  async saveDependent(uid: string, dependent: Dependent): Promise<void> {
+    const depId = dependent.id || undefined;
+    const depRef = depId
+      ? doc(this.firestore, `users/${uid}/dependents`, depId)
+      : doc(collection(this.firestore, `users/${uid}/dependents`));
+    const depData = { ...dependent };
+    delete depData.id;
+    await setDoc(depRef, depData, { merge: true });
+  }
+
+  // 被扶養者削除
+  async deleteDependent(uid: string, depId: string): Promise<void> {
+    const depRef = doc(this.firestore, `users/${uid}/dependents`, depId);
+    await deleteDoc(depRef);
   }
 }

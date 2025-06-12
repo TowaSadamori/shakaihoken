@@ -1,43 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { UserService } from '../../services/user.service';
+import { UserService, User, Dependent } from '../../services/user.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-
-interface Dependent {
-  lastName: string;
-  firstName: string;
-  lastNameKana: string;
-  firstNameKana: string;
-  birthDate: string;
-  gender: string;
-  myNumber: string;
-  relationship: string;
-  relationshipOther: string;
-  removalDate: string;
-  removalReason: string;
-  address: string;
-  occupationIncome: string;
-  livingType: string;
-  remittance: string;
-  nenkin3gou: string;
-  certificationDate: string;
-  certificationReason: string;
-  zipCode: string;
-  prefectureCity: string;
-  addressDetail: string;
-  occupation: string;
-  income: string;
-  incomeAmount: string;
-  incomeType: string;
-  incomeTypeOther: string;
-  nenkin3gouStatus: string;
-  nenkin3gouReason: string;
-  companyId: string;
-  employeeNumber: string;
-  isEditMode: boolean;
-  originalData: Dependent | null;
-}
 
 @Component({
   selector: 'app-dependent-detail',
@@ -48,7 +13,9 @@ interface Dependent {
 })
 export class DependentDetailComponent implements OnInit {
   userName = '';
-  dependents: Dependent[] = [];
+  dependents: (Dependent & { isEditMode: boolean; originalData: Dependent | null })[] = [];
+  currentUser: User | null = null;
+  uid = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -56,19 +23,25 @@ export class DependentDetailComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    const uid = this.route.snapshot.paramMap.get('uid');
-    if (uid) {
-      const user = await this.userService.getUserByUid(uid);
-      if (user) {
-        this.userName = user.lastName + user.firstName;
+    this.uid = this.route.snapshot.paramMap.get('uid') || '';
+    if (this.uid) {
+      this.currentUser = await this.userService.getUserByUid(this.uid);
+      if (this.currentUser) {
+        this.userName = this.currentUser.lastName + this.currentUser.firstName;
+        // 被扶養者一覧取得
+        const deps = await this.userService.getDependents(this.uid);
+        this.dependents = deps.map((dep) => ({
+          ...dep,
+          isEditMode: false,
+          originalData: { ...dep },
+        }));
       }
     }
-    // 1件だけ初期表示
-    this.addDependent();
   }
 
   addDependent() {
-    const empty: Dependent = {
+    if (!this.currentUser) return;
+    const empty: Dependent & { isEditMode: boolean; originalData: Dependent | null } = {
       lastName: '',
       firstName: '',
       lastNameKana: '',
@@ -97,9 +70,9 @@ export class DependentDetailComponent implements OnInit {
       incomeTypeOther: '',
       nenkin3gouStatus: '',
       nenkin3gouReason: '',
-      companyId: '',
-      employeeNumber: '',
-      isEditMode: false,
+      companyId: this.currentUser.companyId || '',
+      employeeNumber: this.currentUser.employeeNumber || '',
+      isEditMode: true,
       originalData: null,
     };
     empty.originalData = JSON.parse(JSON.stringify(empty));
@@ -111,15 +84,30 @@ export class DependentDetailComponent implements OnInit {
   }
 
   cancelEdit(i: number) {
-    this.dependents[i] = { ...(this.dependents[i].originalData as Dependent) };
-    this.dependents[i].isEditMode = false;
+    this.dependents[i] = {
+      ...(this.dependents[i].originalData as Dependent),
+      isEditMode: false,
+      originalData: this.dependents[i].originalData,
+    };
   }
 
   async save(i: number) {
-    // Firestore保存処理をここに実装予定
+    if (!this.currentUser) return;
+    // companyId/employeeNumberを本人情報で上書き
+    this.dependents[i].companyId = this.currentUser.companyId || '';
+    this.dependents[i].employeeNumber = this.currentUser.employeeNumber || '';
+    // Firestore保存
+    await this.userService.saveDependent(this.uid, this.dependents[i]);
     this.dependents[i].originalData = { ...this.dependents[i] };
     this.dependents[i].isEditMode = false;
     alert('保存しました');
+    // 保存後にIDを再取得（新規追加時）
+    const deps = await this.userService.getDependents(this.uid);
+    this.dependents = deps.map((dep) => ({
+      ...dep,
+      isEditMode: false,
+      originalData: { ...dep },
+    }));
   }
 
   async onCsvUpload(event: Event, i: number) {
@@ -163,8 +151,16 @@ export class DependentDetailComponent implements OnInit {
     return `${y}年${m}月${d}日`;
   }
 
-  deleteUser(i: number) {
+  async deleteUser(i: number) {
+    if (!this.currentUser) return;
+    const dep = this.dependents[i];
+    if (!dep || !dep.id) {
+      // まだFirestoreに保存されていない場合はローカルから削除
+      this.dependents.splice(i, 1);
+      return;
+    }
     if (confirm('本当に削除しますか？')) {
+      await this.userService.deleteDependent(this.uid, dep.id);
       this.dependents.splice(i, 1);
     }
   }
