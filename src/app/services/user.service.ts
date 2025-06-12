@@ -1,13 +1,33 @@
 import { Injectable } from '@angular/core';
-import { collection, getDocs, getFirestore, query, where, doc, getDoc } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+  query,
+  where,
+  doc,
+  getDoc,
+  setDoc,
+} from 'firebase/firestore';
 
 export interface User {
   uid: string;
-  employeeNumber?: string | number;
-  branchNumber?: string | number;
+  employeeNumber?: string;
+  branchNumber?: string;
   lastName: string;
   firstName: string;
   companyId?: string;
+  lastNameKana?: string;
+  firstNameKana?: string;
+  birthDate?: string;
+  gender?: string;
+  myNumber?: string;
+  pensionNumber?: string;
+  insuranceSymbolNumber?: string;
+  zipCode?: string;
+  prefectureCity?: string;
+  addressDetail?: string;
+  phone?: string;
   // 他に必要なフィールドがあれば追加
 }
 
@@ -32,5 +52,10 @@ export class UserService {
     const userDoc = await getDoc(doc(this.firestore, 'users', uid));
     if (!userDoc.exists()) return null;
     return { uid: userDoc.id, ...userDoc.data() } as User;
+  }
+
+  async saveUser(user: User): Promise<void> {
+    if (!user.uid) throw new Error('uid is required');
+    await setDoc(doc(this.firestore, 'users', user.uid), user, { merge: true });
   }
 }

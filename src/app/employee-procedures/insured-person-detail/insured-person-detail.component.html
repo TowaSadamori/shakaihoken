@@ -4,67 +4,179 @@
 
 <h2 class="detail-title">{{ userName }}さんの個人情報</h2>
 
-<div class="form-section">
-  <h3>被保険者本人の個人情報</h3>
+<!-- 操作ボタン -->
+<div class="button-group" style="margin-bottom: 16px">
+  <button *ngIf="!isEditMode" (click)="enableEdit()">編集</button>
+  <button *ngIf="isEditMode" (click)="save()">保存</button>
+  <button *ngIf="isEditMode" (click)="cancelEdit()">キャンセル</button>
+  <label style="margin-left: 16px">
+    <input
+      type="file"
+      accept=".csv"
+      (change)="onCsvUpload($event)"
+      style="display: none"
+      #csvInput
+    />
+    <button type="button" (click)="csvInput.click()">CSV取り込み</button>
+  </label>
+  <button style="margin-left: 16px" (click)="deleteUser()">削除</button>
+</div>
+
+<div class="form-section" *ngIf="formData">
   <table class="excel-table">
     <tbody>
       <tr>
         <th>姓</th>
-        <td><input id="lastName" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else lastNameText">
+            <input id="lastName" type="text" [(ngModel)]="formData.lastName" name="lastName" />
+          </ng-container>
+          <ng-template #lastNameText>{{ formData.lastName }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>名</th>
-        <td><input id="firstName" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else firstNameText">
+            <input id="firstName" type="text" [(ngModel)]="formData.firstName" name="firstName" />
+          </ng-container>
+          <ng-template #firstNameText>{{ formData.firstName }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>姓（フリガナ）</th>
-        <td><input id="lastNameKana" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else lastNameKanaText">
+            <input
+              id="lastNameKana"
+              type="text"
+              [(ngModel)]="formData.lastNameKana"
+              name="lastNameKana"
+            />
+          </ng-container>
+          <ng-template #lastNameKanaText>{{ formData.lastNameKana }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>名（フリガナ）</th>
-        <td><input id="firstNameKana" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else firstNameKanaText">
+            <input
+              id="firstNameKana"
+              type="text"
+              [(ngModel)]="formData.firstNameKana"
+              name="firstNameKana"
+            />
+          </ng-container>
+          <ng-template #firstNameKanaText>{{ formData.firstNameKana }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>生年月日</th>
-        <td><input id="birthDate" type="date" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else birthDateText">
+            <input id="birthDate" type="date" [(ngModel)]="formData.birthDate" name="birthDate" />
+          </ng-container>
+          <ng-template #birthDateText>{{ formData.birthDate }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>性別</th>
         <td>
-          <select id="gender">
-            <option value="">選択してください</option>
-            <option value="male">男</option>
-            <option value="female">女</option>
-          </select>
+          <ng-container *ngIf="isEditMode; else genderText">
+            <select id="gender" [(ngModel)]="formData.gender" name="gender">
+              <option value="">選択してください</option>
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
+          </ng-container>
+          <ng-template #genderText>
+            {{ formData.gender === 'male' ? '男' : formData.gender === 'female' ? '女' : '' }}
+          </ng-template>
         </td>
       </tr>
       <tr>
         <th>個人番号（マイナンバー）</th>
-        <td><input id="myNumber" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else myNumberText">
+            <input id="myNumber" type="text" [(ngModel)]="formData.myNumber" name="myNumber" />
+          </ng-container>
+          <ng-template #myNumberText>{{ formData.myNumber }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>基礎年金番号</th>
-        <td><input id="pensionNumber" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else pensionNumberText">
+            <input
+              id="pensionNumber"
+              type="text"
+              [(ngModel)]="formData.pensionNumber"
+              name="pensionNumber"
+            />
+          </ng-container>
+          <ng-template #pensionNumberText>{{ formData.pensionNumber }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>被保険者証の記号番号</th>
-        <td><input id="insuranceSymbolNumber" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else insuranceSymbolNumberText">
+            <input
+              id="insuranceSymbolNumber"
+              type="text"
+              [(ngModel)]="formData.insuranceSymbolNumber"
+              name="insuranceSymbolNumber"
+            />
+          </ng-container>
+          <ng-template #insuranceSymbolNumberText>{{ formData.insuranceSymbolNumber }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>郵便番号</th>
-        <td><input id="zipCode" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else zipCodeText">
+            <input id="zipCode" type="text" [(ngModel)]="formData.zipCode" name="zipCode" />
+          </ng-container>
+          <ng-template #zipCodeText>{{ formData.zipCode }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>都道府県・市区町村</th>
-        <td><input id="prefectureCity" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else prefectureCityText">
+            <input
+              id="prefectureCity"
+              type="text"
+              [(ngModel)]="formData.prefectureCity"
+              name="prefectureCity"
+            />
+          </ng-container>
+          <ng-template #prefectureCityText>{{ formData.prefectureCity }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>上記以下の住所</th>
-        <td><input id="addressDetail" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else addressDetailText">
+            <input
+              id="addressDetail"
+              type="text"
+              [(ngModel)]="formData.addressDetail"
+              name="addressDetail"
+            />
+          </ng-container>
+          <ng-template #addressDetailText>{{ formData.addressDetail }}</ng-template>
+        </td>
       </tr>
       <tr>
         <th>連絡先電話番号</th>
-        <td><input id="phone" type="text" /></td>
+        <td>
+          <ng-container *ngIf="isEditMode; else phoneText">
+            <input id="phone" type="text" [(ngModel)]="formData.phone" name="phone" />
+          </ng-container>
+          <ng-template #phoneText>{{ formData.phone }}</ng-template>
+        </td>
       </tr>
     </tbody>
   </table>

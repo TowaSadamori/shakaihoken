@@ -2,3 +2,312 @@
   一覧に戻る
 </button>
 <h2 class="detail-title">{{ userName }}さんの被扶養者情報</h2>
+
+<!-- 被扶養者追加ボタン（一覧画面の上部に独立配置） -->
+<div class="button-group" style="margin-bottom: 24px">
+  <button type="button" (click)="addDependent()">被扶養者追加</button>
+</div>
+
+<!-- 各被扶養者ブロック -->
+<div class="dependent-block" *ngFor="let dep of dependents; let i = index">
+  <table class="excel-table">
+    <tbody>
+      <tr>
+        <td colspan="2" class="button-row">
+          <div class="button-center">
+            <button *ngIf="!dep.isEditMode" (click)="enableEdit(i)">編集</button>
+            <button *ngIf="dep.isEditMode" (click)="save(i)">保存</button>
+            <button *ngIf="dep.isEditMode" (click)="cancelEdit(i)">キャンセル</button>
+            <label style="margin-left: 16px">
+              <input
+                type="file"
+                accept=".csv"
+                (change)="onCsvUpload($event, i)"
+                style="display: none"
+                #csvInput
+              />
+              <button type="button" (click)="csvInput.click()">CSV取込</button>
+            </label>
+            <button style="margin-left: 16px" (click)="deleteUser(i)">削除</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <th>カンパニーID</th>
+        <td>{{ (dep.companyId || 'ABC123').toUpperCase() }}</td>
+      </tr>
+      <tr>
+        <th>被保険者の従業員番号</th>
+        <td>{{ dep.employeeNumber || '1001' }}</td>
+      </tr>
+      <tr>
+        <th>姓</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else lastNameText">
+            <input type="text" [(ngModel)]="dep.lastName" placeholder="例: 山田" />
+          </ng-container>
+          <ng-template #lastNameText>{{ dep.lastName || '山田' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>名</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else firstNameText">
+            <input type="text" [(ngModel)]="dep.firstName" placeholder="例: 太郎" />
+          </ng-container>
+          <ng-template #firstNameText>{{ dep.firstName || '太郎' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>姓（フリガナ）</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else lastNameKanaText">
+            <input type="text" [(ngModel)]="dep.lastNameKana" placeholder="例: ヤマダ" />
+          </ng-container>
+          <ng-template #lastNameKanaText>{{ dep.lastNameKana || 'ヤマダ' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>名（フリガナ）</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else firstNameKanaText">
+            <input type="text" [(ngModel)]="dep.firstNameKana" placeholder="例: タロウ" />
+          </ng-container>
+          <ng-template #firstNameKanaText>{{ dep.firstNameKana || 'タロウ' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>生年月日</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else birthDateText">
+            <input type="date" [(ngModel)]="dep.birthDate" />
+          </ng-container>
+          <ng-template #birthDateText>{{
+            formatDateJp(dep.birthDate || '2000-01-01')
+          }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>性別</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else genderText">
+            <select [(ngModel)]="dep.gender">
+              <option value="">選択してください</option>
+              <option value="男">男</option>
+              <option value="女">女</option>
+            </select>
+          </ng-container>
+          <ng-template #genderText>{{ dep.gender || '男' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>個人番号（マイナンバー）</th>
+        <td>123456789012</td>
+      </tr>
+      <tr>
+        <th>被保険者との続柄</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else relationshipText">
+            <select [(ngModel)]="dep.relationship">
+              <option value="">選択してください</option>
+              <option value="子">子</option>
+              <option value="配偶者">配偶者</option>
+              <option value="父">父</option>
+              <option value="母">母</option>
+              <option value="祖父">祖父</option>
+              <option value="祖母">祖母</option>
+              <option value="孫">孫</option>
+              <option value="兄">兄</option>
+              <option value="姉">姉</option>
+              <option value="弟">弟</option>
+              <option value="妹">妹</option>
+              <option value="その他">その他</option>
+            </select>
+            <input
+              *ngIf="dep.relationship === 'その他'"
+              type="text"
+              [(ngModel)]="dep.relationshipOther"
+              placeholder="続柄を入力"
+              style="margin-left: 8px; width: 160px"
+            />
+          </ng-container>
+          <ng-template #relationshipText>
+            {{
+              dep.relationship === 'その他'
+                ? dep.relationshipOther || 'その他'
+                : dep.relationship || '子'
+            }}
+          </ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>扶養認定年月日</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else certificationDateText">
+            <input type="date" [(ngModel)]="dep.certificationDate" />
+          </ng-container>
+          <ng-template #certificationDateText>{{
+            formatDateJp(dep.certificationDate || '2023-04-01')
+          }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>扶養認定理由</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else certificationReasonText">
+            <input type="text" [(ngModel)]="dep.certificationReason" />
+          </ng-container>
+          <ng-template #certificationReasonText>{{ dep.certificationReason || '-' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>扶養削除年月日</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else removalDateText">
+            <input type="date" [(ngModel)]="dep.removalDate" />
+          </ng-container>
+          <ng-template #removalDateText>{{
+            formatDateJp(dep.removalDate || '2024-01-01')
+          }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>扶養削除理由</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else removalReasonText">
+            <input type="text" [(ngModel)]="dep.removalReason" />
+          </ng-container>
+          <ng-template #removalReasonText>{{ dep.removalReason || '-' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>郵便番号</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else zipCodeText">
+            <input type="text" [(ngModel)]="dep.zipCode" placeholder="例: 123-4567" />
+          </ng-container>
+          <ng-template #zipCodeText>{{ dep.zipCode || '123-4567' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>都道府県・市区町村</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else prefectureCityText">
+            <input type="text" [(ngModel)]="dep.prefectureCity" placeholder="例: 東京都新宿区" />
+          </ng-container>
+          <ng-template #prefectureCityText>{{ dep.prefectureCity || '東京都新宿区' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>上記以下の住所</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else addressDetailText">
+            <input type="text" [(ngModel)]="dep.addressDetail" placeholder="例: 西新宿1-1-1" />
+          </ng-container>
+          <ng-template #addressDetailText>{{ dep.addressDetail || '西新宿1-1-1' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>職業</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else occupationText">
+            <input type="text" [(ngModel)]="dep.occupation" placeholder="例: 学生" />
+          </ng-container>
+          <ng-template #occupationText>{{ dep.occupation || '学生' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>収入（年間見込み額）</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else incomeAmountText">
+            <input type="text" [(ngModel)]="dep.incomeAmount" placeholder="例: 0円" />
+          </ng-container>
+          <ng-template #incomeAmountText>{{ dep.incomeAmount || '0円' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>収入の種類</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else incomeTypeText">
+            <select [(ngModel)]="dep.incomeType">
+              <option value="">選択してください</option>
+              <option value="給与">給与</option>
+              <option value="事業">事業</option>
+              <option value="年金">年金</option>
+              <option value="不動産">不動産</option>
+              <option value="その他">その他</option>
+            </select>
+            <input
+              *ngIf="dep.incomeType === 'その他'"
+              type="text"
+              [(ngModel)]="dep.incomeTypeOther"
+              placeholder="収入の種類を入力"
+              style="margin-left: 8px; width: 160px"
+            />
+          </ng-container>
+          <ng-template #incomeTypeText>
+            {{
+              dep.incomeType === 'その他'
+                ? dep.incomeTypeOther || 'その他'
+                : dep.incomeType || '給与'
+            }}
+          </ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>同居・別居の別</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else livingTypeText">
+            <select [(ngModel)]="dep.livingType">
+              <option value="">選択してください</option>
+              <option value="同居">同居</option>
+              <option value="別居">別居</option>
+            </select>
+          </ng-container>
+          <ng-template #livingTypeText>{{ dep.livingType || '同居' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>仕送り額（別居の場合）</th>
+        <td>
+          <ng-container *ngIf="dep.livingType === '別居' && dep.isEditMode; else remittanceText">
+            <input type="text" [(ngModel)]="dep.remittance" placeholder="例: 3万円" />
+          </ng-container>
+          <ng-template #remittanceText>{{
+            dep.livingType === '別居' ? dep.remittance || '-' : '-'
+          }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>国民年金第3号被保険者該当・非該当の別</th>
+        <td>
+          <ng-container *ngIf="dep.isEditMode; else nenkin3gouStatusText">
+            <select [(ngModel)]="dep.nenkin3gouStatus">
+              <option value="">選択してください</option>
+              <option value="該当">該当</option>
+              <option value="非該当">非該当</option>
+            </select>
+          </ng-container>
+          <ng-template #nenkin3gouStatusText>{{ dep.nenkin3gouStatus || '非該当' }}</ng-template>
+        </td>
+      </tr>
+      <tr>
+        <th>該当理由</th>
+        <td>
+          <ng-container
+            *ngIf="dep.isEditMode && dep.nenkin3gouStatus === '該当'; else nenkin3gouReasonText"
+          >
+            <input
+              type="text"
+              [(ngModel)]="dep.nenkin3gouReason"
+              placeholder="例: 配偶者の被保険者資格取得"
+            />
+          </ng-container>
+          <ng-template #nenkin3gouReasonText>{{
+            dep.nenkin3gouStatus === '該当' ? dep.nenkin3gouReason || '-' : '-'
+          }}</ng-template>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

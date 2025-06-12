@@ -29,3 +29,144 @@
 .back-btn:hover {
   background: #1565c0;
 }
+
+.dependent-block {
+  width: 100%;
+  max-width: 900px;
+  min-width: 320px;
+  margin: 40px auto 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  margin: 0;
+}
+
+.excel-table th,
+.excel-table td {
+  border: 1px solid #bdbdbd;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 1rem;
+}
+
+.excel-table th {
+  background: #e3f0fb;
+  color: #1976d2;
+  font-weight: bold;
+  width: 320px;
+}
+.excel-table tr:nth-child(even) td {
+  background: #f7fafd;
+}
+.excel-table input[type='text'],
+.excel-table input[type='date'] {
+  width: 98%;
+  padding: 6px 8px;
+  font-size: 1rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.button-row {
+  text-align: center;
+  padding: 16px 0;
+}
+.button-row button {
+  display: inline-block;
+  margin: 0 10px;
+  min-width: 100px;
+  padding: 8px 24px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.button-row button:hover {
+  background: #1565c0;
+}
+.button-row label > button {
+  margin-left: 0;
+}
+.button-group {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.button-group button,
+.button-group label > button {
+  height: 40px;
+  min-width: 110px;
+  padding: 0 28px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.08rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.1s;
+  outline: none;
+  letter-spacing: 0.04em;
+  margin-right: 0;
+}
+.button-group button:hover,
+.button-group label > button:hover {
+  background: #1565c0;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.13);
+  transform: translateY(-2px) scale(1.03);
+}
+.button-group button:active,
+.button-group label > button:active {
+  background: #0d47a1;
+  transform: scale(0.98);
+}
+.button-group label > button {
+  margin-left: 0;
+}
+
+/* 削除ボタン専用デザイン */
+button[style*='#e53935'] {
+  background: #e53935 !important;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.13);
+}
+button[style*='#e53935']:hover {
+  background: #b71c1c !important;
+  box-shadow: 0 4px 16px rgba(229, 57, 53, 0.18);
+  transform: translateY(-2px) scale(1.03);
+}
+button[style*='#e53935']:active {
+  background: #8a1816 !important;
+  transform: scale(0.98);
+}
+
+.button-row label {
+  margin: 0;
+}
+
+.dependent-block + .dependent-block {
+  margin-top: 40px;
+}
+
+.button-center {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
