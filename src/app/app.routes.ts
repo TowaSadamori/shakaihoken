@@ -126,6 +126,20 @@ export const routes: Routes = [
             (m) => m.Over70ApplicationComponent
           ),
       },
+      {
+        path: 'employee-procedures/childcare-period-exemption-application/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/childcare-period-exemption-application/childcare-period-exemption-application.component'
+          ).then((m) => m.ChildcarePeriodExemptionApplicationComponent),
+      },
+      {
+        path: 'employee-procedures/qualification-acquisition-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/qualification-acquisition-notification/qualification-acquisition-notification.component'
+          ).then((m) => m.QualificationAcquisitionNotificationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
