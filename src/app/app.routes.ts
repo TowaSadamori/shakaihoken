@@ -92,11 +92,18 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'employee-procedures/application-form',
+        path: 'employee-procedures/application-form/:uid',
         loadComponent: () =>
           import('./employee-procedures/application-form/application-form.component').then(
             (m) => m.ApplicationFormComponent
           ),
+      },
+      {
+        path: 'employee-procedures/maternity-leave-application/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/maternity-leave-application/maternity-leave-application.component'
+          ).then((m) => m.MaternityLeaveApplicationComponent),
       },
     ],
   },

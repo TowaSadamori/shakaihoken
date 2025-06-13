@@ -33,8 +33,7 @@
       <tr *ngFor="let user of users">
         <td>
           <a
-            [routerLink]="['/employee-procedures/application-form']"
-            [queryParams]="{ uid: user.uid }"
+            [routerLink]="['/employee-procedures/application-form', user.uid]"
             class="employee-link"
           >
             {{ user.lastName }}{{ user.firstName }}

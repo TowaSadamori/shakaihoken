@@ -12,6 +12,7 @@ import { UserService } from '../../services/user.service';
 })
 export class ApplicationFormComponent implements OnInit {
   userName = '';
+  uid: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -20,16 +21,17 @@ export class ApplicationFormComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    // クエリパラメータからuid取得
-    const uid = this.route.snapshot.queryParamMap.get('uid');
+    // パスパラメータからuid取得
+    this.uid = this.route.snapshot.paramMap.get('uid');
     let user = null;
-    if (uid) {
-      user = await this.userService.getUserByUid(uid);
+    if (this.uid) {
+      user = await this.userService.getUserByUid(this.uid);
     } else {
       const auth = await this.authService['auth'];
       const currentUser = auth.currentUser;
       if (currentUser) {
         user = await this.userService.getUserByUid(currentUser.uid);
+        this.uid = currentUser.uid;
       }
     }
     if (user) {

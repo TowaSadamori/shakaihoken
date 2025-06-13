@@ -51,7 +51,10 @@ export class EmployeeProceduresPlaceholderComponent implements OnInit {
     this.router.navigate(['/employee-salary-bonus']);
   }
 
-  goToApplication() {
-    this.router.navigate(['/employee-procedures/application-form']);
+  async goToApplication() {
+    const currentUser = await this.authService.getCurrentUserProfileWithRole();
+    if (currentUser) {
+      this.router.navigate(['/employee-procedures/application-form', currentUser.uid]);
+    }
   }
 }

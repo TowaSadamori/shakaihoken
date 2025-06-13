@@ -178,4 +178,25 @@ export class AuthService {
     const userData = userDoc.data();
     return userData['companyId'] || null;
   }
+
+  async getCurrentUserProfileWithRole(): Promise<{
+    uid: string;
+    lastName: string;
+    firstName: string;
+    role: string;
+  } | null> {
+    const user = this.auth.currentUser;
+    if (!user) return null;
+    const userDoc = await getDoc(doc(this.firestore, 'users', user.uid));
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      return {
+        uid: user.uid,
+        lastName: data['lastName'],
+        firstName: data['firstName'],
+        role: data['role'],
+      };
+    }
+    return null;
+  }
 }
