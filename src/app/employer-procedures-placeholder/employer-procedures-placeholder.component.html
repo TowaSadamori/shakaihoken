@@ -5,10 +5,20 @@
     <!-- 事業所基本情報関連 -->
     <div class="button-section">
       <h3>事業所基本情報</h3>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/new-application-notification', 'dummyUid']"
+      >
         健康保険・厚生年金保険 新規適用届
       </button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/abolition-notification', 'dummyUid']"
+      >
         健康保険・厚生年金保険 適用事業所全喪届
       </button>
       <button mat-raised-button color="primary" class="procedure-btn" disabled>

@@ -189,6 +189,20 @@ export const routes: Routes = [
             './employee-procedures/maternity-leave-end-salary-notification/maternity-leave-end-salary-notification.component'
           ).then((m) => m.MaternityLeaveEndSalaryNotificationComponent),
       },
+      {
+        path: 'employer-procedures/new-application-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/new-application-notification/new-application-notification.component'
+          ).then((m) => m.NewApplicationNotificationComponent),
+      },
+      {
+        path: 'employer-procedures/abolition-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/abolition-notification/abolition-notification.component'
+          ).then((m) => m.AbolitionNotificationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
