@@ -15,4 +15,8 @@ export class EmployeeProceduresPlaceholderComponent {
   goToSalaryBonus() {
     this.router.navigate(['/employee-salary-bonus']);
   }
+
+  goToApplication() {
+    this.router.navigate(['/employee-procedures/application']);
+  }
 }
