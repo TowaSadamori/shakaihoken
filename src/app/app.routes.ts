@@ -119,6 +119,13 @@ export const routes: Routes = [
             './employee-procedures/care-insurance-exemption-application/care-insurance-exemption-application.component'
           ).then((m) => m.CareInsuranceExemptionApplicationComponent),
       },
+      {
+        path: 'employee-procedures/over70-application/:uid',
+        loadComponent: () =>
+          import('./employee-procedures/over70-application/over70-application.component').then(
+            (m) => m.Over70ApplicationComponent
+          ),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },

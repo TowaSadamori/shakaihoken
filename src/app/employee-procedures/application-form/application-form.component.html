@@ -23,6 +23,12 @@
   >
     介護保険適用除外等（該当・非該当）届
   </button>
-  <button class="employee-btn">70歳以上被用者該当届</button>
+  <button
+    class="employee-btn"
+    [routerLink]="['/employee-procedures/over70-application', uid]"
+    [disabled]="!uid"
+  >
+    70歳以上被用者該当届
+  </button>
   <button class="employee-btn">養育期間標準報酬月額特例申出書</button>
 </div>
