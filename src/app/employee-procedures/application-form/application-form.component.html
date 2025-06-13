@@ -51,9 +51,25 @@
   >
     健保厚年資格喪失届
   </button>
-  <button class="employee-btn" disabled>被保険者証回収不能届</button>
-  <button class="employee-btn" disabled>健康保険 被保険者証再交付申請書</button>
-  <button class="employee-btn" disabled>
+  <button
+    class="employee-btn"
+    [routerLink]="['/employee-procedures/uncollectable-insurance-card-notification', uid]"
+    [disabled]="!uid"
+  >
+    被保険者証回収不能届
+  </button>
+  <button
+    class="employee-btn"
+    [routerLink]="['/employee-procedures/insurance-card-reissue-application', uid]"
+    [disabled]="!uid"
+  >
+    健康保険 被保険者証再交付申請書
+  </button>
+  <button
+    class="employee-btn"
+    [routerLink]="['/employee-procedures/insured-person-info-change-notification', uid]"
+    [disabled]="!uid"
+  >
     健康保険・厚生年金保険 被保険者氏名変更（訂正）届／住所変更届
   </button>
   <button class="employee-btn" disabled>

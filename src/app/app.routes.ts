@@ -147,6 +147,27 @@ export const routes: Routes = [
             './employee-procedures/qualification-loss-notification/qualification-loss-notification.component'
           ).then((m) => m.QualificationLossNotificationComponent),
       },
+      {
+        path: 'employee-procedures/uncollectable-insurance-card-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/uncollectable-insurance-card-notification/uncollectable-insurance-card-notification.component'
+          ).then((m) => m.UncollectableInsuranceCardNotificationComponent),
+      },
+      {
+        path: 'employee-procedures/insurance-card-reissue-application/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/insurance-card-reissue-application/insurance-card-reissue-application.component'
+          ).then((m) => m.InsuranceCardReissueApplicationComponent),
+      },
+      {
+        path: 'employee-procedures/insured-person-info-change-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/insured-person-info-change-notification/insured-person-info-change-notification.component'
+          ).then((m) => m.InsuredPersonInfoChangeNotificationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
