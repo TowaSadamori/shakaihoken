@@ -91,6 +91,13 @@ export const routes: Routes = [
             (m) => m.DependentDetailComponent
           ),
       },
+      {
+        path: 'employee-procedures/application-form',
+        loadComponent: () =>
+          import('./employee-procedures/application-form/application-form.component').then(
+            (m) => m.ApplicationFormComponent
+          ),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },

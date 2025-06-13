@@ -17,6 +17,6 @@ export class EmployeeProceduresPlaceholderComponent {
   }
 
   goToApplication() {
-    this.router.navigate(['/employee-procedures/application']);
+    this.router.navigate(['/employee-procedures/application-form']);
   }
 }
