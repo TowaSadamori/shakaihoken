@@ -9,3 +9,46 @@
     <button class="employee-btn" (click)="goToApplication()">その他各種申請</button>
   </div>
 </div>
+<div class="employee-status-list">
+  <h3>従業員と申請状況一覧</h3>
+  <table class="status-table">
+    <thead>
+      <tr>
+        <th>従業員名</th>
+        <th (click)="sortByEmployeeNumber()" style="cursor: pointer">
+          従業員番号
+          <span *ngIf="sortOrder === 'asc'">▲</span>
+          <span *ngIf="sortOrder === 'desc'">▼</span>
+        </th>
+        <th>事業所番号</th>
+        <!-- <th>カンパニーID</th> -->
+        <th>産前産後休業申請</th>
+        <th>育児休業申請</th>
+        <th>介護保険適用除外</th>
+        <th>70歳以上該当</th>
+        <th>養育期間特例</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let user of users">
+        <td>
+          <a
+            [routerLink]="['/employee-procedures/application-form']"
+            [queryParams]="{ uid: user.uid }"
+            class="employee-link"
+          >
+            {{ user.lastName }}{{ user.firstName }}
+          </a>
+        </td>
+        <td>{{ user.employeeNumber }}</td>
+        <td>{{ user.branchNumber }}</td>
+        <!-- <td>{{ user.companyId }}</td> -->
+        <td>未申請</td>
+        <td>未申請</td>
+        <td>未申請</td>
+        <td>未申請</td>
+        <td>未申請</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,40 @@
+.detail-title {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: bold;
+  margin: 32px 0 24px 0;
+  color: #222;
+  letter-spacing: 0.05em;
+  border-bottom: 4px solid #b71c1c;
+  padding-bottom: 8px;
+  width: 80%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.application-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.employee-btn {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 320px;
+  max-width: 90vw;
+  box-sizing: border-box;
+}
+.employee-btn:hover {
+  background: #1565c0;
+}
