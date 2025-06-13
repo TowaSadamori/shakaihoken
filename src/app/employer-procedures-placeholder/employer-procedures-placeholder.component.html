@@ -1,7 +1,51 @@
 <div class="placeholder">
-  <h2>事業所手続き画面（プレースホルダー）</h2>
-  <p>ここに事業所手続きの機能が実装されます。</p>
-  <button mat-raised-button color="primary" class="large-btn" (click)="goToCompanyRegister()">
-    事業所登録
-  </button>
+  <h2>事業所手続き画面</h2>
+
+  <div class="procedure-buttons">
+    <!-- 事業所基本情報関連 -->
+    <div class="button-section">
+      <h3>事業所基本情報</h3>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        健康保険・厚生年金保険 新規適用届
+      </button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        健康保険・厚生年金保険 適用事業所全喪届
+      </button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        健康保険・厚生年金保険 任意適用申請書／任意適用取消申請書
+      </button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        健康保険・厚生年金保険 適用事業所 名称／所在地変更（訂正）届
+      </button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        健康保険・厚生年金保険 事業主（代表者）変更（訂正）届
+      </button>
+    </div>
+
+    <!-- 保険料関連 -->
+    <div class="button-section">
+      <h3>保険料</h3>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        健康保険・厚生年金保険 保険料口座振替納付（変更）申出書
+      </button>
+    </div>
+
+    <!-- 報酬関連 -->
+    <div class="button-section">
+      <h3>報酬関連</h3>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        賞与支払届出書
+      </button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        賞与不支給報告書
+      </button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>算定基礎届</button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        算定基礎賃金集計表（算定基礎届作成のための補助資料）
+      </button>
+      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+        月額変更届（随時改定）
+      </button>
+    </div>
+  </div>
 </div>

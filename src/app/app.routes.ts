@@ -168,6 +168,27 @@ export const routes: Routes = [
             './employee-procedures/insured-person-info-change-notification/insured-person-info-change-notification.component'
           ).then((m) => m.InsuredPersonInfoChangeNotificationComponent),
       },
+      {
+        path: 'employee-procedures/dependent-change-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/dependent-change-notification/dependent-change-notification.component'
+          ).then((m) => m.DependentChangeNotificationComponent),
+      },
+      {
+        path: 'employee-procedures/childcare-leave-end-salary-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/childcare-leave-end-salary-notification/childcare-leave-end-salary-notification.component'
+          ).then((m) => m.ChildcareLeaveEndSalaryNotificationComponent),
+      },
+      {
+        path: 'employee-procedures/maternity-leave-end-salary-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/maternity-leave-end-salary-notification/maternity-leave-end-salary-notification.component'
+          ).then((m) => m.MaternityLeaveEndSalaryNotificationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
