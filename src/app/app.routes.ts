@@ -140,6 +140,13 @@ export const routes: Routes = [
             './employee-procedures/qualification-acquisition-notification/qualification-acquisition-notification.component'
           ).then((m) => m.QualificationAcquisitionNotificationComponent),
       },
+      {
+        path: 'employee-procedures/qualification-loss-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/qualification-loss-notification/qualification-loss-notification.component'
+          ).then((m) => m.QualificationLossNotificationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },

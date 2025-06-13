@@ -44,7 +44,13 @@
   >
     健保厚年資格取得届
   </button>
-  <button class="employee-btn" disabled>健保厚年資格喪失届</button>
+  <button
+    class="employee-btn"
+    [routerLink]="['/employee-procedures/qualification-loss-notification', uid]"
+    [disabled]="!uid"
+  >
+    健保厚年資格喪失届
+  </button>
   <button class="employee-btn" disabled>被保険者証回収不能届</button>
   <button class="employee-btn" disabled>健康保険 被保険者証再交付申請書</button>
   <button class="employee-btn" disabled>
