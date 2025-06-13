@@ -105,6 +105,13 @@ export const routes: Routes = [
             './employee-procedures/maternity-leave-application/maternity-leave-application.component'
           ).then((m) => m.MaternityLeaveApplicationComponent),
       },
+      {
+        path: 'employee-procedures/childcare-leave-application/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/childcare-leave-application/childcare-leave-application.component'
+          ).then((m) => m.ChildcareLeaveApplicationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },
