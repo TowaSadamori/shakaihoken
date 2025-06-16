@@ -224,6 +224,48 @@ export const routes: Routes = [
             './employer-procedures/representative-change-notification/representative-change-notification.component'
           ).then((m) => m.RepresentativeChangeNotificationComponent),
       },
+      {
+        path: 'employer-procedures/account-transfer-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/account-transfer-notification/account-transfer-notification.component'
+          ).then((m) => m.AccountTransferNotificationComponent),
+      },
+      {
+        path: 'employer-procedures/bonus-payment-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/bonus-payment-notification/bonus-payment-notification.component'
+          ).then((m) => m.BonusPaymentNotificationComponent),
+      },
+      {
+        path: 'employer-procedures/no-bonus-report/:uid',
+        loadComponent: () =>
+          import('./employer-procedures/no-bonus-report/no-bonus-report.component').then(
+            (m) => m.NoBonusReportComponent
+          ),
+      },
+      {
+        path: 'employer-procedures/standard-remuneration-report/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/standard-remuneration-report/standard-remuneration-report.component'
+          ).then((m) => m.StandardRemunerationReportComponent),
+      },
+      {
+        path: 'employer-procedures/wage-summary-report/:uid',
+        loadComponent: () =>
+          import('./employer-procedures/wage-summary-report/wage-summary-report.component').then(
+            (m) => m.WageSummaryReportComponent
+          ),
+      },
+      {
+        path: 'employer-procedures/monthly-change-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/monthly-change-notification/monthly-change-notification.component'
+          ).then((m) => m.MonthlyChangeNotificationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },

@@ -50,7 +50,12 @@
     <!-- 保険料関連 -->
     <div class="button-section">
       <h3>保険料</h3>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/account-transfer-notification', 'dummyUid']"
+      >
         健康保険・厚生年金保険 保険料口座振替納付（変更）申出書
       </button>
     </div>
@@ -58,17 +63,44 @@
     <!-- 報酬関連 -->
     <div class="button-section">
       <h3>報酬関連</h3>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/bonus-payment-notification', 'dummyUid']"
+      >
         賞与支払届出書
       </button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/no-bonus-report', 'dummyUid']"
+      >
         賞与不支給報告書
       </button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>算定基礎届</button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/standard-remuneration-report', 'dummyUid']"
+      >
+        算定基礎届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/wage-summary-report', 'dummyUid']"
+      >
         算定基礎賃金集計表（算定基礎届作成のための補助資料）
       </button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/monthly-change-notification', 'dummyUid']"
+      >
         月額変更届（随時改定）
       </button>
     </div>
