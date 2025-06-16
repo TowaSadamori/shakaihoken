@@ -1,0 +1,22 @@
+<div class="maternity-leave-container">
+  <button mat-button color="primary" routerLink="/employer-procedures">
+    事業所手続き画面へ戻る
+  </button>
+
+  <h2 class="detail-title">健康保険・厚生年金保険 事業主（代表者）変更（訂正）届</h2>
+
+  <div class="form-section">
+    <!-- フォームの内容は後ほど実装 -->
+  </div>
+
+  <div class="button-group">
+    <ng-container *ngIf="!isEditing">
+      <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+    </ng-container>
+
+    <ng-container *ngIf="isEditing">
+      <button mat-raised-button color="primary" (click)="onSave()">保存</button>
+      <button mat-button (click)="onCancel()">キャンセル</button>
+    </ng-container>
+  </div>
+</div>

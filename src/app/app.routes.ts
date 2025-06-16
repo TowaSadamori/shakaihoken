@@ -203,6 +203,27 @@ export const routes: Routes = [
             './employer-procedures/abolition-notification/abolition-notification.component'
           ).then((m) => m.AbolitionNotificationComponent),
       },
+      {
+        path: 'employer-procedures/voluntary-application-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/voluntary-application-notification/voluntary-application-notification.component'
+          ).then((m) => m.VoluntaryApplicationNotificationComponent),
+      },
+      {
+        path: 'employer-procedures/name-address-change-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/name-address-change-notification/name-address-change-notification.component'
+          ).then((m) => m.NameAddressChangeNotificationComponent),
+      },
+      {
+        path: 'employer-procedures/representative-change-notification/:uid',
+        loadComponent: () =>
+          import(
+            './employer-procedures/representative-change-notification/representative-change-notification.component'
+          ).then((m) => m.RepresentativeChangeNotificationComponent),
+      },
     ],
   },
   { path: 'password-reset', component: PasswordResetComponent },

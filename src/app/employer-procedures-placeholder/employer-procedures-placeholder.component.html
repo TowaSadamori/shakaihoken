@@ -21,13 +21,28 @@
       >
         健康保険・厚生年金保険 適用事業所全喪届
       </button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/voluntary-application-notification', 'dummyUid']"
+      >
         健康保険・厚生年金保険 任意適用申請書／任意適用取消申請書
       </button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/name-address-change-notification', 'dummyUid']"
+      >
         健康保険・厚生年金保険 適用事業所 名称／所在地変更（訂正）届
       </button>
-      <button mat-raised-button color="primary" class="procedure-btn" disabled>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employer-procedures/representative-change-notification', 'dummyUid']"
+      >
         健康保険・厚生年金保険 事業主（代表者）変更（訂正）届
       </button>
     </div>
