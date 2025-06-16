@@ -4,11 +4,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { OfficeService } from '../../services/office.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
 
 @Component({
   selector: 'app-new-application-notification',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, RouterModule, ReactiveFormsModule],
+  imports: [CommonModule, MatButtonModule, RouterModule, ReactiveFormsModule, MatInputModule],
   templateUrl: './new-application-notification.component.html',
   styleUrl: './new-application-notification.component.scss',
 })

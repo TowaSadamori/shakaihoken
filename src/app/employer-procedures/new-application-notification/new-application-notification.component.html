@@ -9,7 +9,14 @@
   </h2>
 
   <div class="button-group" style="margin-bottom: 1.5rem">
-    <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+    <button *ngIf="!isEditing" mat-raised-button color="primary" (click)="onEdit()">編集</button>
+    <button *ngIf="!isEditing" mat-stroked-button color="primary" style="margin-left: 8px">
+      CSV出力
+    </button>
+    <ng-container *ngIf="isEditing">
+      <button mat-raised-button color="primary" (click)="onSave()">保存</button>
+      <button mat-button (click)="onCancel()">キャンセル</button>
+    </ng-container>
   </div>
 
   <form [formGroup]="form" class="form-section">
@@ -25,16 +32,11 @@
               type="text"
               [formControlName]="item"
               [id]="'input-' + i"
-              [readonly]="!isEditing"
+              [attr.readonly]="!isEditing ? true : null"
             />
           </td>
         </tr>
       </tbody>
     </table>
   </form>
-
-  <div class="button-group" *ngIf="isEditing">
-    <button mat-raised-button color="primary" (click)="onSave()">保存</button>
-    <button mat-button (click)="onCancel()">キャンセル</button>
-  </div>
 </div>
