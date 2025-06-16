@@ -19,10 +19,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/new-application-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/new-application-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         健康保険・厚生年金保険 新規適用届
       </button>
@@ -30,10 +28,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/abolition-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/abolition-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         健康保険・厚生年金保険 適用事業所全喪届
       </button>
@@ -41,10 +37,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/voluntary-application-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/voluntary-application-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         健康保険・厚生年金保険 任意適用申請書／任意適用取消申請書
       </button>
@@ -52,10 +46,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/name-address-change-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/name-address-change-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         健康保険・厚生年金保険 適用事業所 名称／所在地変更（訂正）届
       </button>
@@ -63,10 +55,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/representative-change-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/representative-change-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         健康保険・厚生年金保険 事業主（代表者）変更（訂正）届
       </button>
@@ -79,10 +69,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/account-transfer-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/account-transfer-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         健康保険・厚生年金保険 保険料口座振替納付（変更）申出書
       </button>
@@ -95,10 +83,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/bonus-payment-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/bonus-payment-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         賞与支払届出書
       </button>
@@ -106,7 +92,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/no-bonus-report', selectedOfficeId || 'dummyUid']"
+        [routerLink]="['/employer-procedures/no-bonus-report', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         賞与不支給報告書
       </button>
@@ -114,10 +101,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/standard-remuneration-report',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/standard-remuneration-report', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         算定基礎届
       </button>
@@ -125,7 +110,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/wage-summary-report', selectedOfficeId || 'dummyUid']"
+        [routerLink]="['/employer-procedures/wage-summary-report', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         算定基礎賃金集計表（算定基礎届作成のための補助資料）
       </button>
@@ -133,10 +119,8 @@
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="[
-          '/employer-procedures/monthly-change-notification',
-          selectedOfficeId || 'dummyUid',
-        ]"
+        [routerLink]="['/employer-procedures/monthly-change-notification', selectedOfficeId]"
+        [disabled]="!selectedOfficeId"
       >
         月額変更届（随時改定）
       </button>

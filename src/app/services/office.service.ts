@@ -27,4 +27,14 @@ export class OfficeService {
       return officesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     }
   }
+
+  async getOfficeById(officeId: string): Promise<{ id: string; [key: string]: unknown } | null> {
+    const docRef = collection(this.firestore, 'offices');
+    const docs = await getDocs(query(docRef, where('__name__', '==', officeId)));
+    if (!docs.empty) {
+      const doc = docs.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+    return null;
+  }
 }
