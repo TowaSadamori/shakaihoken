@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../services/auth.service';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
+import { exportNewApplicationNotificationToCSV } from '../../csv-export/new-application-notification-csv-export';
 
 @Component({
   selector: 'app-new-application-notification',
@@ -186,5 +187,18 @@ export class NewApplicationNotificationComponent implements OnInit {
   onCancel() {
     this.isEditing = false;
     // TODO: 必要ならフォーム値をリセット
+  }
+
+  onExportCSV() {
+    const csv = exportNewApplicationNotificationToCSV(this.form.value);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const pageTitle = '健康保険・厚生年金保険 新規適用届';
+    const fileName = `${pageTitle}${this.officeName ? '（' + this.officeName + '）' : ''}.csv`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    window.URL.revokeObjectURL(url);
   }
 }

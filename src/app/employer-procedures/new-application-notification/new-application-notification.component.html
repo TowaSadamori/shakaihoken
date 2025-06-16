@@ -10,7 +10,13 @@
 
   <div class="button-group" style="margin-bottom: 1.5rem">
     <button *ngIf="!isEditing" mat-raised-button color="primary" (click)="onEdit()">編集</button>
-    <button *ngIf="!isEditing" mat-stroked-button color="primary" style="margin-left: 8px">
+    <button
+      *ngIf="!isEditing"
+      mat-stroked-button
+      color="primary"
+      style="margin-left: 8px"
+      (click)="onExportCSV()"
+    >
       CSV出力
     </button>
     <ng-container *ngIf="isEditing">
