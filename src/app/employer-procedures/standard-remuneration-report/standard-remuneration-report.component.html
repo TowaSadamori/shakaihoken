@@ -3,7 +3,10 @@
     事業所手続き画面へ戻る
   </button>
 
-  <h2 class="detail-title">算定基礎届</h2>
+  <h2 class="detail-title">
+    算定基礎届
+    <span class="office-name" *ngIf="officeName">（{{ officeName }}）</span>
+  </h2>
 
   <div class="form-section">
     <!-- フォームの内容は後ほど実装 -->

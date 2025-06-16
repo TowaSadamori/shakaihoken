@@ -3,7 +3,10 @@
     事業所手続き画面へ戻る
   </button>
 
-  <h2 class="detail-title">健康保険・厚生年金保険 保険料口座振替納付（変更）申出書</h2>
+  <h2 class="detail-title">
+    健康保険・厚生年金保険 保険料口座振替納付（変更）申出書
+    <span class="office-name" *ngIf="officeName">（{{ officeName }}）</span>
+  </h2>
 
   <div class="form-section">
     <!-- フォームの内容は後ほど実装 -->
