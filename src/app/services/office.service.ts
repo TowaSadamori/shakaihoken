@@ -1,5 +1,14 @@
 import { Injectable } from '@angular/core';
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 import { AuthService } from './auth.service';
 
 @Injectable({
@@ -36,5 +45,27 @@ export class OfficeService {
       return { id: doc.id, ...doc.data() };
     }
     return null;
+  }
+
+  /**
+   * 事業所ごとのapplicationsサブコレクションに帳票データをformNameをドキュメントIDとして上書き保存
+   */
+  async saveApplicationForOffice(
+    officeId: string,
+    formName: string,
+    formData: Record<string, unknown>,
+    userId: string
+  ): Promise<void> {
+    const applicationDocRef = doc(this.firestore, 'offices', officeId, 'applications', formName);
+    await setDoc(
+      applicationDocRef,
+      {
+        formName,
+        formData,
+        updatedAt: serverTimestamp(),
+        createdBy: userId,
+      },
+      { merge: true }
+    );
   }
 }

@@ -5,6 +5,9 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { OfficeService } from '../../services/office.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
+import { AuthService } from '../../services/auth.service';
+import { doc, getDoc } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 @Component({
   selector: 'app-new-application-notification',
@@ -126,7 +129,8 @@ export class NewApplicationNotificationComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private officeService: OfficeService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private authService: AuthService
   ) {
     // フォーム初期化
     const controls: Record<string, unknown> = {};
@@ -141,6 +145,22 @@ export class NewApplicationNotificationComponent implements OnInit {
       this.officeName =
         (office && ((office['officeName'] as string) || (office['name'] as string) || office.id)) ||
         '';
+      // 既存データ取得
+      const db = getFirestore();
+      const appDocRef = doc(
+        db,
+        'offices',
+        this.uid,
+        'applications',
+        'new-application-notification'
+      );
+      const appDocSnap = await getDoc(appDocRef);
+      if (appDocSnap.exists()) {
+        const data = appDocSnap.data();
+        if (data && data['formData']) {
+          this.form.patchValue(data['formData']);
+        }
+      }
     }
   }
 
@@ -148,9 +168,19 @@ export class NewApplicationNotificationComponent implements OnInit {
     this.isEditing = true;
   }
 
-  onSave() {
+  async onSave() {
+    // 保存処理
+    const userProfile = await this.authService.getCurrentUserProfileWithRole();
+    const userId = userProfile?.uid || '';
+    if (this.uid && userId) {
+      await this.officeService.saveApplicationForOffice(
+        this.uid,
+        'new-application-notification',
+        this.form.value,
+        userId
+      );
+    }
     this.isEditing = false;
-    // TODO: 保存処理の実装
   }
 
   onCancel() {
