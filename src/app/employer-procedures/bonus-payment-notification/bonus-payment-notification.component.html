@@ -4,22 +4,293 @@
   </button>
 
   <h2 class="detail-title">
-    賞与支払届出書
+    被保険者賞与支払届（70歳以上被用者賞与支払届）
     <span class="office-name" *ngIf="officeName">（{{ officeName }}）</span>
   </h2>
-
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
 
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">CSV出力</button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
       <button mat-raised-button color="primary" (click)="onSave()">保存</button>
       <button mat-button (click)="onCancel()">キャンセル</button>
     </ng-container>
+  </div>
+
+  <div class="form-section">
+    <form [formGroup]="form" class="form-section">
+      <table class="form-table">
+        <tbody>
+          <tr>
+            <td class="form-label"><label for="input-提出年月日x年">提出年月日x年</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="提出年月日x年"
+                id="input-提出年月日x年"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-提出年月日x月">提出年月日x月</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="提出年月日x月"
+                id="input-提出年月日x月"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-提出年月日x日">提出年月日x日</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="提出年月日x日"
+                id="input-提出年月日x日"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-事業所整理記号">事業所整理記号</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="事業所整理記号"
+                id="input-事業所整理記号"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-事業所番号">事業所番号</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="事業所番号"
+                id="input-事業所番号"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-事業所所在地">事業所所在地</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="事業所所在地"
+                id="input-事業所所在地"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-事業所名称">事業所名称</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="事業所名称"
+                id="input-事業所名称"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-事業主氏名">事業主氏名</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="事業主氏名"
+                id="input-事業主氏名"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label"><label for="input-電話番号">電話番号</label></td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="電話番号"
+                id="input-電話番号"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td class="form-label">
+              <label for="input-社会保険労務士氏名">社会保険労務士氏名</label>
+            </td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                formControlName="社会保険労務士氏名"
+                id="input-社会保険労務士氏名"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin: 2rem 0 1rem 0; font-weight: bold">被保険者情報</div>
+      <div formArrayName="insuredList">
+        <div
+          *ngFor="let group of insuredArray.controls; let i = index"
+          [formGroupName]="i"
+          class="insured-block"
+        >
+          <table class="form-table">
+            <tbody>
+              <tr>
+                <td class="form-label">
+                  <label [for]="'insured-整理番号-' + i">被保険者整理番号</label>
+                </td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="被保険者整理番号"
+                    [id]="'insured-整理番号-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="form-label"><label [for]="'insured-氏名-' + i">被保険者氏名</label></td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="被保険者氏名"
+                    [id]="'insured-氏名-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="form-label"><label [for]="'insured-生年月日-' + i">生年月日</label></td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="生年月日"
+                    [id]="'insured-生年月日-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="form-label">
+                  <label [for]="'insured-賞与支払年月日-' + i">賞与支払年月日</label>
+                </td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="賞与支払年月日"
+                    [id]="'insured-賞与支払年月日-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="form-label">
+                  <label [for]="'insured-賞与支払額-' + i">賞与支払額</label>
+                </td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="賞与支払額"
+                    [id]="'insured-賞与支払額-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="form-label">
+                  <label [for]="'insured-賞与額千円未満切捨て-' + i"
+                    >賞与額（千円未満切捨て）</label
+                  >
+                </td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="賞与額千円未満切捨て"
+                    [id]="'insured-賞与額千円未満切捨て-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="form-label">
+                  <label [for]="'insured-個人番号基礎年金番号-' + i"
+                    >個人番号（基礎年金番号）</label
+                  >
+                </td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="個人番号基礎年金番号"
+                    [id]="'insured-個人番号基礎年金番号-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="form-label"><label [for]="'insured-備考-' + i">備考</label></td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="備考"
+                    [id]="'insured-備考-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="removeInsured(i)"
+                    *ngIf="isEditing && insuredArray.length > 1"
+                    type="button"
+                    style="margin-left: 8px; vertical-align: middle"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="text-align: right; margin-top: 8px">
+        <button
+          mat-mini-fab
+          color="primary"
+          (click)="addInsured()"
+          *ngIf="isEditing && insuredArray.length < 10"
+          type="button"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
