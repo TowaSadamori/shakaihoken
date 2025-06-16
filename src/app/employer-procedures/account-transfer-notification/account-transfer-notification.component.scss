@@ -25,10 +25,68 @@
 }
 
 .form-section {
-  width: 90%;
-  max-width: 700px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.form-table {
+  width: 100%;
+  max-width: 800px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fafbfc;
   margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+}
+
+.form-table tr {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.form-table tr:last-child {
+  border-bottom: none;
+}
+
+.form-label {
+  width: 38%;
+  min-width: 180px;
+  background: #f0f4f8;
+  color: #333;
+  font-weight: 500;
+  padding: 0.7rem 1.2rem;
   text-align: left;
+  border-right: 1px solid #e0e0e0;
+  font-size: 1rem;
+}
+
+.form-input {
+  width: 62%;
+  padding: 0.7rem 1.2rem;
+  background: #fff;
+}
+
+.form-input input[matInput] {
+  width: 100%;
+  font-size: 1rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .form-table,
+  .form-label,
+  .form-input {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.5rem;
+  }
+  .form-table {
+    max-width: 100%;
+  }
 }
 
 .button-group {
