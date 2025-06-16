@@ -8,18 +8,37 @@
     <span class="office-name" *ngIf="officeName">（{{ officeName }}）</span>
   </h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
-
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">CSV出力</button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
       <button mat-raised-button color="primary" (click)="onSave()">保存</button>
       <button mat-button (click)="onCancel()">キャンセル</button>
     </ng-container>
+  </div>
+
+  <div class="form-section">
+    <form [formGroup]="form" class="form-section">
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let item of formItems">
+            <td class="form-label">
+              <label [for]="'input-' + item">{{ item }}</label>
+            </td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                [formControlName]="item"
+                [id]="'input-' + item"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
   </div>
 </div>
