@@ -1,0 +1,141 @@
+<div class="judgment-container">
+  <h2>社会保険対象者判定</h2>
+
+  <!-- 対象者情報 -->
+  <div class="employee-info">
+    <h3>対象者情報</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">従業員名:</div>
+        <span>{{ employeeName }}</span>
+      </div>
+      <div class="info-item">
+        <div class="label">従業員番号:</div>
+        <span>{{ employeeNumber }}</span>
+      </div>
+      <div class="info-item">
+        <div class="label">生年月日:</div>
+        <span>{{ birthDate }}</span>
+      </div>
+      <div class="info-item">
+        <div class="label">年齢:</div>
+        <span>{{ age }}歳</span>
+      </div>
+      <div class="info-item">
+        <div class="label">事業所番号:</div>
+        <span>{{ officeNumber }}</span>
+      </div>
+      <div class="info-item">
+        <div class="label">事業所所在地:</div>
+        <span>{{ officePrefecture }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 雇用形態選択 -->
+  <div class="employment-selection">
+    <h3>属性判定</h3>
+    <div class="selection-form">
+      <select
+        id="employment-type"
+        [(ngModel)]="selectedEmploymentType"
+        (change)="onEmploymentTypeChange()"
+      >
+        <option value="">選択してください</option>
+        <option value="regular">正社員</option>
+        <option value="part-time">パートタイム・アルバイト</option>
+        <option value="contract">契約社員</option>
+        <option value="executive-full">常勤役員</option>
+        <option value="executive-part">非常勤役員</option>
+        <option value="over70">70歳以上被用者</option>
+        <option value="over75">75歳以上（後期高齢者）</option>
+        <option value="on-leave">休職者</option>
+        <option value="secondment">出向者</option>
+        <option value="multiple-workplace">二以上事業所勤務者</option>
+        <option value="trial-period">試用期間中</option>
+        <option value="overseas">海外居住</option>
+        <option value="disabled">障害者</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 追加質問エリア -->
+  <div class="questionnaire" *ngIf="showQuestionnaire">
+    <h3>詳細判定のための質問</h3>
+    <div class="questions">
+      <div *ngFor="let question of currentQuestions" class="question-item">
+        <div class="question-text">{{ question.text }}</div>
+        <div class="answer-options">
+          <label>
+            <input
+              type="radio"
+              [name]="question.id"
+              value="yes"
+              [(ngModel)]="answers[question.id]"
+              (change)="updateAnswers()"
+            />
+            はい
+          </label>
+          <label>
+            <input
+              type="radio"
+              [name]="question.id"
+              value="no"
+              [(ngModel)]="answers[question.id]"
+              (change)="updateAnswers()"
+            />
+            いいえ
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 判定結果 -->
+  <div class="judgment-result" *ngIf="judgmentResult">
+    <h3>判定結果</h3>
+    <div class="result-cards">
+      <div class="result-card">
+        <h4>健康保険</h4>
+        <div
+          class="status"
+          [class]="judgmentResult.healthInsurance.eligible ? 'eligible' : 'not-eligible'"
+        >
+          {{ judgmentResult.healthInsurance.eligible ? '加入対象' : '加入対象外' }}
+        </div>
+        <p>{{ judgmentResult.healthInsurance.reason }}</p>
+      </div>
+
+      <div class="result-card">
+        <h4>厚生年金保険</h4>
+        <div
+          class="status"
+          [class]="judgmentResult.pensionInsurance.eligible ? 'eligible' : 'not-eligible'"
+        >
+          {{ judgmentResult.pensionInsurance.eligible ? '加入対象' : '加入対象外' }}
+        </div>
+        <p>{{ judgmentResult.pensionInsurance.reason }}</p>
+      </div>
+
+      <div class="result-card">
+        <h4>介護保険</h4>
+        <div
+          class="status"
+          [class]="judgmentResult.careInsurance?.eligible ? 'eligible' : 'not-eligible'"
+        >
+          {{ judgmentResult.careInsurance?.eligible ? '加入対象' : '加入対象外' }}
+        </div>
+        <p>{{ judgmentResult.careInsurance?.reason }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- アクションボタン -->
+  <div class="action-buttons">
+    <button class="btn-secondary" (click)="goBack()">戻る</button>
+    <button class="btn-primary" (click)="executeJudgment()" [disabled]="!canExecuteJudgment()">
+      判定実行
+    </button>
+    <button class="btn-primary" *ngIf="judgmentResult" (click)="saveJudgment()">結果を保存</button>
+  </div>
+</div>

@@ -43,9 +43,38 @@
 }
 
 .employee-status-list {
-  margin: 48px auto 0 auto;
-  max-width: 1100px;
-  width: 100%;
+  margin-top: 2rem;
+
+  .status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    h3 {
+      margin: 0;
+      color: #333;
+    }
+
+    .period-selector {
+      display: flex;
+      gap: 0.5rem;
+
+      .year-select,
+      .month-select {
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+
+        &:focus {
+          outline: none;
+          border-color: #1976d2;
+        }
+      }
+    }
+  }
 }
 
 .status-table {
@@ -68,4 +97,18 @@
 }
 .status-table tr:nth-child(even) td {
   background: #f7fafd;
+}
+
+.judgment-btn {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+
+  &:hover {
+    background-color: #45a049;
+  }
 }

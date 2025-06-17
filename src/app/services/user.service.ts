@@ -30,6 +30,21 @@ export interface User {
   prefectureCity?: string;
   addressDetail?: string;
   phone?: string;
+
+  // 社会保険判定用フィールド
+  employmentType?: 'regular' | 'part-time' | 'contract' | 'temporary' | 'dispatch' | 'other'; // 雇用形態
+  workingHoursPerWeek?: number; // 週労働時間
+  workingDaysPerWeek?: number; // 週労働日数
+  monthlyIncome?: string; // 月収（文字列でbigint対応）
+  annualIncome?: string; // 年収（文字列でbigint対応）
+  multipleWorkplaces?: boolean; // 二以上事業所勤務
+  otherWorkplaceInfo?: string; // 他の事業所情報
+  nationality?: string; // 国籍
+  socialSecurityAgreement?: boolean; // 社会保障協定対象
+  agreementCountry?: string; // 協定対象国
+  insuranceExemption?: boolean; // 保険適用除外
+  exemptionReason?: string; // 適用除外理由
+
   // 他に必要なフィールドがあれば追加
 }
 

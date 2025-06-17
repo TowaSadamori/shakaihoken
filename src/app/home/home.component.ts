@@ -42,6 +42,30 @@ interface EmployeeInsuranceData {
   currentMonth: InsuranceFeeData;
 }
 
+// 社会保険加入判定結果の型定義
+interface InsuranceEligibility {
+  healthInsurance: {
+    eligible: boolean;
+    reason: string;
+    notes?: string;
+  };
+  pensionInsurance: {
+    eligible: boolean;
+    reason: string;
+    notes?: string;
+  };
+  employmentInsurance: {
+    eligible: boolean;
+    reason: string;
+    notes?: string;
+  };
+  specialCases: {
+    multipleWorkplaces: boolean;
+    shortTimeWorker: boolean;
+    socialSecurityAgreement: boolean;
+  };
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -81,6 +105,9 @@ export class HomeComponent implements OnInit {
     { value: 11, display: '11月' },
     { value: 12, display: '12月' },
   ];
+
+  // 社会保険加入判定結果
+  insuranceEligibility: InsuranceEligibility | null = null;
 
   // 現在のユーザーの保険料データ
   currentUserInsurance: InsuranceFeeData = {
@@ -157,9 +184,11 @@ export class HomeComponent implements OnInit {
         const currentUserData = employees.find((emp) => emp.uid === this.currentUser?.uid);
         if (currentUserData) {
           this.allEmployeesData = [this.convertToEmployeeInsuranceData(currentUserData)];
-          // 個人保険料データも設定
+          // 個人保険料データも更新
           this.currentUserInsurance = this.createInsuranceFeeData(currentUserData);
-          // 月別データを生成
+          // 社会保険加入判定を実行
+          this.insuranceEligibility = this.checkEligibility(currentUserData);
+          // 月別データを再生成
           this.monthlyData = this.generateMonthlyData(currentUserData);
         }
       }
@@ -331,6 +360,8 @@ export class HomeComponent implements OnInit {
           this.allEmployeesData = [this.convertToEmployeeInsuranceData(currentUserData)];
           // 個人保険料データも更新
           this.currentUserInsurance = this.createInsuranceFeeData(currentUserData);
+          // 社会保険加入判定を実行
+          this.insuranceEligibility = this.checkEligibility(currentUserData);
           // 月別データを再生成
           this.monthlyData = this.generateMonthlyData(currentUserData);
         }
@@ -338,5 +369,30 @@ export class HomeComponent implements OnInit {
     } catch (error) {
       console.error('データ更新エラー:', error);
     }
+  }
+
+  // 社会保険加入判定を実行
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private checkEligibility(_user: User): InsuranceEligibility {
+    // TODO: 実際の判定ロジックをここに実装
+    return {
+      healthInsurance: {
+        eligible: true,
+        reason: '判定不可',
+      },
+      pensionInsurance: {
+        eligible: true,
+        reason: '判定不可',
+      },
+      employmentInsurance: {
+        eligible: true,
+        reason: '判定不可',
+      },
+      specialCases: {
+        multipleWorkplaces: false,
+        shortTimeWorker: false,
+        socialSecurityAgreement: false,
+      },
+    };
   }
 }

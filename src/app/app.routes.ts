@@ -99,6 +99,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'employee-procedures/insurance-judgment/:uid',
+        loadComponent: () =>
+          import('./employee-procedures/insurance-judgment/insurance-judgment.component').then(
+            (m) => m.InsuranceJudgmentComponent
+          ),
+      },
+      {
         path: 'employee-procedures/maternity-leave-application/:uid',
         loadComponent: () =>
           import(

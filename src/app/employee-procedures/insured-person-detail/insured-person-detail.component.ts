@@ -99,7 +99,7 @@ export class InsuredPersonDetailComponent implements OnInit {
     headers.forEach((h, i) => {
       const key = h.trim() as keyof User;
       const v: string = values[i] ? values[i].trim() : '';
-      obj[key] = v;
+      (obj as Record<string, unknown>)[key] = v;
     });
     // 必須項目チェック
     if (!obj.uid || !obj.lastName || !obj.firstName) return null;
