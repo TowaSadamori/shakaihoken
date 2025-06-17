@@ -8,26 +8,101 @@
     <span class="office-name" *ngIf="officeName">（{{ officeName }}）</span>
   </h2>
 
-  <!-- 提出者記入欄 -->
-  <div class="form-section submitter-section">
-    <!-- 提出者情報フォーム（例: 事業所整理記号、所在地、名称、氏名、電話番号、社労士氏名など） -->
-    <!-- 項目は後ほど実装 -->
-  </div>
-
-  <!-- 被保険者欄 -->
-  <div class="form-section insured-section">
-    <!-- 被保険者情報フォーム（1人分ごとにFormArrayで繰り返し） -->
-    <!-- 項目は後ほど実装 -->
-  </div>
-
-  <div class="button-group right-align">
+  <div class="button-group">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">CSV出力</button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
       <button mat-raised-button color="primary" (click)="onSave()">保存</button>
       <button mat-button (click)="onCancel()">キャンセル</button>
     </ng-container>
   </div>
+
+  <form [formGroup]="form" class="form-section">
+    <div style="margin: 2rem 0 1rem 0; font-weight: bold">提出者記入欄</div>
+    <table class="form-table">
+      <tbody>
+        <tr *ngFor="let item of formItems">
+          <td class="form-label">
+            <label [for]="'input-' + item">{{ item }}</label>
+          </td>
+          <td class="form-input">
+            <input
+              matInput
+              type="text"
+              [formControlName]="item"
+              [id]="'input-' + item"
+              [attr.readonly]="!isEditing ? true : null"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin: 2rem 0 1rem 0; font-weight: bold">被保険者情報</div>
+    <div formArrayName="insuredList">
+      <div
+        *ngFor="let group of insuredArray.controls; let i = index"
+        [formGroupName]="i"
+        class="insured-block"
+      >
+        <div style="font-weight: bold; margin-bottom: 1rem; color: #1976d2">
+          被保険者 {{ i + 1 }}
+        </div>
+        <table class="form-table">
+          <tbody>
+            <tr *ngFor="let pItem of personItems">
+              <td class="form-label">
+                <label [for]="'insured-' + pItem + '-' + i">{{ pItem }}</label>
+              </td>
+              <td class="form-input">
+                <ng-container *ngIf="pItem.includes('該当理由チェック'); else inputField">
+                  <input
+                    type="checkbox"
+                    [formControlName]="pItem"
+                    [id]="'insured-' + pItem + '-' + i"
+                    [attr.disabled]="!isEditing ? true : null"
+                    style="margin-right: 8px"
+                  />
+                  <span>{{ pItem.replace('該当理由チェック', '') }}</span>
+                </ng-container>
+                <ng-template #inputField>
+                  <input
+                    matInput
+                    type="text"
+                    [formControlName]="pItem"
+                    [id]="'insured-' + pItem + '-' + i"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </ng-template>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="removeInsured(i)"
+                  *ngIf="isEditing && insuredArray.length > 1 && pItem === '備考'"
+                  type="button"
+                  style="margin-left: 8px; vertical-align: middle"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="text-align: right; margin-top: 8px">
+      <button
+        mat-mini-fab
+        color="primary"
+        (click)="addInsured()"
+        *ngIf="isEditing && insuredArray.length < 10"
+        type="button"
+      >
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </form>
 </div>

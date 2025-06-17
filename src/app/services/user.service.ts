@@ -9,6 +9,7 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 
 export interface User {
@@ -117,5 +118,41 @@ export class UserService {
   async deleteDependent(uid: string, depId: string): Promise<void> {
     const depRef = doc(this.firestore, `users/${uid}/dependents`, depId);
     await deleteDoc(depRef);
+  }
+
+  /**
+   * 個人の申請データを保存（個人ごとのFirestore保存）
+   */
+  async saveUserApplication(
+    uid: string,
+    formName: string,
+    formData: Record<string, unknown>
+  ): Promise<void> {
+    const applicationDocRef = doc(this.firestore, 'users', uid, 'applications', formName);
+    await setDoc(
+      applicationDocRef,
+      {
+        formName,
+        formData,
+        updatedAt: serverTimestamp(),
+        createdBy: uid,
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * 個人の申請データを取得
+   */
+  async getUserApplication(
+    uid: string,
+    formName: string
+  ): Promise<{ formData: Record<string, unknown> } | null> {
+    const applicationDocRef = doc(this.firestore, 'users', uid, 'applications', formName);
+    const applicationDocSnap = await getDoc(applicationDocRef);
+    if (applicationDocSnap.exists()) {
+      return applicationDocSnap.data() as { formData: Record<string, unknown> };
+    }
+    return null;
   }
 }

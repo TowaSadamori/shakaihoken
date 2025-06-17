@@ -1,96 +1,149 @@
-<button class="employee-btn" routerLink="/employee-procedures">従業員手続き画面へ戻る</button>
+<div class="application-form-container">
+  <button class="back-btn" routerLink="/employee-procedures">従業員手続き画面へ戻る</button>
 
-<h2 class="detail-title">{{ userName }}さんの各種申請</h2>
-<div class="application-buttons">
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/maternity-leave-application', uid]"
-    [disabled]="!uid"
-  >
-    健康保険・厚生年金保険 産前産後休業取得者申出書／変更（終了）届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/childcare-leave-application', uid]"
-    [disabled]="!uid"
-  >
-    健康保険・厚生年金保険 育児休業等取得者申出書（新規・延長）／終了届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/care-insurance-exemption-application', uid]"
-    [disabled]="!uid"
-  >
-    介護保険適用除外等（該当・非該当）届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/over70-application', uid]"
-    [disabled]="!uid"
-  >
-    厚生年金保険 70歳以上被用者 該当・不該当届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/childcare-period-exemption-application', uid]"
-    [disabled]="!uid"
-  >
-    厚生年金保険 養育期間標準報酬月額特例申出書／終了届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/qualification-acquisition-notification', uid]"
-    [disabled]="!uid"
-  >
-    健保厚年資格取得届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/qualification-loss-notification', uid]"
-    [disabled]="!uid"
-  >
-    健保厚年資格喪失届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/uncollectable-insurance-card-notification', uid]"
-    [disabled]="!uid"
-  >
-    被保険者証回収不能届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/insurance-card-reissue-application', uid]"
-    [disabled]="!uid"
-  >
-    健康保険 被保険者証再交付申請書
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/insured-person-info-change-notification', uid]"
-    [disabled]="!uid"
-  >
-    健康保険・厚生年金保険 被保険者氏名変更（訂正）届／住所変更届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/dependent-change-notification', uid]"
-    [disabled]="!uid"
-  >
-    健康保険被扶養者（異動）届（国民年金第３号被保険者関係届）
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/childcare-leave-end-salary-notification', uid]"
-    [disabled]="!uid"
-  >
-    育児休業等終了時報酬月額変更届
-  </button>
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/maternity-leave-end-salary-notification', uid]"
-    [disabled]="!uid"
-  >
-    産前産後休業終了時報酬月額変更届
-  </button>
+  <h2 class="detail-title">{{ userName }}さんの各種申請</h2>
+
+  <div class="procedure-buttons">
+    <!-- 入退社および扶養家族 -->
+    <div class="button-section">
+      <h3>入退社および扶養家族</h3>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/qualification-acquisition-notification', uid]"
+        [disabled]="!uid"
+      >
+        健保厚年資格取得届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/qualification-loss-notification', uid]"
+        [disabled]="!uid"
+      >
+        健保厚年資格喪失届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/uncollectable-insurance-card-notification', uid]"
+        [disabled]="!uid"
+      >
+        被保険者証回収不能届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/dependent-change-notification', uid]"
+        [disabled]="!uid"
+      >
+        健康保険被扶養者（異動）届（国民年金第３号被保険者関係届）
+      </button>
+    </div>
+
+    <!-- 出産及び育児関係 -->
+    <div class="button-section">
+      <h3>出産及び育児関係</h3>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/maternity-leave-application', uid]"
+        [disabled]="!uid"
+      >
+        健康保険・厚生年金保険 産前産後休業取得者申出書／変更（終了）届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/childcare-leave-application', uid]"
+        [disabled]="!uid"
+      >
+        健康保険・厚生年金保険 育児休業等取得者申出書（新規・延長）／終了届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/childcare-leave-end-salary-notification', uid]"
+        [disabled]="!uid"
+      >
+        育児休業等終了時報酬月額変更届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/maternity-leave-end-salary-notification', uid]"
+        [disabled]="!uid"
+      >
+        産前産後休業終了時報酬月額変更届
+      </button>
+    </div>
+
+    <!-- 介護保険 -->
+    <div class="button-section">
+      <h3>介護保険</h3>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/care-insurance-exemption-application', uid]"
+        [disabled]="!uid"
+      >
+        介護保険適用除外等（該当・非該当）届
+      </button>
+    </div>
+
+    <!-- 厚生年金 -->
+    <div class="button-section">
+      <h3>厚生年金</h3>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/over70-application', uid]"
+        [disabled]="!uid"
+      >
+        厚生年金保険 70歳以上被用者 該当・不該当届
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/childcare-period-exemption-application', uid]"
+        [disabled]="!uid"
+      >
+        厚生年金保険 養育期間標準報酬月額特例申出書／終了届
+      </button>
+    </div>
+
+    <!-- その他 -->
+    <div class="button-section">
+      <h3>その他</h3>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/insurance-card-reissue-application', uid]"
+        [disabled]="!uid"
+      >
+        健康保険 被保険者証再交付申請書
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        class="procedure-btn"
+        [routerLink]="['/employee-procedures/insured-person-info-change-notification', uid]"
+        [disabled]="!uid"
+      >
+        健康保険・厚生年金保険 被保険者氏名変更（訂正）届／住所変更届
+      </button>
+    </div>
+  </div>
 </div>

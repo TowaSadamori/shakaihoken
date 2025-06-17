@@ -32,10 +32,14 @@
 }
 
 .button-group {
-  margin-top: 32px;
+  margin: 24px 0;
   display: flex;
   gap: 16px;
   justify-content: center;
+
+  button {
+    min-width: 120px;
+  }
 }
 
 .button-group.right-align {
@@ -50,4 +54,106 @@
   color: #1976d2;
   margin-left: 1.5rem;
   font-weight: bold;
+}
+
+.form-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+
+  tr {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .form-label {
+    width: 30%;
+    padding: 12px 16px;
+    background-color: #f5f5f5;
+    font-weight: 500;
+    color: #333;
+    vertical-align: middle;
+    border-right: 1px solid #e0e0e0;
+
+    label {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+  }
+
+  .form-input {
+    width: 70%;
+    padding: 12px 16px;
+    vertical-align: middle;
+
+    input[type='text'] {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9rem;
+
+      &[readonly] {
+        background-color: #f9f9f9;
+        color: #666;
+      }
+    }
+
+    input[type='checkbox'] {
+      transform: scale(1.2);
+      margin-right: 8px;
+    }
+  }
+}
+
+.insured-block {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 2px solid #e3f2fd;
+  border-radius: 8px;
+  background-color: #fafafa;
+
+  &:nth-child(even) {
+    background-color: #f5f5f5;
+  }
+}
+
+// 被保険者追加ボタンのスタイル
+.mat-mini-fab {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+// レスポンシブ対応
+@media (max-width: 768px) {
+  .maternity-leave-container {
+    margin: 20px auto 0 auto;
+    padding: 16px 0 24px 0;
+  }
+
+  .form-section {
+    width: 95%;
+  }
+
+  .form-table {
+    .form-label,
+    .form-input {
+      display: block;
+      width: 100%;
+      padding: 8px;
+    }
+
+    .form-label {
+      background-color: #e3f2fd;
+      border-right: none;
+      border-bottom: 1px solid #ddd;
+    }
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: center;
+
+    button {
+      width: 200px;
+    }
+  }
 }

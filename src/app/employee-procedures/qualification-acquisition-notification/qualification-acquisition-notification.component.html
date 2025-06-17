@@ -5,18 +5,108 @@
 
   <h2 class="detail-title">{{ userName }}さんの健保厚年資格取得届</h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
-
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">CSV出力</button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
       <button mat-raised-button color="primary" (click)="onSave()">保存</button>
       <button mat-button (click)="onCancel()">キャンセル</button>
     </ng-container>
   </div>
+
+  <form [formGroup]="form" class="form-section">
+    <table class="form-table">
+      <tbody>
+        <tr *ngFor="let item of formItems">
+          <td class="form-label">
+            <label [for]="'input-' + item">{{ item }}</label>
+          </td>
+          <td class="form-input">
+            <ng-container *ngIf="item === '性別'; else checkOther">
+              <select
+                [formControlName]="item"
+                [id]="'input-' + item"
+                [attr.disabled]="!isEditing ? true : null"
+                class="form-select"
+              >
+                <option value="">選択してください</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </ng-container>
+
+            <ng-template #checkOther>
+              <ng-container *ngIf="item === '70歳以上被用者該当'; else checkWorkType">
+                <input
+                  type="checkbox"
+                  [formControlName]="item"
+                  [id]="'input-' + item"
+                  [attr.disabled]="!isEditing ? true : null"
+                  style="margin-right: 8px"
+                />
+                <span>70歳以上被用者に該当する</span>
+              </ng-container>
+
+              <ng-template #checkWorkType>
+                <ng-container *ngIf="item === '就労形態'; else checkBenefit">
+                  <select
+                    [formControlName]="item"
+                    [id]="'input-' + item"
+                    [attr.disabled]="!isEditing ? true : null"
+                    class="form-select"
+                  >
+                    <option value="">選択してください</option>
+                    <option value="正社員">正社員</option>
+                    <option value="契約社員">契約社員</option>
+                    <option value="パート・アルバイト">パート・アルバイト</option>
+                    <option value="派遣社員">派遣社員</option>
+                    <option value="その他">その他</option>
+                  </select>
+                </ng-container>
+
+                <ng-template #checkBenefit>
+                  <ng-container *ngIf="item.includes('現物給与'); else dateField">
+                    <input
+                      matInput
+                      type="number"
+                      [formControlName]="item"
+                      [id]="'input-' + item"
+                      [attr.readonly]="!isEditing ? true : null"
+                      placeholder="金額（円）"
+                    />
+                  </ng-container>
+
+                  <ng-template #dateField>
+                    <ng-container
+                      *ngIf="item.includes('年月日') || item === '生年月日'; else normalField"
+                    >
+                      <input
+                        matInput
+                        type="date"
+                        [formControlName]="item"
+                        [id]="'input-' + item"
+                        [attr.readonly]="!isEditing ? true : null"
+                      />
+                    </ng-container>
+
+                    <ng-template #normalField>
+                      <input
+                        matInput
+                        type="text"
+                        [formControlName]="item"
+                        [id]="'input-' + item"
+                        [attr.readonly]="!isEditing ? true : null"
+                      />
+                    </ng-template>
+                  </ng-template>
+                </ng-template>
+              </ng-template>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
 </div>
