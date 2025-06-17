@@ -1,22 +1,611 @@
-<div class="maternity-leave-container">
+<div class="maternity-leave-end-salary-container">
   <button mat-button color="primary" routerLink="/employee-procedures/application-form/{{ uid }}">
+    <mat-icon>arrow_back</mat-icon>
     各種申請画面へ戻る
   </button>
 
   <h2 class="detail-title">{{ userName }}さんの産前産後休業終了時報酬月額変更届</h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
-
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
-      <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="primary" (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+        編集
+      </button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">
+        <mat-icon>download</mat-icon>
+        CSV出力
+      </button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
-      <button mat-raised-button color="primary" (click)="onSave()">保存</button>
-      <button mat-button (click)="onCancel()">キャンセル</button>
+      <button mat-raised-button color="primary" (click)="onSave()">
+        <mat-icon>save</mat-icon>
+        保存
+      </button>
+      <button mat-button (click)="onCancel()">
+        <mat-icon>cancel</mat-icon>
+        キャンセル
+      </button>
     </ng-container>
+  </div>
+
+  <form [formGroup]="form" class="form-container">
+    <!-- 事業所情報セクション -->
+    <div class="form-section office-section">
+      <div class="section-header">
+        <mat-icon>business</mat-icon>
+        <h3>事業所情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="submission-date-era">提出年月日（和暦）</label>
+          <input
+            id="submission-date-era"
+            type="text"
+            formControlName="提出年月日和暦"
+            [readonly]="!isEditing"
+            placeholder="令和○年"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="submission-year">提出年月日</label>
+          <div class="date-inputs">
+            <input
+              id="submission-year"
+              type="number"
+              formControlName="提出年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="提出年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="提出年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="office-prefecture">事業所整理記号（都道府県コード）</label>
+          <input
+            id="office-prefecture"
+            type="text"
+            formControlName="事業所整理記号都道府県コード"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="office-city">事業所整理記号（郡市区符号）</label>
+          <input
+            id="office-city"
+            type="text"
+            formControlName="事業所整理記号郡市区符号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="office-number">事業所整理記号（事業所記号）</label>
+          <input
+            id="office-number"
+            type="text"
+            formControlName="事業所整理記号事業所記号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-address">事業所所在地</label>
+          <input
+            id="office-address"
+            type="text"
+            formControlName="事業所所在地"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-name">事業所名称</label>
+          <input
+            id="office-name"
+            type="text"
+            formControlName="事業所名称"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="employer-name">事業主氏名</label>
+          <input
+            id="employer-name"
+            type="text"
+            formControlName="事業主氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="phone-number">電話番号</label>
+          <input id="phone-number" type="tel" formControlName="電話番号" [readonly]="!isEditing" />
+        </div>
+        <div class="form-group full-width">
+          <label for="labor-consultant">社会保険労務士氏名</label>
+          <input
+            id="labor-consultant"
+            type="text"
+            formControlName="社会保険労務士氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 申出者情報セクション -->
+    <div class="form-section applicant-section">
+      <div class="section-header">
+        <mat-icon>person</mat-icon>
+        <h3>申出者情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label for="applicant-address">申出者住所</label>
+          <input
+            id="applicant-address"
+            type="text"
+            formControlName="申出者住所"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="applicant-name">申出者氏名</label>
+          <input
+            id="applicant-name"
+            type="text"
+            formControlName="申出者氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="relationship">続柄</label>
+          <input
+            id="relationship"
+            type="text"
+            formControlName="申出者続柄"
+            [readonly]="!isEditing"
+            placeholder="本人・配偶者等"
+          />
+        </div>
+        <div class="form-group">
+          <label for="applicant-phone">申出者電話番号</label>
+          <input
+            id="applicant-phone"
+            type="tel"
+            formControlName="申出者電話番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 被保険者基本情報セクション -->
+    <div class="form-section insured-section">
+      <div class="section-header">
+        <mat-icon>badge</mat-icon>
+        <h3>被保険者基本情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="insured-number">被保険者整理番号</label>
+          <input
+            id="insured-number"
+            type="text"
+            formControlName="被保険者整理番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="personal-number">個人番号</label>
+          <input
+            id="personal-number"
+            type="text"
+            formControlName="個人番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insured-name">被保険者氏名</label>
+          <input
+            id="insured-name"
+            type="text"
+            formControlName="被保険者氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="insured-birth-year">被保険者生年月日</label>
+          <div class="date-inputs">
+            <input
+              id="insured-birth-year"
+              type="number"
+              formControlName="被保険者生年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 産前産後休業終了情報セクション -->
+    <div class="form-section maternity-end-section">
+      <div class="section-header">
+        <mat-icon>event</mat-icon>
+        <h3>産前産後休業終了情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group date-group">
+          <label for="maternity-end-year">産前産後休業終了年月日</label>
+          <div class="date-inputs">
+            <input
+              id="maternity-end-year"
+              type="number"
+              formControlName="産前産後休業終了年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="産前産後休業終了年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="産前産後休業終了年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group date-group">
+          <label for="maternity-end-planned-year">産前産後休業終了予定年月日</label>
+          <div class="date-inputs">
+            <input
+              id="maternity-end-planned-year"
+              type="number"
+              formControlName="産前産後休業終了予定年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="産前産後休業終了予定年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="産前産後休業終了予定年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3か月間の報酬情報セクション -->
+    <div class="form-section salary-section">
+      <div class="section-header">
+        <mat-icon>attach_money</mat-icon>
+        <h3>3か月間の報酬情報</h3>
+      </div>
+
+      <!-- 1か月目 -->
+      <div class="month-section">
+        <h4>1か月目</h4>
+        <div class="form-grid">
+          <div class="form-group date-group">
+            <label for="payment-year-1">支給年月</label>
+            <div class="date-inputs">
+              <input
+                id="payment-year-1"
+                type="number"
+                formControlName="支給年月1年"
+                [readonly]="!isEditing"
+                placeholder="年"
+              />
+              <span>年</span>
+              <input
+                type="number"
+                formControlName="支給年月1月"
+                [readonly]="!isEditing"
+                placeholder="月"
+              />
+              <span>月</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="base-days-1">給与計算の基礎日数</label>
+            <input
+              id="base-days-1"
+              type="number"
+              formControlName="給与計算の基礎日数1"
+              [readonly]="!isEditing"
+            />
+          </div>
+          <div class="form-group">
+            <label for="currency-1">通貨によるものの額</label>
+            <input
+              id="currency-1"
+              type="number"
+              formControlName="通貨によるものの額1"
+              [readonly]="!isEditing"
+              (blur)="calculateTotal(1)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="goods-1">現物によるものの額</label>
+            <input
+              id="goods-1"
+              type="number"
+              formControlName="現物によるものの額1"
+              [readonly]="!isEditing"
+              (blur)="calculateTotal(1)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="subtotal-1">合計</label>
+            <input
+              id="subtotal-1"
+              type="number"
+              formControlName="合計1"
+              readonly
+              class="calculated-field"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 2か月目 -->
+      <div class="month-section">
+        <h4>2か月目</h4>
+        <div class="form-grid">
+          <div class="form-group date-group">
+            <label for="payment-year-2">支給年月</label>
+            <div class="date-inputs">
+              <input
+                id="payment-year-2"
+                type="number"
+                formControlName="支給年月2年"
+                [readonly]="!isEditing"
+                placeholder="年"
+              />
+              <span>年</span>
+              <input
+                type="number"
+                formControlName="支給年月2月"
+                [readonly]="!isEditing"
+                placeholder="月"
+              />
+              <span>月</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="base-days-2">給与計算の基礎日数</label>
+            <input
+              id="base-days-2"
+              type="number"
+              formControlName="給与計算の基礎日数2"
+              [readonly]="!isEditing"
+            />
+          </div>
+          <div class="form-group">
+            <label for="currency-2">通貨によるものの額</label>
+            <input
+              id="currency-2"
+              type="number"
+              formControlName="通貨によるものの額2"
+              [readonly]="!isEditing"
+              (blur)="calculateTotal(2)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="goods-2">現物によるものの額</label>
+            <input
+              id="goods-2"
+              type="number"
+              formControlName="現物によるものの額2"
+              [readonly]="!isEditing"
+              (blur)="calculateTotal(2)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="subtotal-2">合計</label>
+            <input
+              id="subtotal-2"
+              type="number"
+              formControlName="合計2"
+              readonly
+              class="calculated-field"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3か月目 -->
+      <div class="month-section">
+        <h4>3か月目</h4>
+        <div class="form-grid">
+          <div class="form-group date-group">
+            <label for="payment-year-3">支給年月</label>
+            <div class="date-inputs">
+              <input
+                id="payment-year-3"
+                type="number"
+                formControlName="支給年月3年"
+                [readonly]="!isEditing"
+                placeholder="年"
+              />
+              <span>年</span>
+              <input
+                type="number"
+                formControlName="支給年月3月"
+                [readonly]="!isEditing"
+                placeholder="月"
+              />
+              <span>月</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="base-days-3">給与計算の基礎日数</label>
+            <input
+              id="base-days-3"
+              type="number"
+              formControlName="給与計算の基礎日数3"
+              [readonly]="!isEditing"
+            />
+          </div>
+          <div class="form-group">
+            <label for="currency-3">通貨によるものの額</label>
+            <input
+              id="currency-3"
+              type="number"
+              formControlName="通貨によるものの額3"
+              [readonly]="!isEditing"
+              (blur)="calculateTotal(3)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="goods-3">現物によるものの額</label>
+            <input
+              id="goods-3"
+              type="number"
+              formControlName="現物によるものの額3"
+              [readonly]="!isEditing"
+              (blur)="calculateTotal(3)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="subtotal-3">合計</label>
+            <input
+              id="subtotal-3"
+              type="number"
+              formControlName="合計3"
+              readonly
+              class="calculated-field"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 計算結果セクション -->
+    <div class="form-section calculation-section">
+      <div class="section-header">
+        <mat-icon>calculate</mat-icon>
+        <h3>計算結果</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="grand-total">総計</label>
+          <input
+            id="grand-total"
+            type="number"
+            formControlName="総計"
+            readonly
+            class="calculated-field"
+          />
+        </div>
+        <div class="form-group">
+          <label for="average-amount">平均額</label>
+          <input
+            id="average-amount"
+            type="number"
+            formControlName="平均額"
+            readonly
+            class="calculated-field"
+          />
+        </div>
+        <div class="form-group">
+          <label for="adjusted-average">修正平均額</label>
+          <input
+            id="adjusted-average"
+            type="number"
+            formControlName="修正平均額"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- その他・備考セクション -->
+    <div class="form-section other-section">
+      <div class="section-header">
+        <mat-icon>note</mat-icon>
+        <h3>その他・備考</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label for="remarks">備考</label>
+          <textarea id="remarks" formControlName="備考" [readonly]="!isEditing" rows="3"></textarea>
+        </div>
+        <div class="form-group full-width">
+          <label for="attachments">添付書類確認</label>
+          <textarea
+            id="attachments"
+            formControlName="添付書類確認"
+            [readonly]="!isEditing"
+            rows="2"
+            placeholder="添付書類の確認事項を記載"
+          ></textarea>
+        </div>
+        <div class="form-group full-width">
+          <label for="other-notes">その他特記事項</label>
+          <textarea
+            id="other-notes"
+            formControlName="その他特記事項"
+            [readonly]="!isEditing"
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- 注意事項 -->
+  <div class="notice-section">
+    <h4>注意事項</h4>
+    <ul>
+      <li>産前産後休業終了後3か月間の報酬月額により、標準報酬月額の改定を行います。</li>
+      <li>通貨によるもの、現物によるものの両方を含めて記載してください。</li>
+      <li>給与計算の基礎日数は支払基礎日数を記載してください。</li>
+      <li>添付書類として賃金台帳等の写しが必要です。</li>
+    </ul>
   </div>
 </div>

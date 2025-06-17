@@ -1,10 +1,10 @@
-.maternity-leave-container {
+.maternity-leave-end-salary-container {
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
   margin: 40px auto 0 auto;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   padding: 32px 0 48px 0;
   display: flex;
   flex-direction: column;
@@ -13,44 +13,390 @@
 
 .detail-title {
   text-align: center;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   font-weight: bold;
   color: #222;
   letter-spacing: 0.05em;
-  border-bottom: 4px solid #b71c1c;
-  padding-bottom: 8px;
+  border-bottom: 4px solid #d32f2f;
+  padding-bottom: 12px;
   width: 80%;
   max-width: 900px;
   margin: 32px auto 24px auto;
 }
 
-.form-section {
-  width: 90%;
-  max-width: 700px;
-  margin: 0 auto;
-  text-align: left;
-}
-
 .button-group {
-  margin-top: 32px;
+  margin: 24px 0 32px 0;
   display: flex;
   gap: 16px;
   justify-content: center;
+  flex-wrap: wrap;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    mat-icon {
+      font-size: 1.2rem;
+    }
+  }
 }
 
-.employee-btn {
-  background: #1976d2;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 10px 28px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-  margin-bottom: 24px;
+.form-container {
+  width: 95%;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-.employee-btn:hover {
-  background: #1565c0;
+.form-section {
+  margin-bottom: 32px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    font-weight: bold;
+    color: white;
+    font-size: 1.1rem;
+
+    mat-icon {
+      font-size: 1.4rem;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 24px;
+    background: #fafafa;
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      &.full-width {
+        grid-column: 1 / -1;
+      }
+
+      &.date-group {
+        .date-inputs {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+
+          input {
+            flex: 1;
+            min-width: 60px;
+            max-width: 80px;
+          }
+
+          span {
+            font-weight: 500;
+            color: #666;
+          }
+        }
+      }
+
+      label {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+      }
+
+      input,
+      textarea,
+      select {
+        padding: 12px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: white;
+
+        &:focus {
+          outline: none;
+          border-color: #1976d2;
+          box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+        }
+
+        &[readonly] {
+          background: #f5f5f5;
+          color: #666;
+          cursor: not-allowed;
+        }
+
+        &.calculated-field {
+          background: #e8f5e8;
+          font-weight: 600;
+          color: #2e7d32;
+        }
+
+        &::placeholder {
+          color: #999;
+          font-style: italic;
+        }
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+    }
+  }
+}
+
+// セクション別色分け
+.office-section .section-header {
+  background: linear-gradient(135deg, #d32f2f, #f44336);
+}
+
+.applicant-section .section-header {
+  background: linear-gradient(135deg, #1976d2, #2196f3);
+}
+
+.insured-section .section-header {
+  background: linear-gradient(135deg, #388e3c, #4caf50);
+}
+
+.maternity-end-section .section-header {
+  background: linear-gradient(135deg, #f57c00, #ff9800);
+}
+
+.salary-section .section-header {
+  background: linear-gradient(135deg, #7b1fa2, #9c27b0);
+}
+
+.calculation-section .section-header {
+  background: linear-gradient(135deg, #303f9f, #3f51b5);
+}
+
+.other-section .section-header {
+  background: linear-gradient(135deg, #5d4037, #795548);
+}
+
+// 月別セクション
+.month-section {
+  margin: 24px 0;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #e1bee7;
+
+  h4 {
+    margin: 0 0 16px 0;
+    color: #7b1fa2;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e1bee7;
+  }
+}
+
+// 注意事項セクション
+.notice-section {
+  width: 95%;
+  max-width: 1100px;
+  margin: 32px auto 0 auto;
+  padding: 24px;
+  background: #fff3e0;
+  border-radius: 12px;
+  border-left: 6px solid #ff9800;
+
+  h4 {
+    margin: 0 0 16px 0;
+    color: #e65100;
+    font-size: 1.2rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+      content: '⚠️';
+      font-size: 1.3rem;
+    }
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 8px;
+      line-height: 1.6;
+      color: #bf360c;
+      font-weight: 500;
+
+      &::marker {
+        color: #ff9800;
+      }
+    }
+  }
+}
+
+// レスポンシブデザイン
+@media (max-width: 768px) {
+  .maternity-leave-end-salary-container {
+    margin: 20px auto 0 auto;
+    padding: 20px 0 32px 0;
+  }
+
+  .detail-title {
+    font-size: 1.4rem;
+    width: 90%;
+  }
+
+  .form-container {
+    width: 95%;
+  }
+
+  .form-section .form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+
+    .form-group.date-group .date-inputs {
+      input {
+        min-width: 50px;
+        max-width: 70px;
+      }
+    }
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: center;
+    width: 90%;
+
+    button {
+      width: 100%;
+      max-width: 200px;
+    }
+  }
+
+  .month-section {
+    padding: 16px;
+  }
+
+  .notice-section {
+    width: 95%;
+    padding: 16px;
+
+    h4 {
+      font-size: 1.1rem;
+    }
+
+    ul {
+      padding-left: 16px;
+
+      li {
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
+
+// ホバーエフェクト
+.form-section {
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+}
+
+// アニメーション
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-section {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.form-section:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.form-section:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.form-section:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.form-section:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.form-section:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.form-section:nth-child(6) {
+  animation-delay: 0.6s;
+}
+.form-section:nth-child(7) {
+  animation-delay: 0.7s;
+}
+
+// 印刷スタイル
+@media print {
+  .maternity-leave-end-salary-container {
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .button-group {
+    display: none;
+  }
+
+  .form-section {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+  }
+
+  .section-header {
+    background: #f0f0f0 !important;
+    color: #333 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .notice-section {
+    background: #f9f9f9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

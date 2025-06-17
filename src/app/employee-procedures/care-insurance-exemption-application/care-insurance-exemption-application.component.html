@@ -1,20 +1,515 @@
-<div class="maternity-leave-container">
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/application-form', uid]"
-    [disabled]="!uid"
-  >
+<div class="care-insurance-exemption-container">
+  <button mat-button color="primary" routerLink="/employee-procedures/application-form/{{ uid }}">
+    <mat-icon>arrow_back</mat-icon>
     各種申請画面へ戻る
   </button>
-  <h2 class="detail-title">
-    <span *ngIf="userName">{{ userName }}さんの</span>介護保険適用除外等（該当・非該当）届
-  </h2>
-  <div class="button-group" style="margin-bottom: 16px">
-    <button class="employee-btn" disabled>編集</button>
-    <button class="employee-btn" disabled>保存</button>
-    <button class="employee-btn" disabled>キャンセル</button>
+
+  <h2 class="detail-title">{{ userName }}さんの介護保険適用除外等（該当・非該当）届</h2>
+
+  <div class="button-group">
+    <ng-container *ngIf="!isEditing">
+      <button mat-raised-button color="primary" (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+        編集
+      </button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">
+        <mat-icon>download</mat-icon>
+        CSV出力
+      </button>
+    </ng-container>
+    <ng-container *ngIf="isEditing">
+      <button mat-raised-button color="primary" (click)="onSave()">
+        <mat-icon>save</mat-icon>
+        保存
+      </button>
+      <button mat-button (click)="onCancel()">
+        <mat-icon>cancel</mat-icon>
+        キャンセル
+      </button>
+    </ng-container>
   </div>
-  <div class="form-section">
-    <p>ここに申請フォームを作成します。</p>
+
+  <form [formGroup]="form" class="form-container">
+    <!-- 提出年月日セクション -->
+    <div class="form-section submission-section">
+      <div class="section-header">
+        <mat-icon>calendar_today</mat-icon>
+        <h3>提出年月日</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="submission-era">和暦</label>
+          <input
+            id="submission-era"
+            type="text"
+            formControlName="提出年月日和暦"
+            [readonly]="!isEditing"
+            placeholder="令和○年"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="submission-year">年月日</label>
+          <div class="date-inputs">
+            <input
+              id="submission-year"
+              type="number"
+              formControlName="提出年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="提出年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="提出年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 事業所情報セクション -->
+    <div class="form-section office-section">
+      <div class="section-header">
+        <mat-icon>business</mat-icon>
+        <h3>事業所情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="office-prefecture">事業所整理記号（都道府県コード）</label>
+          <input
+            id="office-prefecture"
+            type="text"
+            formControlName="事業所整理記号都道府県コード"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="office-city">事業所整理記号（郡市区符号）</label>
+          <input
+            id="office-city"
+            type="text"
+            formControlName="事業所整理記号郡市区符号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="office-number">事業所整理記号（事業所記号）</label>
+          <input
+            id="office-number"
+            type="text"
+            formControlName="事業所整理記号事業所記号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-address">事業所所在地</label>
+          <input
+            id="office-address"
+            type="text"
+            formControlName="事業所所在地"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-name">事業所名称</label>
+          <input
+            id="office-name"
+            type="text"
+            formControlName="事業所名称"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="employer-name">事業主氏名</label>
+          <input
+            id="employer-name"
+            type="text"
+            formControlName="事業主氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="office-phone">事業所電話番号</label>
+          <input
+            id="office-phone"
+            type="tel"
+            formControlName="事業所電話番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="labor-consultant">社会保険労務士氏名</label>
+          <input
+            id="labor-consultant"
+            type="text"
+            formControlName="社会保険労務士氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 被保険者情報セクション -->
+    <div class="form-section insured-section">
+      <div class="section-header">
+        <mat-icon>person</mat-icon>
+        <h3>被保険者情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="insured-name">被保険者氏名</label>
+          <input
+            id="insured-name"
+            type="text"
+            formControlName="被保険者氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="insured-birth-year">被保険者生年月日</label>
+          <div class="date-inputs">
+            <input
+              id="insured-birth-year"
+              type="number"
+              formControlName="被保険者生年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="insured-number">被保険者整理番号</label>
+          <input
+            id="insured-number"
+            type="text"
+            formControlName="被保険者整理番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 被扶養者情報セクション（動的） -->
+    <div formArrayName="被扶養者リスト">
+      <div
+        *ngFor="let dependent of dependentArray.controls; let i = index"
+        [formGroupName]="i"
+        class="dependent-container"
+      >
+        <!-- 被扶養者基本情報セクション -->
+        <div class="form-section dependent-section">
+          <div class="section-header">
+            <mat-icon>family_restroom</mat-icon>
+            <h3>被扶養者情報 {{ i + 1 }}</h3>
+            <div class="dependent-actions" *ngIf="isEditing">
+              <button
+                type="button"
+                mat-icon-button
+                color="warn"
+                (click)="removeDependent(i)"
+                [disabled]="dependentArray.length === 1"
+                title="被扶養者を削除"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label [for]="'dependent-name-' + i">被扶養者氏名</label>
+              <input
+                [id]="'dependent-name-' + i"
+                type="text"
+                formControlName="被扶養者氏名"
+                [readonly]="!isEditing"
+              />
+            </div>
+            <div class="form-group date-group">
+              <label [for]="'dependent-birth-year-' + i">被扶養者生年月日</label>
+              <div class="date-inputs">
+                <input
+                  [id]="'dependent-birth-year-' + i"
+                  type="number"
+                  formControlName="被扶養者生年月日年"
+                  [readonly]="!isEditing"
+                  placeholder="年"
+                />
+                <span>年</span>
+                <input
+                  type="number"
+                  formControlName="被扶養者生年月日月"
+                  [readonly]="!isEditing"
+                  placeholder="月"
+                />
+                <span>月</span>
+                <input
+                  type="number"
+                  formControlName="被扶養者生年月日日"
+                  [readonly]="!isEditing"
+                  placeholder="日"
+                />
+                <span>日</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label [for]="'relationship-' + i">続柄</label>
+              <input
+                [id]="'relationship-' + i"
+                type="text"
+                formControlName="続柄"
+                [readonly]="!isEditing"
+                placeholder="配偶者・子・父母等"
+              />
+            </div>
+            <div class="form-group date-group">
+              <label [for]="'dependent-creation-year-' + i">被扶養者作成年月日</label>
+              <div class="date-inputs">
+                <input
+                  [id]="'dependent-creation-year-' + i"
+                  type="number"
+                  formControlName="被扶養者作成年月日年"
+                  [readonly]="!isEditing"
+                  placeholder="年"
+                />
+                <span>年</span>
+                <input
+                  type="number"
+                  formControlName="被扶養者作成年月日月"
+                  [readonly]="!isEditing"
+                  placeholder="月"
+                />
+                <span>月</span>
+                <input
+                  type="number"
+                  formControlName="被扶養者作成年月日日"
+                  [readonly]="!isEditing"
+                  placeholder="日"
+                />
+                <span>日</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 受給被保険者情報セクション -->
+        <div class="form-section recipient-section">
+          <div class="section-header">
+            <mat-icon>account_box</mat-icon>
+            <h3>受給被保険者情報 {{ i + 1 }}</h3>
+          </div>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label [for]="'recipient-address-' + i">受給被保険者住所</label>
+              <input
+                [id]="'recipient-address-' + i"
+                type="text"
+                formControlName="受給被保険者住所"
+                [readonly]="!isEditing"
+              />
+            </div>
+            <div class="form-group">
+              <label [for]="'recipient-name-' + i">受給被保険者氏名</label>
+              <input
+                [id]="'recipient-name-' + i"
+                type="text"
+                formControlName="受給被保険者氏名"
+                [readonly]="!isEditing"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 適用除外理由セクション -->
+        <div class="form-section reason-section">
+          <div class="section-header">
+            <mat-icon>rule</mat-icon>
+            <h3>適用除外理由 {{ i + 1 }}</h3>
+          </div>
+          <div class="form-grid">
+            <div class="checkbox-group">
+              <h4>該当</h4>
+              <div class="checkbox-item">
+                <input
+                  [id]="'reason-applicable-1-' + i"
+                  type="checkbox"
+                  formControlName="適用除外理由該当1"
+                  [disabled]="!isEditing"
+                />
+                <label [for]="'reason-applicable-1-' + i">介護保険法施行令第2条第1号に該当</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  [id]="'reason-applicable-2-' + i"
+                  type="checkbox"
+                  formControlName="適用除外理由該当2"
+                  [disabled]="!isEditing"
+                />
+                <label [for]="'reason-applicable-2-' + i">介護保険法施行令第2条第2号に該当</label>
+              </div>
+            </div>
+            <div class="checkbox-group">
+              <h4>非該当</h4>
+              <div class="checkbox-item">
+                <input
+                  [id]="'reason-not-applicable-1-' + i"
+                  type="checkbox"
+                  formControlName="適用除外理由非該当1"
+                  [disabled]="!isEditing"
+                />
+                <label [for]="'reason-not-applicable-1-' + i"
+                  >介護保険法施行令第2条第1号に非該当</label
+                >
+              </div>
+              <div class="checkbox-item">
+                <input
+                  [id]="'reason-not-applicable-2-' + i"
+                  type="checkbox"
+                  formControlName="適用除外理由非該当2"
+                  [disabled]="!isEditing"
+                />
+                <label [for]="'reason-not-applicable-2-' + i"
+                  >介護保険法施行令第2条第2号に非該当</label
+                >
+              </div>
+            </div>
+            <div class="form-group date-group">
+              <label [for]="'applicable-date-year-' + i">該当年月日</label>
+              <div class="date-inputs">
+                <input
+                  [id]="'applicable-date-year-' + i"
+                  type="number"
+                  formControlName="該当年月日年"
+                  [readonly]="!isEditing"
+                  placeholder="年"
+                />
+                <span>年</span>
+                <input
+                  type="number"
+                  formControlName="該当年月日月"
+                  [readonly]="!isEditing"
+                  placeholder="月"
+                />
+                <span>月</span>
+                <input
+                  type="number"
+                  formControlName="該当年月日日"
+                  [readonly]="!isEditing"
+                  placeholder="日"
+                />
+                <span>日</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 入居施設情報セクション -->
+        <div class="form-section facility-section">
+          <div class="section-header">
+            <mat-icon>home</mat-icon>
+            <h3>入居施設情報 {{ i + 1 }}</h3>
+          </div>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label [for]="'facility-name-' + i">入居施設名称</label>
+              <input
+                [id]="'facility-name-' + i"
+                type="text"
+                formControlName="入居施設名称"
+                [readonly]="!isEditing"
+              />
+            </div>
+            <div class="form-group full-width">
+              <label [for]="'facility-address-' + i">入居施設所在地</label>
+              <input
+                [id]="'facility-address-' + i"
+                type="text"
+                formControlName="入居施設所在地"
+                [readonly]="!isEditing"
+              />
+            </div>
+            <div class="form-group">
+              <label [for]="'facility-phone-' + i">電話番号</label>
+              <input
+                [id]="'facility-phone-' + i"
+                type="tel"
+                formControlName="電話番号"
+                [readonly]="!isEditing"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 備考セクション -->
+        <div class="form-section remarks-section">
+          <div class="section-header">
+            <mat-icon>note</mat-icon>
+            <h3>備考 {{ i + 1 }}</h3>
+          </div>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label [for]="'remarks-' + i">備考</label>
+              <textarea
+                [id]="'remarks-' + i"
+                formControlName="備考"
+                [readonly]="!isEditing"
+                rows="4"
+                placeholder="その他特記事項があれば記載してください"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 被扶養者追加ボタン -->
+    <div class="add-dependent-section" *ngIf="isEditing">
+      <button
+        type="button"
+        mat-raised-button
+        color="accent"
+        (click)="addDependent()"
+        class="add-dependent-btn"
+      >
+        <mat-icon>add</mat-icon>
+        被扶養者を追加
+      </button>
+    </div>
+  </form>
+
+  <!-- 注意事項 -->
+  <div class="notice-section">
+    <h4>注意事項</h4>
+    <ul>
+      <li>介護保険の適用除外に該当する場合は、該当する理由にチェックを入れてください。</li>
+      <li>適用除外に該当しなくなった場合は、非該当にチェックを入れてください。</li>
+      <li>入居施設情報は、介護保険法施行令第2条第2号に該当する場合に記載してください。</li>
+      <li>添付書類として、該当する証明書類等が必要です。</li>
+      <li>被扶養者が複数いる場合は、「被扶養者を追加」ボタンで追加してください。</li>
+    </ul>
   </div>
 </div>

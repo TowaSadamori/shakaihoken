@@ -1,22 +1,263 @@
-<div class="maternity-leave-container">
+<div class="childcare-end-salary-container">
   <button mat-button color="primary" routerLink="/employee-procedures/application-form/{{ uid }}">
     各種申請画面へ戻る
   </button>
 
   <h2 class="detail-title">{{ userName }}さんの育児休業等終了時報酬月額変更届</h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
-
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">CSV出力</button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
       <button mat-raised-button color="primary" (click)="onSave()">保存</button>
       <button mat-button (click)="onCancel()">キャンセル</button>
     </ng-container>
+  </div>
+
+  <form [formGroup]="form" class="form-section">
+    <!-- 事業所情報セクション -->
+    <div class="section-container office-section">
+      <h3 class="section-title">
+        <mat-icon>business</mat-icon>
+        事業所情報
+      </h3>
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let field of officeInfoFields">
+            <td class="form-label">
+              <label [for]="'input-' + field.key">{{ field.label }}</label>
+            </td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                [formControlName]="field.key"
+                [id]="'input-' + field.key"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 申出者情報セクション -->
+    <div class="section-container applicant-section">
+      <h3 class="section-title">
+        <mat-icon>person_outline</mat-icon>
+        申出者情報
+      </h3>
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let field of applicantInfoFields">
+            <td class="form-label">
+              <label [for]="'input-' + field.key">{{ field.label }}</label>
+            </td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                [formControlName]="field.key"
+                [id]="'input-' + field.key"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 被保険者基本情報セクション -->
+    <div class="section-container insured-basic-section">
+      <h3 class="section-title">
+        <mat-icon>person</mat-icon>
+        被保険者基本情報
+      </h3>
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let field of insuredPersonBasicFields">
+            <td class="form-label">
+              <label [for]="'input-' + field.key">{{ field.label }}</label>
+            </td>
+            <td class="form-input">
+              <ng-container *ngIf="field.type === 'select'; else basicOther">
+                <select
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.disabled]="!isEditing ? true : null"
+                  class="form-select"
+                >
+                  <option value="">選択してください</option>
+                  <option *ngFor="let option of field.options" [value]="option">
+                    {{ option }}
+                  </option>
+                </select>
+              </ng-container>
+              <ng-template #basicOther>
+                <input
+                  matInput
+                  type="text"
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.readonly]="!isEditing ? true : null"
+                />
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 育児休業終了情報セクション -->
+    <div class="section-container leave-end-section">
+      <h3 class="section-title">
+        <mat-icon>event_available</mat-icon>
+        育児休業終了情報
+      </h3>
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let field of childcareLeaveEndFields">
+            <td class="form-label">
+              <label [for]="'input-' + field.key">{{ field.label }}</label>
+            </td>
+            <td class="form-input">
+              <input
+                matInput
+                type="text"
+                [formControlName]="field.key"
+                [id]="'input-' + field.key"
+                [attr.readonly]="!isEditing ? true : null"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3か月間の報酬情報セクション -->
+    <div class="section-container salary-section">
+      <h3 class="section-title">
+        <mat-icon>payments</mat-icon>
+        3か月間の報酬情報
+      </h3>
+      <div class="section-description">育児休業終了後の3か月間の報酬月額を記入してください</div>
+
+      <div formArrayName="salaryMonths" class="salary-months-container">
+        <div
+          *ngFor="let salaryMonth of salaryMonthsArray.controls; let i = index"
+          [formGroupName]="i"
+          class="salary-month-group"
+        >
+          <h4 class="month-title">{{ i + 1 }}か月目</h4>
+          <table class="form-table">
+            <tbody>
+              <tr *ngFor="let field of salaryMonthFields">
+                <td class="form-label">
+                  <label [for]="'salary-' + i + '-' + field.key">{{ field.label }}</label>
+                </td>
+                <td class="form-input">
+                  <input
+                    matInput
+                    [type]="field.type === 'number' ? 'number' : 'text'"
+                    [formControlName]="field.key"
+                    [id]="'salary-' + i + '-' + field.key"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="month-actions" *ngIf="isEditing && salaryMonthsArray.length > 3">
+            <button mat-button color="warn" type="button" (click)="removeSalaryMonth(i)">
+              <mat-icon>delete</mat-icon>
+              この月を削除
+            </button>
+          </div>
+        </div>
+
+        <div class="add-month-section" *ngIf="isEditing">
+          <button mat-button color="primary" type="button" (click)="addSalaryMonth()">
+            <mat-icon>add</mat-icon>
+            月を追加
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- その他情報セクション -->
+    <div class="section-container additional-section">
+      <h3 class="section-title">
+        <mat-icon>calculate</mat-icon>
+        計算結果・その他
+      </h3>
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let field of additionalFields">
+            <td class="form-label">
+              <label [for]="'input-' + field.key">{{ field.label }}</label>
+            </td>
+            <td class="form-input">
+              <ng-container *ngIf="field.type === 'textarea'; else additionalOther">
+                <textarea
+                  matInput
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.readonly]="!isEditing ? true : null"
+                  rows="3"
+                  style="
+                    width: 100%;
+                    padding: 8px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 0.9rem;
+                    resize: vertical;
+                  "
+                ></textarea>
+              </ng-container>
+              <ng-template #additionalOther>
+                <input
+                  matInput
+                  [type]="field.type === 'number' ? 'number' : 'text'"
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.readonly]="!isEditing ? true : null"
+                />
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </form>
+
+  <!-- 注意事項 -->
+  <div class="notice-section">
+    <h4>注意事項</h4>
+    <ul>
+      <li>
+        この届書は、育児休業終了時に3歳未満の子を養育する被保険者の報酬月額の変更が生じた場合に提出していただくものです。
+      </li>
+      <li>
+        育児休業終了後は、改めて労働者の働き方により報酬額が変更されることが考えられるため、育児休業終了後の2か月分の報酬額により標準報酬月額を決定いたします。
+      </li>
+      <li>
+        この申出により保険料の免除を受けられる期間は、育児休業終了月の翌月から、育児休業終了後7年目の月の前月まで（最長7年間）となります。
+      </li>
+      <li>
+        この申出書は、育児休業終了日の翌日から、育児休業終了日の翌日の属する月の末日まで（例：終了日が3月31日の場合は4月30日まで）の間に提出してください。
+      </li>
+      <li>
+        標準報酬月額にかかる保険料が免除となるのは、原則、育児休業終了月の翌月から、育児休業終了後7年目の月の前月の期間分までとなります。
+      </li>
+      <li>
+        育児休業終了後の標準報酬月額については、育児休業終了後の2か月分の報酬額により決定いたします。
+      </li>
+      <li>育児休業終了後の標準報酬月額は、育児休業終了月の翌月から適用されます。</li>
+      <li>
+        育児休業終了後の報酬額が、育児休業開始前の報酬額と比較して著しく低下した場合には、特例により標準報酬月額の改定を行うことができます。
+      </li>
+    </ul>
   </div>
 </div>
