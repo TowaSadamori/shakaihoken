@@ -5,18 +5,107 @@
 
   <h2 class="detail-title">{{ userName }}さんの被保険者証回収不能届</h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
-
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">CSV出力</button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
       <button mat-raised-button color="primary" (click)="onSave()">保存</button>
       <button mat-button (click)="onCancel()">キャンセル</button>
     </ng-container>
   </div>
+
+  <form [formGroup]="form" class="form-section">
+    <table class="form-table">
+      <tbody>
+        <tr *ngFor="let field of formFields">
+          <td class="form-label">
+            <label [for]="'input-' + field.key">{{ field.label }}</label>
+          </td>
+          <td class="form-input">
+            <ng-container *ngIf="field.type === 'select'; else checkOther">
+              <select
+                [formControlName]="field.key"
+                [id]="'input-' + field.key"
+                [attr.disabled]="!isEditing ? true : null"
+                class="form-select"
+              >
+                <option value="">選択してください</option>
+                <option *ngFor="let option of field.options" [value]="option">{{ option }}</option>
+              </select>
+            </ng-container>
+
+            <ng-template #checkOther>
+              <ng-container *ngIf="field.type === 'checkbox'; else checkDate">
+                <input
+                  type="checkbox"
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.disabled]="!isEditing ? true : null"
+                  style="margin-right: 8px"
+                />
+                <span>{{ field.label }}</span>
+              </ng-container>
+
+              <ng-template #checkDate>
+                <ng-container *ngIf="field.type === 'date'; else checkNumber">
+                  <input
+                    matInput
+                    type="date"
+                    [formControlName]="field.key"
+                    [id]="'input-' + field.key"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </ng-container>
+
+                <ng-template #checkNumber>
+                  <ng-container *ngIf="field.type === 'number'; else checkTextarea">
+                    <input
+                      matInput
+                      type="number"
+                      [formControlName]="field.key"
+                      [id]="'input-' + field.key"
+                      [attr.readonly]="!isEditing ? true : null"
+                      placeholder="金額・数値"
+                    />
+                  </ng-container>
+
+                  <ng-template #checkTextarea>
+                    <ng-container *ngIf="field.type === 'textarea'; else normalField">
+                      <textarea
+                        matInput
+                        [formControlName]="field.key"
+                        [id]="'input-' + field.key"
+                        [attr.readonly]="!isEditing ? true : null"
+                        rows="3"
+                        style="
+                          width: 100%;
+                          padding: 8px 12px;
+                          border: 1px solid #ddd;
+                          border-radius: 4px;
+                          font-size: 0.9rem;
+                          resize: vertical;
+                        "
+                      ></textarea>
+                    </ng-container>
+
+                    <ng-template #normalField>
+                      <input
+                        matInput
+                        type="text"
+                        [formControlName]="field.key"
+                        [id]="'input-' + field.key"
+                        [attr.readonly]="!isEditing ? true : null"
+                      />
+                    </ng-template>
+                  </ng-template>
+                </ng-template>
+              </ng-template>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
 </div>
