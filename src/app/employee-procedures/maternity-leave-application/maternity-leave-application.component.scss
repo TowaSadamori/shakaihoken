@@ -1,6 +1,6 @@
 .maternity-leave-container {
   width: 100%;
-  max-width: 900px;
+  max-width: 1000px;
   margin: 40px auto 0 auto;
   background: #fff;
   border-radius: 8px;
@@ -9,6 +9,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-family: 'Noto Sans JP', sans-serif;
 }
 
 .detail-title {
@@ -25,24 +26,186 @@
 }
 
 .form-section {
-  width: 90%;
-  max-width: 700px;
+  width: 95%;
+  max-width: 900px;
   margin: 0 auto;
   text-align: left;
 }
 
-.employee-btn {
-  background: #1976d2;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 10px 28px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-  margin-bottom: 24px;
+.button-group {
+  margin-top: 32px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
 }
-.employee-btn:hover {
-  background: #1565c0;
+
+// セクションコンテナ
+.section-container {
+  margin-bottom: 40px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+
+  &.employer-section {
+    border-color: #1976d2;
+    .section-title {
+      background: #1976d2;
+      color: white;
+    }
+  }
+
+  &.insured-section {
+    border-color: #388e3c;
+    .section-title {
+      background: #388e3c;
+      color: white;
+    }
+  }
+}
+
+// セクションタイトル
+.section-title {
+  margin: 0;
+  padding: 16px 24px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+// フォームテーブル
+.form-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+
+  .form-label {
+    background: #f5f5f5;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    border-right: 1px solid #e0e0e0;
+    width: 35%;
+    font-weight: 500;
+    color: #333;
+    vertical-align: top;
+
+    label {
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+  }
+
+  .form-input {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: top;
+
+    input,
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: #1976d2;
+        box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+      }
+
+      &[readonly],
+      &[disabled] {
+        background: #f5f5f5;
+        color: #666;
+        cursor: not-allowed;
+      }
+    }
+
+    select {
+      cursor: pointer;
+
+      &[disabled] {
+        cursor: not-allowed;
+      }
+    }
+
+    input[type='checkbox'] {
+      width: auto;
+      margin-right: 8px;
+      transform: scale(1.2);
+    }
+  }
+
+  tr:last-child {
+    .form-label,
+    .form-input {
+      border-bottom: none;
+    }
+  }
+}
+
+// レスポンシブ対応
+@media (max-width: 768px) {
+  .maternity-leave-container {
+    width: 95%;
+    padding: 24px 16px 32px 16px;
+  }
+
+  .detail-title {
+    font-size: 1.3rem;
+    width: 90%;
+  }
+
+  .form-section {
+    width: 100%;
+  }
+
+  .section-container {
+    margin-bottom: 24px;
+  }
+
+  .form-table {
+    .form-label,
+    .form-input {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+    }
+
+    .form-label {
+      background: #f0f0f0;
+      border-right: none;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+    }
+
+    .form-input {
+      border-bottom: 2px solid #e0e0e0;
+      margin-bottom: 8px;
+    }
+
+    tr {
+      display: block;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .button-group {
+    flex-direction: column;
+    width: 100%;
+    max-width: 300px;
+
+    button {
+      width: 100%;
+    }
+  }
 }
