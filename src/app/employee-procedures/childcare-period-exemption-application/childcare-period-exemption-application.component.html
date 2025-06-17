@@ -1,21 +1,572 @@
-<div class="maternity-leave-container">
-  <button
-    class="employee-btn"
-    [routerLink]="['/employee-procedures/application-form', uid]"
-    [disabled]="!uid"
-  >
+<div class="childcare-period-exemption-container">
+  <button mat-button color="primary" routerLink="/employee-procedures/application-form/{{ uid }}">
+    <mat-icon>arrow_back</mat-icon>
     各種申請画面へ戻る
   </button>
+
   <h2 class="detail-title">
-    <span *ngIf="userName">{{ userName }}さんの</span>厚生年金保険
-    養育期間標準報酬月額特例申出書／終了届
+    {{ userName }}さんの厚生年金保険養育期間標準報酬月額特例申出書／終了届
   </h2>
-  <div class="button-group" style="margin-bottom: 16px">
-    <button class="employee-btn" disabled>編集</button>
-    <button class="employee-btn" disabled>保存</button>
-    <button class="employee-btn" disabled>キャンセル</button>
+
+  <div class="button-group">
+    <ng-container *ngIf="!isEditing">
+      <button mat-raised-button color="primary" (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+        編集
+      </button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">
+        <mat-icon>download</mat-icon>
+        CSV出力
+      </button>
+    </ng-container>
+    <ng-container *ngIf="isEditing">
+      <button mat-raised-button color="primary" (click)="onSave()">
+        <mat-icon>save</mat-icon>
+        保存
+      </button>
+      <button mat-button (click)="onCancel()">
+        <mat-icon>cancel</mat-icon>
+        キャンセル
+      </button>
+    </ng-container>
   </div>
-  <div class="form-section">
-    <p>ここに申請フォームを作成します。</p>
+
+  <form [formGroup]="form" class="form-container">
+    <!-- 提出年月日セクション -->
+    <div class="form-section submission-date-section">
+      <div class="section-header">
+        <mat-icon>calendar_today</mat-icon>
+        <h3>提出年月日</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="submission-date-era">和暦</label>
+          <input
+            id="submission-date-era"
+            type="text"
+            formControlName="提出年月日和暦"
+            [readonly]="!isEditing"
+            placeholder="令和○年"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="submission-year">年月日</label>
+          <div class="date-inputs">
+            <input
+              id="submission-year"
+              type="number"
+              formControlName="提出年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="提出年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="提出年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 事業所情報セクション -->
+    <div class="form-section office-section">
+      <div class="section-header">
+        <mat-icon>business</mat-icon>
+        <h3>事業所情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="office-prefecture">事業所整理記号（都道府県コード）</label>
+          <input
+            id="office-prefecture"
+            type="text"
+            formControlName="事業所整理記号都道府県コード"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="office-city">事業所整理記号（郡市区符号）</label>
+          <input
+            id="office-city"
+            type="text"
+            formControlName="事業所整理記号郡市区符号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="office-number">事業所整理記号（事業所記号）</label>
+          <input
+            id="office-number"
+            type="text"
+            formControlName="事業所整理記号事業所記号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-address">事業所所在地</label>
+          <input
+            id="office-address"
+            type="text"
+            formControlName="事業所所在地"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-name">事業所名称</label>
+          <input
+            id="office-name"
+            type="text"
+            formControlName="事業所名称"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="employer-name">事業主氏名</label>
+          <input
+            id="employer-name"
+            type="text"
+            formControlName="事業主氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="phone-number">電話番号</label>
+          <input id="phone-number" type="tel" formControlName="電話番号" [readonly]="!isEditing" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 申出区分セクション -->
+    <div class="form-section application-type-section">
+      <div class="section-header">
+        <mat-icon>assignment</mat-icon>
+        <h3>申出区分</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="application-type">申出区分</label>
+          <select
+            id="application-type"
+            formControlName="申出区分"
+            [disabled]="!isEditing"
+            class="form-select"
+          >
+            <option value="">選択してください</option>
+            <option *ngFor="let type of applicationTypes" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 被保険者情報セクション -->
+    <div class="form-section insured-section">
+      <div class="section-header">
+        <mat-icon>person</mat-icon>
+        <h3>被保険者情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="insured-number">被保険者整理番号</label>
+          <input
+            id="insured-number"
+            type="text"
+            formControlName="被保険者整理番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insured-name-kana">被保険者氏名（カナ）</label>
+          <input
+            id="insured-name-kana"
+            type="text"
+            formControlName="被保険者氏名カナ"
+            [readonly]="!isEditing"
+            placeholder="姓と名の間に全角スペース"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insured-name-kanji">被保険者氏名（漢字）</label>
+          <input
+            id="insured-name-kanji"
+            type="text"
+            formControlName="被保険者氏名漢字"
+            [readonly]="!isEditing"
+            placeholder="姓と名の間に全角スペース"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="insured-birth-year">被保険者生年月日</label>
+          <div class="date-inputs">
+            <input
+              id="insured-birth-year"
+              type="number"
+              formControlName="被保険者生年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="personal-number">被保険者個人番号</label>
+          <input
+            id="personal-number"
+            type="text"
+            formControlName="被保険者個人番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 養育する子の情報セクション -->
+    <div class="form-section child-section">
+      <div class="section-header">
+        <mat-icon>child_care</mat-icon>
+        <h3>養育する子の情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="child-name">養育する子の氏名</label>
+          <input
+            id="child-name"
+            type="text"
+            formControlName="養育する子の氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="child-birth-year">養育する子の生年月日</label>
+          <div class="date-inputs">
+            <input
+              id="child-birth-year"
+              type="number"
+              formControlName="養育する子の生年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="養育する子の生年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="養育する子の生年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="child-gender">養育する子の性別</label>
+          <select
+            id="child-gender"
+            formControlName="養育する子の性別"
+            [disabled]="!isEditing"
+            class="form-select"
+          >
+            <option value="">選択してください</option>
+            <option *ngFor="let gender of childGenders" [value]="gender">{{ gender }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="relationship">被保険者との続柄</label>
+          <select
+            id="relationship"
+            formControlName="被保険者との続柄"
+            [disabled]="!isEditing"
+            class="form-select"
+          >
+            <option value="">選択してください</option>
+            <option *ngFor="let relation of relationships" [value]="relation">
+              {{ relation }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 養育期間の申出をする場合セクション -->
+    <div class="form-section application-period-section">
+      <div class="section-header">
+        <mat-icon>play_arrow</mat-icon>
+        <h3>養育期間の申出をする場合</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group date-group">
+          <label for="application-start-year">養育開始年月日</label>
+          <div class="date-inputs">
+            <input
+              id="application-start-year"
+              type="number"
+              formControlName="申出養育開始年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="申出養育開始年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="申出養育開始年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group date-group">
+          <label for="special-period-start-year">特例期間開始年月日</label>
+          <div class="date-inputs">
+            <input
+              id="special-period-start-year"
+              type="number"
+              formControlName="申出特例期間開始年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="申出特例期間開始年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="申出特例期間開始年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group date-group">
+          <label for="special-period-end-year">特例期間終了年月日</label>
+          <div class="date-inputs">
+            <input
+              id="special-period-end-year"
+              type="number"
+              formControlName="申出特例期間終了年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="申出特例期間終了年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="申出特例期間終了年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 養育期間の終了をする場合セクション -->
+    <div class="form-section termination-period-section">
+      <div class="section-header">
+        <mat-icon>stop</mat-icon>
+        <h3>養育期間の終了をする場合</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group date-group">
+          <label for="termination-end-year">養育終了年月日</label>
+          <div class="date-inputs">
+            <input
+              id="termination-end-year"
+              type="number"
+              formControlName="終了養育終了年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="終了養育終了年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="終了養育終了年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group date-group">
+          <label for="termination-special-end-year">特例期間終了年月日</label>
+          <div class="date-inputs">
+            <input
+              id="termination-special-end-year"
+              type="number"
+              formControlName="終了特例期間終了年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="終了特例期間終了年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="終了特例期間終了年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 終了理由セクション -->
+    <div class="form-section termination-reason-section">
+      <div class="section-header">
+        <mat-icon>help_outline</mat-icon>
+        <h3>終了について</h3>
+      </div>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input
+            type="checkbox"
+            id="termination-reason-1"
+            formControlName="終了理由チェック1"
+            [disabled]="!isEditing"
+          />
+          <label for="termination-reason-1">申出に係る子が3歳に到達したため</label>
+        </div>
+        <div class="checkbox-item">
+          <input
+            type="checkbox"
+            id="termination-reason-2"
+            formControlName="終了理由チェック2"
+            [disabled]="!isEditing"
+          />
+          <label for="termination-reason-2"
+            >退職により、申出者が厚生年金保険の被保険者資格を喪失したとき</label
+          >
+        </div>
+        <div class="checkbox-item">
+          <input
+            type="checkbox"
+            id="termination-reason-3"
+            formControlName="終了理由チェック3"
+            [disabled]="!isEditing"
+          />
+          <label for="termination-reason-3"
+            >申出に係る子以外の子について養育特例措置をうけるため</label
+          >
+        </div>
+        <div class="checkbox-item">
+          <input
+            type="checkbox"
+            id="termination-reason-4"
+            formControlName="終了理由チェック4"
+            [disabled]="!isEditing"
+          />
+          <label for="termination-reason-4">申出者が産前産後休業または育児休業を開始したため</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- その他・備考セクション -->
+    <div class="form-section other-section">
+      <div class="section-header">
+        <mat-icon>note</mat-icon>
+        <h3>その他・備考</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label for="entry-method">記入方法確認</label>
+          <textarea
+            id="entry-method"
+            formControlName="記入方法確認"
+            [readonly]="!isEditing"
+            rows="2"
+            placeholder="記入方法に関する確認事項"
+          ></textarea>
+        </div>
+        <div class="form-group full-width">
+          <label for="remarks">備考</label>
+          <textarea id="remarks" formControlName="備考" [readonly]="!isEditing" rows="3"></textarea>
+        </div>
+        <div class="form-group full-width">
+          <label for="attachments">添付書類確認</label>
+          <textarea
+            id="attachments"
+            formControlName="添付書類確認"
+            [readonly]="!isEditing"
+            rows="2"
+            placeholder="添付書類の確認事項を記載"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- 注意事項 -->
+  <div class="notice-section">
+    <h4>注意事項</h4>
+    <ul>
+      <li>申出をする場合と終了をする場合では記入する項目が異なります。</li>
+      <li>
+        被保険者氏名はカナ・漢字いずれも全角で入力し、姓と名の間に全角スペースを1文字分挿入してください。
+      </li>
+      <li>養育期間標準報酬月額特例は、3歳未満の子を養育する被保険者が対象です。</li>
+      <li>特例期間は子の3歳到達日に終了します。</li>
+      <li>必要に応じて住民票の写し等の添付書類が必要です。</li>
+    </ul>
   </div>
 </div>

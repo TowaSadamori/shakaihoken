@@ -127,6 +127,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'employee-procedures/over70-non-application/:uid',
+        loadComponent: () =>
+          import(
+            './employee-procedures/over70-non-application/over70-non-application.component'
+          ).then((m) => m.Over70NonApplicationComponent),
+      },
+      {
         path: 'employee-procedures/childcare-period-exemption-application/:uid',
         loadComponent: () =>
           import(

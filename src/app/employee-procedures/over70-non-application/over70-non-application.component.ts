@@ -5,15 +5,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
-import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
-import { exportChildcarePeriodExemptionToCSV } from '../../csv-export/childcare-period-exemption-csv-export';
+import { exportOver70NonApplicationToCSV } from '../../csv-export/over70-non-application-csv-export';
 
 @Component({
-  selector: 'app-childcare-period-exemption-application',
+  selector: 'app-over70-non-application',
   standalone: true,
   imports: [
     CommonModule,
@@ -22,26 +20,26 @@ import { exportChildcarePeriodExemptionToCSV } from '../../csv-export/childcare-
     MatIconModule,
     MatInputModule,
     MatSelectModule,
-    MatCheckboxModule,
     RouterModule,
   ],
-  templateUrl: './childcare-period-exemption-application.component.html',
-  styleUrl: './childcare-period-exemption-application.component.scss',
+  templateUrl: './over70-non-application.component.html',
+  styleUrl: './over70-non-application.component.scss',
 })
-export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
+export class Over70NonApplicationComponent implements OnInit {
   uid: string | null = null;
   userName = '';
   isEditing = false;
   form: FormGroup;
 
-  // 申出区分の選択肢
-  applicationTypes = ['申出', '終了'];
-
-  // 養育する子の性別選択肢
-  childGenders = ['男', '女'];
-
-  // 被保険者との続柄選択肢
-  relationships = ['子', '養子', 'その他'];
+  // 不該当理由の選択肢（公式様式に基づく）
+  nonApplicableReasons = [
+    '4.退職等',
+    '5.死亡',
+    '7.75歳到達',
+    '9.障害認定',
+    '11.社会保障協定',
+    'その他',
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -65,9 +63,7 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
       事業所名称: [''],
       事業主氏名: [''],
       電話番号: [''],
-
-      // 申出区分
-      申出区分: [''],
+      社会保険労務士氏名: [''],
 
       // 被保険者情報
       被保険者整理番号: [''],
@@ -76,43 +72,19 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
       被保険者生年月日年: [''],
       被保険者生年月日月: [''],
       被保険者生年月日日: [''],
-      被保険者個人番号: [''],
+      個人番号または基礎年金番号: [''],
 
-      // 養育する子の情報
-      養育する子の氏名: [''],
-      養育する子の生年月日年: [''],
-      養育する子の生年月日月: [''],
-      養育する子の生年月日日: [''],
-      養育する子の性別: [''],
-      被保険者との続柄: [''],
+      // 喪失情報
+      喪失年月日年: [''],
+      喪失年月日月: [''],
+      喪失年月日日: [''],
+      喪失原因: [''],
 
-      // 養育期間の申出をする場合
-      申出養育開始年月日年: [''],
-      申出養育開始年月日月: [''],
-      申出養育開始年月日日: [''],
-      申出特例期間開始年月日年: [''],
-      申出特例期間開始年月日月: [''],
-      申出特例期間開始年月日日: [''],
-      申出特例期間終了年月日年: [''],
-      申出特例期間終了年月日月: [''],
-      申出特例期間終了年月日日: [''],
-
-      // 養育期間の終了をする場合
-      終了養育終了年月日年: [''],
-      終了養育終了年月日月: [''],
-      終了養育終了年月日日: [''],
-      終了特例期間終了年月日年: [''],
-      終了特例期間終了年月日月: [''],
-      終了特例期間終了年月日日: [''],
-
-      // 終了について
-      終了理由チェック1: [false], // 申出に係る子が3歳に到達したため
-      終了理由チェック2: [false], // 退職により、申出者が厚生年金保険の被保険者資格を喪失したとき
-      終了理由チェック3: [false], // 申出に係る子以外の子について養育特例措置をうけるため
-      終了理由チェック4: [false], // 申出者が産前産後休業または育児休業を開始したため
-
-      // 記入方法
-      記入方法確認: [''],
+      // 70歳不該当情報
+      '70歳不該当チェック': [false],
+      '70歳不該当年月日年': [''],
+      '70歳不該当年月日月': [''],
+      '70歳不該当年月日日': [''],
 
       // 備考
       備考: [''],
@@ -175,26 +147,20 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
     if (!this.uid) return;
 
     try {
-      const db = getFirestore();
-      const docRef = doc(db, 'users', this.uid, 'applications', 'childcare-period-exemption');
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data) {
-          // undefined/nullを空文字に変換
-          const cleanData = Object.fromEntries(
-            Object.entries(data).map(([key, value]) => [key, value == null ? '' : value])
-          );
-          this.form.patchValue(cleanData);
-        }
+      const data = await this.userService.getUserApplication(this.uid, 'over70-non-application');
+      if (data && data.formData) {
+        // undefined/nullを空文字に変換
+        const cleanData = Object.fromEntries(
+          Object.entries(data.formData).map(([key, value]) => [key, value == null ? '' : value])
+        );
+        this.form.patchValue(cleanData);
       }
     } catch (error) {
       console.error('データの読み込みに失敗しました:', error);
     }
   }
 
-  onEdit() {
+  onEdit(): void {
     this.isEditing = true;
   }
 
@@ -202,11 +168,11 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
     if (!this.uid) return;
 
     try {
-      const db = getFirestore();
-      const docRef = doc(db, 'users', this.uid, 'applications', 'childcare-period-exemption');
-
-      await setDoc(docRef, this.form.value, { merge: true });
-
+      await this.userService.saveUserApplication(
+        this.uid,
+        'over70-non-application',
+        this.form.value
+      );
       this.isEditing = false;
       alert('保存しました');
     } catch (error) {
@@ -224,9 +190,9 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
   }
 
   async onExportCSV() {
-    const csv = exportChildcarePeriodExemptionToCSV(this.form.value);
+    const csv = exportOver70NonApplicationToCSV(this.form.value);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const pageTitle = '養育期間標準報酬月額特例申出書／終了届';
+    const pageTitle = '70歳以上被用者不該当届';
     const fileName = `${pageTitle}${this.userName ? '（' + this.userName + '）' : ''}.csv`;
 
     // ファイルダウンロード

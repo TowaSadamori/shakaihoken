@@ -1,16 +1,9 @@
-<div class="over70-application-container">
-  <button
-    mat-button
-    color="primary"
-    [routerLink]="['/employee-procedures/application-form', uid]"
-    [disabled]="!uid"
-  >
+<div class="over70-non-application-container">
+  <button mat-button color="primary" routerLink="/employee-procedures/application-form/{{ uid }}">
     各種申請画面へ戻る
   </button>
 
-  <h2 class="detail-title">
-    <span *ngIf="userName">{{ userName }}さんの</span>厚生年金保険７０歳以上被用者該当届
-  </h2>
+  <h2 class="detail-title">{{ userName }}さんの厚生年金保険７０歳以上被用者不該当届</h2>
 
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
@@ -79,7 +72,7 @@
       </div>
       <div class="form-grid">
         <div class="form-group">
-          <label for="office-prefecture">事業所整理記号（都道府県コード）</label>
+          <label for="office-prefecture">事業所整理記号（都道府県）</label>
           <input
             id="office-prefecture"
             type="text"
@@ -88,7 +81,7 @@
           />
         </div>
         <div class="form-group">
-          <label for="office-city">事業所整理記号（郡市区符号）</label>
+          <label for="office-city">事業所整理記号（郡市区）</label>
           <input
             id="office-city"
             type="text"
@@ -165,19 +158,30 @@
           />
         </div>
         <div class="form-group">
-          <label for="insured-name">被保険者氏名 <span class="required">*</span></label>
+          <label for="insured-name-kana">被保険者氏名（カナ）</label>
           <input
-            id="insured-name"
+            id="insured-name-kana"
             type="text"
-            formControlName="被保険者氏名"
+            formControlName="被保険者氏名カナ"
             [readonly]="!isEditing"
+            placeholder="姓と名の間に全角スペース"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insured-name-kanji">被保険者氏名（漢字）</label>
+          <input
+            id="insured-name-kanji"
+            type="text"
+            formControlName="被保険者氏名漢字"
+            [readonly]="!isEditing"
+            placeholder="姓と名の間に全角スペース"
           />
         </div>
         <div class="form-group date-group">
-          <label for="insured-birth-year">被保険者生年月日</label>
+          <label for="birth-year">生年月日</label>
           <div class="date-inputs">
             <input
-              id="insured-birth-year"
+              id="birth-year"
               type="number"
               formControlName="被保険者生年月日年"
               [readonly]="!isEditing"
@@ -201,45 +205,46 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="personal-number">個人番号（マイナンバー）</label>
+          <label for="personal-number">個人番号（または基礎年金番号）</label>
           <input
             id="personal-number"
             type="text"
-            formControlName="個人番号"
+            formControlName="個人番号または基礎年金番号"
             [readonly]="!isEditing"
+            placeholder="死亡の場合は基礎年金番号"
           />
         </div>
       </div>
     </div>
 
-    <!-- 該当情報セクション -->
-    <div class="form-section eligibility-section">
+    <!-- 喪失情報セクション -->
+    <div class="form-section loss-section">
       <div class="section-header">
-        <mat-icon>event_available</mat-icon>
-        <h3>該当情報</h3>
+        <mat-icon>event_busy</mat-icon>
+        <h3>喪失情報</h3>
       </div>
       <div class="form-grid">
         <div class="form-group date-group">
-          <label for="eligibility-year">該当年月日</label>
+          <label for="loss-year">喪失年月日</label>
           <div class="date-inputs">
             <input
-              id="eligibility-year"
+              id="loss-year"
               type="number"
-              formControlName="該当年月日年"
+              formControlName="喪失年月日年"
               [readonly]="!isEditing"
               placeholder="年"
             />
             <span>年</span>
             <input
               type="number"
-              formControlName="該当年月日月"
+              formControlName="喪失年月日月"
               [readonly]="!isEditing"
               placeholder="月"
             />
             <span>月</span>
             <input
               type="number"
-              formControlName="該当年月日日"
+              formControlName="喪失年月日日"
               [readonly]="!isEditing"
               placeholder="日"
             />
@@ -247,159 +252,81 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="eligibility-reason">該当理由</label>
-          <select id="eligibility-reason" formControlName="該当理由" [disabled]="!isEditing">
+          <label for="loss-reason">喪失原因</label>
+          <select id="loss-reason" formControlName="喪失原因" [disabled]="!isEditing">
             <option value="">選択してください</option>
-            <option *ngFor="let reason of eligibilityReasons" [value]="reason">{{ reason }}</option>
+            <option *ngFor="let reason of nonApplicableReasons" [value]="reason">
+              {{ reason }}
+            </option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="salary-amount">報酬月額</label>
-          <input
-            id="salary-amount"
-            type="number"
-            formControlName="報酬月額"
-            [readonly]="!isEditing"
-            placeholder="円"
-          />
-        </div>
+      </div>
+      <div class="loss-date-notes">
+        <h5>喪失年月日の入力について</h5>
+        <ul>
+          <li><strong>4.退職等の場合：</strong>退職等した日の翌日</li>
+          <li><strong>5.死亡の場合：</strong>死亡日の翌日</li>
+          <li><strong>7.75歳到達の場合：</strong>75歳の誕生日の当日</li>
+          <li><strong>9.障害認定の場合：</strong>障害認定を受けた日</li>
+          <li>
+            <strong>11.社会保障協定の場合：</strong
+            >協定発効の当日または相手国法令の適用となった日の翌日
+          </li>
+        </ul>
       </div>
     </div>
 
-    <!-- 70歳到達時情報セクション -->
-    <div class="form-section age70-section">
+    <!-- 70歳不該当情報セクション -->
+    <div class="form-section age70-non-applicable-section">
       <div class="section-header">
-        <mat-icon>cake</mat-icon>
-        <h3>70歳到達時情報</h3>
+        <mat-icon>cancel</mat-icon>
+        <h3>70歳不該当情報</h3>
       </div>
       <div class="form-grid">
+        <div class="form-group checkbox-group">
+          <label for="age70-non-applicable-check">
+            <input
+              id="age70-non-applicable-check"
+              type="checkbox"
+              formControlName="70歳不該当チェック"
+              [disabled]="!isEditing"
+            />
+            70歳以上被用者不該当
+          </label>
+        </div>
         <div class="form-group date-group">
-          <label for="age70-year">70歳到達年月日</label>
+          <label for="age70-non-applicable-year">70歳不該当年月日</label>
           <div class="date-inputs">
             <input
-              id="age70-year"
+              id="age70-non-applicable-year"
               type="number"
-              formControlName="70歳到達年月日年"
+              formControlName="70歳不該当年月日年"
               [readonly]="!isEditing"
               placeholder="年"
             />
             <span>年</span>
             <input
               type="number"
-              formControlName="70歳到達年月日月"
+              formControlName="70歳不該当年月日月"
               [readonly]="!isEditing"
               placeholder="月"
             />
             <span>月</span>
             <input
               type="number"
-              formControlName="70歳到達年月日日"
+              formControlName="70歳不該当年月日日"
               [readonly]="!isEditing"
               placeholder="日"
             />
             <span>日</span>
           </div>
         </div>
-        <div class="form-group">
-          <label for="age70-salary">70歳到達時の報酬月額</label>
-          <input
-            id="age70-salary"
-            type="number"
-            formControlName="70歳到達時の報酬月額"
-            [readonly]="!isEditing"
-            placeholder="円"
-          />
-        </div>
       </div>
-    </div>
-
-    <!-- 適用区分セクション -->
-    <div class="form-section application-type-section">
-      <div class="section-header">
-        <mat-icon>category</mat-icon>
-        <h3>適用区分</h3>
-      </div>
-      <div class="form-grid">
-        <div class="form-group full-width">
-          <label for="application-type">適用区分</label>
-          <select id="application-type" formControlName="適用区分" [disabled]="!isEditing">
-            <option value="">選択してください</option>
-            <option *ngFor="let type of applicationTypes" [value]="type">{{ type }}</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- 被扶養者情報セクション -->
-    <div class="form-section dependent-section">
-      <div class="section-header">
-        <mat-icon>family_restroom</mat-icon>
-        <h3>被扶養者情報</h3>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="dependent-exists">被扶養者の有無</label>
-          <select id="dependent-exists" formControlName="被扶養者有無" [disabled]="!isEditing">
-            <option value="">選択してください</option>
-            <option value="有">有</option>
-            <option value="無">無</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="dependent-name">被扶養者氏名</label>
-          <input
-            id="dependent-name"
-            type="text"
-            formControlName="被扶養者氏名"
-            [readonly]="!isEditing"
-          />
-        </div>
-        <div class="form-group date-group">
-          <label for="dependent-birth-year">被扶養者生年月日</label>
-          <div class="date-inputs">
-            <input
-              id="dependent-birth-year"
-              type="number"
-              formControlName="被扶養者生年月日年"
-              [readonly]="!isEditing"
-              placeholder="年"
-            />
-            <span>年</span>
-            <input
-              type="number"
-              formControlName="被扶養者生年月日月"
-              [readonly]="!isEditing"
-              placeholder="月"
-            />
-            <span>月</span>
-            <input
-              type="number"
-              formControlName="被扶養者生年月日日"
-              [readonly]="!isEditing"
-              placeholder="日"
-            />
-            <span>日</span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="dependent-relationship">被扶養者続柄</label>
-          <input
-            id="dependent-relationship"
-            type="text"
-            formControlName="被扶養者続柄"
-            [readonly]="!isEditing"
-            placeholder="配偶者、子等"
-          />
-        </div>
-        <div class="form-group">
-          <label for="dependent-number">被扶養者個人番号</label>
-          <input
-            id="dependent-number"
-            type="text"
-            formControlName="被扶養者個人番号"
-            [readonly]="!isEditing"
-          />
-        </div>
+      <div class="non-applicable-notes">
+        <p>
+          <strong>注意：</strong
+          >70歳以上被用者が退職・死亡により不該当となる場合、上記チェックボックスにチェックを付けて、不該当年月日に「退職日」または「死亡日」の当日を入力してください。
+        </p>
       </div>
     </div>
 
@@ -412,13 +339,7 @@
       <div class="form-grid">
         <div class="form-group full-width">
           <label for="remarks">備考</label>
-          <textarea
-            id="remarks"
-            formControlName="備考"
-            [readonly]="!isEditing"
-            rows="3"
-            placeholder="特記事項がある場合は記載してください"
-          ></textarea>
+          <textarea id="remarks" formControlName="備考" [readonly]="!isEditing" rows="3"></textarea>
         </div>
         <div class="form-group full-width">
           <label for="attachments">添付書類確認</label>
@@ -438,12 +359,26 @@
   <div class="notice-section">
     <h4>注意事項</h4>
     <ul>
-      <li>70歳以上の方が厚生年金保険の適用事業所で働く場合に提出が必要です。</li>
       <li>
-        該当年月日は、70歳に達した日又は使用されるに至った日のいずれか遅い日を記載してください。
+        <strong>申請する届書：</strong
+        >70歳以上の従業員が退職した場合は、下側のチェックボックスを選択してください。
       </li>
-      <li>報酬月額は、基本給、諸手当等の報酬の総額を記載してください。</li>
-      <li>被扶養者がいる場合は、健康保険被扶養者（異動）届も併せて提出してください。</li>
+      <li>
+        <strong>事業所整理記号：</strong
+        >都道府県コード、郡市区符号、事業所記号を左側から順に入力してください。
+      </li>
+      <li>
+        <strong>被保険者氏名：</strong
+        >カナ氏名、漢字氏名いずれも全角で入力し、姓と名の間に「全角スペース」を1文字分入れてください。
+      </li>
+      <li>
+        <strong>個人番号：</strong
+        >個人番号または基礎年金番号を入力してください。死亡による資格喪失の場合は、基礎年金番号を入力してください。
+      </li>
+      <li>
+        <strong>70歳不該当：</strong
+        >70歳以上被用者が退職・死亡により不該当となる場合、チェックボックスにチェックを付けて、不該当年月日に「退職日」または「死亡日」の当日を入力してください。
+      </li>
     </ul>
   </div>
 </div>

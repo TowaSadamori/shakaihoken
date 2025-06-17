@@ -1,22 +1,530 @@
-<div class="maternity-leave-container">
+<div class="insurance-card-reissue-container">
   <button mat-button color="primary" routerLink="/employee-procedures/application-form/{{ uid }}">
+    <mat-icon>arrow_back</mat-icon>
     各種申請画面へ戻る
   </button>
 
   <h2 class="detail-title">{{ userName }}さんの健康保険 被保険者証再交付申請書</h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
-
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
-      <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="primary" (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+        編集
+      </button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">
+        <mat-icon>download</mat-icon>
+        CSV出力
+      </button>
     </ng-container>
-
     <ng-container *ngIf="isEditing">
-      <button mat-raised-button color="primary" (click)="onSave()">保存</button>
-      <button mat-button (click)="onCancel()">キャンセル</button>
+      <button mat-raised-button color="primary" (click)="onSave()">
+        <mat-icon>save</mat-icon>
+        保存
+      </button>
+      <button mat-button (click)="onCancel()">
+        <mat-icon>cancel</mat-icon>
+        キャンセル
+      </button>
     </ng-container>
+  </div>
+
+  <form [formGroup]="form" class="form-container">
+    <!-- 提出年月日セクション -->
+    <div class="form-section submission-date-section">
+      <div class="section-header">
+        <mat-icon>calendar_today</mat-icon>
+        <h3>提出年月日</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group date-group">
+          <label for="submission-year">提出年月日</label>
+          <div class="date-inputs">
+            <input
+              id="submission-year"
+              type="number"
+              formControlName="提出年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="提出年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="提出年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 事業所情報セクション -->
+    <div class="form-section office-section">
+      <div class="section-header">
+        <mat-icon>business</mat-icon>
+        <h3>事業所情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="office-symbol">事業所整理記号</label>
+          <input
+            id="office-symbol"
+            type="text"
+            formControlName="事業所整理記号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-address">事業所所在地</label>
+          <input
+            id="office-address"
+            type="text"
+            formControlName="事業所所在地"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label for="office-name">事業所名称</label>
+          <input
+            id="office-name"
+            type="text"
+            formControlName="事業所名称"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="employer-name">事業主氏名</label>
+          <input
+            id="employer-name"
+            type="text"
+            formControlName="事業主氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="phone-number">電話番号</label>
+          <input id="phone-number" type="tel" formControlName="電話番号" [readonly]="!isEditing" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 被保険者情報セクション -->
+    <div class="form-section insured-section">
+      <div class="section-header">
+        <mat-icon>person</mat-icon>
+        <h3>被保険者情報</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="insurance-symbol">被保険者証記号</label>
+          <input
+            id="insurance-symbol"
+            type="text"
+            formControlName="被保険者証記号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insurance-number">被保険者証番号</label>
+          <input
+            id="insurance-number"
+            type="text"
+            formControlName="被保険者証番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insured-name-kana">被保険者氏名（カナ）</label>
+          <input
+            id="insured-name-kana"
+            type="text"
+            formControlName="被保険者氏名カナ"
+            [readonly]="!isEditing"
+            placeholder="姓と名の間に全角スペース"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insured-name-kanji">被保険者氏名（漢字）</label>
+          <input
+            id="insured-name-kanji"
+            type="text"
+            formControlName="被保険者氏名漢字"
+            [readonly]="!isEditing"
+            placeholder="姓と名の間に全角スペース"
+          />
+        </div>
+        <div class="form-group date-group">
+          <label for="insured-birth-year">被保険者生年月日</label>
+          <div class="date-inputs">
+            <input
+              id="insured-birth-year"
+              type="number"
+              formControlName="被保険者生年月日年"
+              [readonly]="!isEditing"
+              placeholder="年"
+            />
+            <span>年</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日月"
+              [readonly]="!isEditing"
+              placeholder="月"
+            />
+            <span>月</span>
+            <input
+              type="number"
+              formControlName="被保険者生年月日日"
+              [readonly]="!isEditing"
+              placeholder="日"
+            />
+            <span>日</span>
+          </div>
+        </div>
+        <div class="form-group full-width">
+          <label for="insured-address">被保険者住所</label>
+          <input
+            id="insured-address"
+            type="text"
+            formControlName="被保険者住所"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="insured-phone">被保険者電話番号</label>
+          <input
+            id="insured-phone"
+            type="tel"
+            formControlName="電話番号被保険者"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 再交付を申請する被保険者証セクション -->
+    <div class="form-section reissue-target-section">
+      <div class="section-header">
+        <mat-icon>credit_card</mat-icon>
+        <h3>再交付を申請する被保険者証</h3>
+      </div>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input
+            type="checkbox"
+            id="insured-person"
+            formControlName="被保険者本人分"
+            [disabled]="!isEditing"
+          />
+          <label for="insured-person">被保険者（本人）分</label>
+        </div>
+        <div class="checkbox-item">
+          <input
+            type="checkbox"
+            id="dependent-family"
+            formControlName="被扶養者家族分"
+            [disabled]="!isEditing"
+          />
+          <label for="dependent-family">被扶養者（家族）分</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 被扶養者情報セクション -->
+    <div class="form-section dependent-section">
+      <div class="section-header">
+        <mat-icon>family_restroom</mat-icon>
+        <h3>被扶養者情報</h3>
+      </div>
+
+      <!-- 被扶養者1 -->
+      <div class="dependent-group">
+        <h4>被扶養者1</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="dependent1-name">氏名</label>
+            <input
+              id="dependent1-name"
+              type="text"
+              formControlName="被扶養者1氏名"
+              [readonly]="!isEditing"
+            />
+          </div>
+          <div class="form-group">
+            <label for="dependent1-relation">続柄</label>
+            <input
+              id="dependent1-relation"
+              type="text"
+              formControlName="被扶養者1続柄"
+              [readonly]="!isEditing"
+              placeholder="配偶者、子等"
+            />
+          </div>
+          <div class="form-group date-group">
+            <label for="dependent1-birth-year">生年月日</label>
+            <div class="date-inputs">
+              <input
+                id="dependent1-birth-year"
+                type="number"
+                formControlName="被扶養者1生年月日年"
+                [readonly]="!isEditing"
+                placeholder="年"
+              />
+              <span>年</span>
+              <input
+                type="number"
+                formControlName="被扶養者1生年月日月"
+                [readonly]="!isEditing"
+                placeholder="月"
+              />
+              <span>月</span>
+              <input
+                type="number"
+                formControlName="被扶養者1生年月日日"
+                [readonly]="!isEditing"
+                placeholder="日"
+              />
+              <span>日</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 被扶養者2 -->
+      <div class="dependent-group">
+        <h4>被扶養者2</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="dependent2-name">氏名</label>
+            <input
+              id="dependent2-name"
+              type="text"
+              formControlName="被扶養者2氏名"
+              [readonly]="!isEditing"
+            />
+          </div>
+          <div class="form-group">
+            <label for="dependent2-relation">続柄</label>
+            <input
+              id="dependent2-relation"
+              type="text"
+              formControlName="被扶養者2続柄"
+              [readonly]="!isEditing"
+              placeholder="配偶者、子等"
+            />
+          </div>
+          <div class="form-group date-group">
+            <label for="dependent2-birth-year">生年月日</label>
+            <div class="date-inputs">
+              <input
+                id="dependent2-birth-year"
+                type="number"
+                formControlName="被扶養者2生年月日年"
+                [readonly]="!isEditing"
+                placeholder="年"
+              />
+              <span>年</span>
+              <input
+                type="number"
+                formControlName="被扶養者2生年月日月"
+                [readonly]="!isEditing"
+                placeholder="月"
+              />
+              <span>月</span>
+              <input
+                type="number"
+                formControlName="被扶養者2生年月日日"
+                [readonly]="!isEditing"
+                placeholder="日"
+              />
+              <span>日</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 被扶養者3 -->
+      <div class="dependent-group">
+        <h4>被扶養者3</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="dependent3-name">氏名</label>
+            <input
+              id="dependent3-name"
+              type="text"
+              formControlName="被扶養者3氏名"
+              [readonly]="!isEditing"
+            />
+          </div>
+          <div class="form-group">
+            <label for="dependent3-relation">続柄</label>
+            <input
+              id="dependent3-relation"
+              type="text"
+              formControlName="被扶養者3続柄"
+              [readonly]="!isEditing"
+              placeholder="配偶者、子等"
+            />
+          </div>
+          <div class="form-group date-group">
+            <label for="dependent3-birth-year">生年月日</label>
+            <div class="date-inputs">
+              <input
+                id="dependent3-birth-year"
+                type="number"
+                formControlName="被扶養者3生年月日年"
+                [readonly]="!isEditing"
+                placeholder="年"
+              />
+              <span>年</span>
+              <input
+                type="number"
+                formControlName="被扶養者3生年月日月"
+                [readonly]="!isEditing"
+                placeholder="月"
+              />
+              <span>月</span>
+              <input
+                type="number"
+                formControlName="被扶養者3生年月日日"
+                [readonly]="!isEditing"
+                placeholder="日"
+              />
+              <span>日</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 再交付を必要とする理由セクション -->
+    <div class="form-section reason-section">
+      <div class="section-header">
+        <mat-icon>help_outline</mat-icon>
+        <h3>再交付を必要とする理由</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="reissue-reason">理由</label>
+          <select
+            id="reissue-reason"
+            formControlName="再交付理由"
+            [disabled]="!isEditing"
+            class="form-select"
+          >
+            <option value="">選択してください</option>
+            <option *ngFor="let reason of reissueReasons" [value]="reason">{{ reason }}</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label for="reissue-reason-detail">理由詳細</label>
+          <textarea
+            id="reissue-reason-detail"
+            formControlName="再交付理由詳細"
+            [readonly]="!isEditing"
+            rows="3"
+            placeholder="詳細な理由や状況を記載してください"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 船員保険被保険者証セクション -->
+    <div class="form-section seamen-insurance-section">
+      <div class="section-header">
+        <mat-icon>directions_boat</mat-icon>
+        <h3>船員保険被保険者証</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="seamen-insurance-availability">船員保険被保険者証の有無</label>
+          <select
+            id="seamen-insurance-availability"
+            formControlName="船員保険被保険者証有無"
+            [disabled]="!isEditing"
+            class="form-select"
+          >
+            <option value="">選択してください</option>
+            <option *ngFor="let option of seamenInsuranceOptions" [value]="option">
+              {{ option }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="seamen-office-symbol">船員保険事業所整理記号</label>
+          <input
+            id="seamen-office-symbol"
+            type="text"
+            formControlName="船員保険事業所整理記号"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="seamen-insured-name">船員保険被保険者氏名</label>
+          <input
+            id="seamen-insured-name"
+            type="text"
+            formControlName="船員保険被保険者氏名"
+            [readonly]="!isEditing"
+          />
+        </div>
+        <div class="form-group">
+          <label for="seamen-insurance-number">船員保険被保険者証番号</label>
+          <input
+            id="seamen-insurance-number"
+            type="text"
+            formControlName="船員保険被保険者証番号"
+            [readonly]="!isEditing"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- その他・備考セクション -->
+    <div class="form-section other-section">
+      <div class="section-header">
+        <mat-icon>note</mat-icon>
+        <h3>その他・備考</h3>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label for="attachments">添付書類確認</label>
+          <textarea
+            id="attachments"
+            formControlName="添付書類確認"
+            [readonly]="!isEditing"
+            rows="2"
+            placeholder="添付書類の確認事項を記載"
+          ></textarea>
+        </div>
+        <div class="form-group full-width">
+          <label for="remarks">備考</label>
+          <textarea id="remarks" formControlName="備考" [readonly]="!isEditing" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- 注意事項 -->
+  <div class="notice-section">
+    <h4>注意事項</h4>
+    <ul>
+      <li>再交付を必要とする理由を正確に記載してください。</li>
+      <li>
+        被保険者氏名はカナ・漢字いずれも全角で入力し、姓と名の間に全角スペースを1文字分挿入してください。
+      </li>
+      <li>被扶養者がいる場合は、該当する被扶養者の情報を全て記載してください。</li>
+      <li>紛失の場合は、警察署等への届出が必要な場合があります。</li>
+      <li>き損（汚した、破った）の場合は、従来の被保険者証を添付してください。</li>
+      <li>船員保険被保険者証をお持ちの方は、該当欄に記載してください。</li>
+    </ul>
   </div>
 </div>
