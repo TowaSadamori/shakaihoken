@@ -32,46 +32,43 @@
     </div>
   </div>
 
-  <!-- 雇用形態選択 -->
-  <div class="employment-selection">
-    <h3>属性判定</h3>
-    <div class="selection-form">
-      <select
-        id="employment-type"
-        [(ngModel)]="selectedEmploymentType"
-        (change)="onEmploymentTypeChange()"
-      >
-        <option value="">選択してください</option>
-        <option value="regular">正社員</option>
-        <option value="part-time">パートタイム・アルバイト</option>
-        <option value="contract">契約社員</option>
-        <option value="executive-full">常勤役員</option>
-        <option value="executive-part">非常勤役員</option>
-        <option value="over70">70歳以上被用者</option>
-        <option value="over75">75歳以上（後期高齢者）</option>
-        <option value="on-leave">休職者</option>
-        <option value="secondment">出向者</option>
-        <option value="multiple-workplace">二以上事業所勤務者</option>
-        <option value="trial-period">試用期間中</option>
-        <option value="overseas">海外居住</option>
-        <option value="disabled">障害者</option>
-      </select>
+  <!-- 属性編集ボタン -->
+  <div class="attribute-edit-section" *ngIf="!showQuestionnaire && !judgmentResult">
+    <div class="edit-prompt">
+      <p>従業員の属性を設定するために質問に答えてください</p>
+      <button class="btn-primary" (click)="startAttributeEdit()">属性を編集する</button>
     </div>
   </div>
 
-  <!-- 追加質問エリア -->
-  <div class="questionnaire" *ngIf="showQuestionnaire">
-    <h3>詳細判定のための質問</h3>
+  <!-- 質問エリア -->
+  <div class="questionnaire" *ngIf="showQuestionnaire && currentQuestion">
+    <h3>質問 {{ getQuestionNumber() }}</h3>
     <div class="questions">
-      <div *ngFor="let question of currentQuestions" class="question-item">
-        <div class="question-text">{{ question.text }}</div>
-        <div class="answer-options">
+      <div class="question-item">
+        <div class="question-text">{{ currentQuestion.text }}</div>
+
+        <!-- 選択式質問 -->
+        <div class="answer-options" *ngIf="currentQuestion.type === 'choice'">
+          <label *ngFor="let choice of currentQuestion.choices">
+            <input
+              type="radio"
+              [name]="currentQuestion.id"
+              [value]="choice.value"
+              [(ngModel)]="answers[currentQuestion.id]"
+              (change)="updateAnswers()"
+            />
+            {{ choice.label }}
+          </label>
+        </div>
+
+        <!-- はい/いいえ質問 -->
+        <div class="answer-options" *ngIf="currentQuestion.type === 'yesno'">
           <label>
             <input
               type="radio"
-              [name]="question.id"
+              [name]="currentQuestion.id"
               value="yes"
-              [(ngModel)]="answers[question.id]"
+              [(ngModel)]="answers[currentQuestion.id]"
               (change)="updateAnswers()"
             />
             はい
@@ -79,9 +76,9 @@
           <label>
             <input
               type="radio"
-              [name]="question.id"
+              [name]="currentQuestion.id"
               value="no"
-              [(ngModel)]="answers[question.id]"
+              [(ngModel)]="answers[currentQuestion.id]"
               (change)="updateAnswers()"
             />
             いいえ
@@ -132,10 +129,24 @@
 
   <!-- アクションボタン -->
   <div class="action-buttons">
-    <button class="btn-secondary" (click)="goBack()">戻る</button>
-    <button class="btn-primary" (click)="executeJudgment()" [disabled]="!canExecuteJudgment()">
-      判定実行
-    </button>
-    <button class="btn-primary" *ngIf="judgmentResult" (click)="saveJudgment()">結果を保存</button>
+    <!-- 左側：戻るボタン -->
+    <div class="left-buttons">
+      <button class="btn-back" (click)="goBack()">
+        <i class="icon-arrow-left"></i>
+        従業員一覧に戻る
+      </button>
+    </div>
+
+    <!-- 右側：操作ボタン -->
+    <div class="right-buttons">
+      <button class="btn-reset" *ngIf="judgmentResult" (click)="resetQuestionnaire()">
+        <i class="icon-refresh"></i>
+        判定をやり直す
+      </button>
+      <button class="btn-save" *ngIf="judgmentResult" (click)="saveJudgment()">
+        <i class="icon-save"></i>
+        判定結果を保存
+      </button>
+    </div>
   </div>
 </div>
