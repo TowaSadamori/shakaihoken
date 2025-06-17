@@ -8,11 +8,19 @@
     <span class="office-name" *ngIf="officeName">（{{ officeName }}）</span>
   </h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
+  <!-- 提出者記入欄 -->
+  <div class="form-section submitter-section">
+    <!-- 提出者情報フォーム（例: 事業所整理記号、所在地、名称、氏名、電話番号、社労士氏名など） -->
+    <!-- 項目は後ほど実装 -->
   </div>
 
-  <div class="button-group">
+  <!-- 被保険者欄 -->
+  <div class="form-section insured-section">
+    <!-- 被保険者情報フォーム（1人分ごとにFormArrayで繰り返し） -->
+    <!-- 項目は後ほど実装 -->
+  </div>
+
+  <div class="button-group right-align">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
     </ng-container>

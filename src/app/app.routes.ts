@@ -253,13 +253,6 @@ export const routes: Routes = [
           ).then((m) => m.StandardRemunerationReportComponent),
       },
       {
-        path: 'employer-procedures/wage-summary-report/:uid',
-        loadComponent: () =>
-          import('./employer-procedures/wage-summary-report/wage-summary-report.component').then(
-            (m) => m.WageSummaryReportComponent
-          ),
-      },
-      {
         path: 'employer-procedures/monthly-change-notification/:uid',
         loadComponent: () =>
           import(

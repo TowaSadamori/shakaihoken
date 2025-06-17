@@ -38,6 +38,13 @@
   justify-content: center;
 }
 
+.button-group.right-align {
+  margin-top: 32px;
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+}
+
 .office-name {
   font-size: 1.1rem;
   color: #1976d2;
