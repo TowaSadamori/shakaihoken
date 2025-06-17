@@ -7,13 +7,10 @@
     {{ userName }}さんの健康保険被扶養者（異動）届（国民年金第３号被保険者関係届）
   </h2>
 
-  <div class="form-section">
-    <!-- フォームの内容は後ほど実装 -->
-  </div>
-
   <div class="button-group">
     <ng-container *ngIf="!isEditing">
       <button mat-raised-button color="primary" (click)="onEdit()">編集</button>
+      <button mat-raised-button color="accent" (click)="onExportCSV()">CSV出力</button>
     </ng-container>
 
     <ng-container *ngIf="isEditing">
@@ -21,4 +18,180 @@
       <button mat-button (click)="onCancel()">キャンセル</button>
     </ng-container>
   </div>
+
+  <form [formGroup]="form" class="form-section">
+    <!-- 事業主記入欄 -->
+    <div class="section-container employer-section">
+      <h3 class="section-title">事業主記入欄</h3>
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let field of employerFields">
+            <td class="form-label">
+              <label [for]="'input-' + field.key">{{ field.label }}</label>
+            </td>
+            <td class="form-input">
+              <ng-container *ngIf="field.type === 'select'; else employerOther">
+                <select
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.disabled]="!isEditing ? true : null"
+                  class="form-select"
+                >
+                  <option value="">選択してください</option>
+                  <option *ngFor="let option of field.options" [value]="option">
+                    {{ option }}
+                  </option>
+                </select>
+              </ng-container>
+              <ng-template #employerOther>
+                <input
+                  matInput
+                  type="text"
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.readonly]="!isEditing ? true : null"
+                />
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 被保険者欄 -->
+    <div class="section-container insured-section">
+      <h3 class="section-title">被保険者欄</h3>
+      <table class="form-table">
+        <tbody>
+          <tr *ngFor="let field of insuredPersonFields">
+            <td class="form-label">
+              <label [for]="'input-' + field.key">{{ field.label }}</label>
+            </td>
+            <td class="form-input">
+              <ng-container *ngIf="field.type === 'select'; else insuredOther">
+                <select
+                  [formControlName]="field.key"
+                  [id]="'input-' + field.key"
+                  [attr.disabled]="!isEditing ? true : null"
+                  class="form-select"
+                >
+                  <option value="">選択してください</option>
+                  <option *ngFor="let option of field.options" [value]="option">
+                    {{ option }}
+                  </option>
+                </select>
+              </ng-container>
+              <ng-template #insuredOther>
+                <ng-container *ngIf="field.type === 'number'; else insuredText">
+                  <input
+                    matInput
+                    type="number"
+                    [formControlName]="field.key"
+                    [id]="'input-' + field.key"
+                    [attr.readonly]="!isEditing ? true : null"
+                    placeholder="数値"
+                  />
+                </ng-container>
+                <ng-template #insuredText>
+                  <input
+                    matInput
+                    type="text"
+                    [formControlName]="field.key"
+                    [id]="'input-' + field.key"
+                    [attr.readonly]="!isEditing ? true : null"
+                  />
+                </ng-template>
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 被扶養者欄 -->
+    <div class="section-container dependents-section">
+      <div class="section-header">
+        <h3 class="section-title">被扶養者欄</h3>
+        <button
+          *ngIf="isEditing"
+          mat-raised-button
+          color="accent"
+          type="button"
+          (click)="addDependent()"
+          class="add-dependent-btn"
+        >
+          <mat-icon>add</mat-icon>
+          被扶養者を追加
+        </button>
+      </div>
+
+      <div formArrayName="dependents">
+        <div
+          *ngFor="let dependent of dependentsArray.controls; let i = index"
+          [formGroupName]="i"
+          class="dependent-item"
+        >
+          <div class="dependent-header">
+            <h4 class="dependent-title">被扶養者 {{ i + 1 }}</h4>
+            <button
+              *ngIf="isEditing && dependentsArray.length > 1"
+              mat-icon-button
+              color="warn"
+              type="button"
+              (click)="removeDependent(i)"
+              class="remove-dependent-btn"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <table class="form-table dependent-table">
+            <tbody>
+              <tr *ngFor="let field of dependentBaseFields">
+                <td class="form-label">
+                  <label [for]="'input-' + field.key + '-' + i">{{ field.label }}</label>
+                </td>
+                <td class="form-input">
+                  <ng-container *ngIf="field.type === 'select'; else dependentOther">
+                    <select
+                      [formControlName]="field.key"
+                      [id]="'input-' + field.key + '-' + i"
+                      [attr.disabled]="!isEditing ? true : null"
+                      class="form-select"
+                    >
+                      <option value="">選択してください</option>
+                      <option *ngFor="let option of field.options" [value]="option">
+                        {{ option }}
+                      </option>
+                    </select>
+                  </ng-container>
+                  <ng-template #dependentOther>
+                    <ng-container *ngIf="field.type === 'number'; else dependentText">
+                      <input
+                        matInput
+                        type="number"
+                        [formControlName]="field.key"
+                        [id]="'input-' + field.key + '-' + i"
+                        [attr.readonly]="!isEditing ? true : null"
+                        placeholder="数値"
+                      />
+                    </ng-container>
+                    <ng-template #dependentText>
+                      <input
+                        matInput
+                        type="text"
+                        [formControlName]="field.key"
+                        [id]="'input-' + field.key + '-' + i"
+                        [attr.readonly]="!isEditing ? true : null"
+                      />
+                    </ng-template>
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </form>
 </div>
