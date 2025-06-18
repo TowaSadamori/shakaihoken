@@ -674,7 +674,7 @@ export class InsuranceJudgmentComponent implements OnInit {
       if (user.branchNumber && user.companyId) {
         const office = await this.getOfficeInfo(user.companyId, user.branchNumber);
         if (office) {
-          this.officeNumber = office.code;
+          this.officeNumber = office.branchNumber.toString();
           this.officePrefecture = office.addressPrefecture;
         }
       }

@@ -77,12 +77,12 @@
           </button>
         </td>
         <!-- <td>{{ user.companyId }}</td> -->
-        <td>未実施</td>
+        <td>{{ getJudgmentStatus(user) }}</td>
         <td>-</td>
-        <td>未判定</td>
-        <td>未判定</td>
+        <td>{{ getHealthInsuranceStatus(user) }}</td>
+        <td>{{ getCareInsuranceStatus(user) }}</td>
         <td>-</td>
-        <td>未判定</td>
+        <td>{{ getPensionInsuranceStatus(user) }}</td>
       </tr>
     </tbody>
   </table>
