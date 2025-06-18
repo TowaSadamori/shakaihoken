@@ -12,6 +12,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 
 interface Question {
@@ -1334,11 +1335,47 @@ export class InsuranceJudgmentComponent implements OnInit {
     this.extensionReasonDropdownOpen.push(false);
   }
 
-  removeSpecialCase(index: number) {
-    if (this.selectedSpecialCases.length > 1) {
+  async removeSpecialCase(index: number) {
+    if (this.selectedSpecialCases.length > 0) {
+      const specialCaseToRemove = this.selectedSpecialCases[index];
+
+      // Firestoreから削除する必要がある場合（保存済みの場合）
+      if (specialCaseToRemove.saveStatus === 'saved') {
+        await this.deleteSpecialCaseFromFirestore(specialCaseToRemove);
+      }
+
+      // ローカル配列から削除
       this.selectedSpecialCases.splice(index, 1);
       // ドロップダウン状態も削除
       this.extensionReasonDropdownOpen.splice(index, 1);
+
+      console.log('特殊事例を削除しました:', specialCaseToRemove.type);
+    }
+  }
+
+  // Firestoreから特殊事例を削除
+  private async deleteSpecialCaseFromFirestore(specialCase: SpecialCase) {
+    if (!this.currentUid) return;
+
+    try {
+      const firestore = getFirestore();
+
+      // 特殊事例の種類とUIDで検索して削除
+      const specialCasesQuery = query(
+        collection(firestore, 'specialCases'),
+        where('uid', '==', this.currentUid),
+        where('caseType', '==', specialCase.type)
+      );
+
+      const querySnapshot = await getDocs(specialCasesQuery);
+
+      // 該当するドキュメントを削除
+      const deletePromises = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      console.log('Firestoreから特殊事例を削除しました:', specialCase.type);
+    } catch (error) {
+      console.error('Firestoreからの特殊事例削除に失敗しました:', error);
     }
   }
 
