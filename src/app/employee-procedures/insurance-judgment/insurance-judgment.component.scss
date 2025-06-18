@@ -860,6 +860,408 @@
         }
       }
     }
+
+    // 計算された期間表示
+    .calculated-period {
+      background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+      border: 2px solid #28a745;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 15px;
+
+      h5 {
+        color: #155724;
+        margin: 0 0 15px 0;
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        &::before {
+          content: '📅';
+          font-size: 18px;
+        }
+      }
+
+      .period-info {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        .period-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          background: rgba(255, 255, 255, 0.7);
+          border-radius: 6px;
+          border-left: 3px solid #28a745;
+
+          &.total {
+            background: rgba(40, 167, 69, 0.1);
+            border-left-color: #155724;
+            font-weight: 600;
+
+            .label {
+              color: #155724;
+            }
+          }
+
+          &.exemption {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border-left-color: #0056b3;
+            font-weight: 600;
+            color: white;
+
+            .label {
+              color: white;
+              font-weight: 600;
+            }
+
+            .value {
+              color: white;
+              font-weight: 600;
+              font-size: 15px;
+            }
+          }
+
+          .label {
+            font-weight: 600;
+            color: #2d5a3d;
+            min-width: 80px;
+          }
+
+          .value {
+            color: #155724;
+            font-weight: 500;
+            text-align: right;
+
+            &.special-note {
+              background: #fff3cd;
+              padding: 8px;
+              border-radius: 4px;
+              border-left: 3px solid #ffc107;
+              font-size: 13px;
+              line-height: 1.4;
+              color: #856404;
+              text-align: left;
+              margin-top: 4px;
+            }
+          }
+        }
+      }
+    }
+
+    // 実際の申請期間選択
+    .actual-period-selection {
+      background: linear-gradient(135deg, #fff3cd 0%, #fef7e0 100%);
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 15px;
+
+      h5 {
+        color: #856404;
+        margin: 0 0 15px 0;
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        &::before {
+          content: '✏️';
+          font-size: 18px;
+        }
+      }
+
+      .period-selection-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 15px;
+
+        @media (max-width: 768px) {
+          grid-template-columns: 1fr;
+        }
+
+        .form-group {
+          margin-bottom: 0;
+        }
+      }
+
+      .period-breakdown {
+        margin: 15px 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+
+        .period-section {
+          padding: 12px;
+          border-radius: 8px;
+          border: 2px solid transparent;
+
+          &.prenatal {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-color: #2196f3;
+          }
+
+          &.postnatal {
+            background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
+            border-color: #ff9800;
+          }
+
+          .period-header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            .period-title {
+              font-weight: 600;
+              font-size: 14px;
+              color: #333;
+              margin-bottom: 4px;
+            }
+
+            .period-inputs {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              flex-wrap: wrap;
+
+              .period-date-input {
+                flex: 1;
+                min-width: 120px;
+                padding: 6px 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+                background: rgba(255, 255, 255, 0.9);
+
+                &:focus {
+                  outline: none;
+                  border-color: #007bff;
+                  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+                }
+              }
+
+              .date-separator {
+                font-size: 12px;
+                color: #666;
+                font-weight: 500;
+              }
+            }
+
+            .period-range {
+              font-size: 12px;
+              color: #666;
+              font-family: 'Courier New', monospace;
+              background: rgba(255, 255, 255, 0.7);
+              padding: 4px 8px;
+              border-radius: 4px;
+            }
+          }
+        }
+
+        @media (max-width: 768px) {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .exemption-period-display {
+        margin: 20px 0;
+
+        .exemption-bar {
+          background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+
+          .exemption-label {
+            font-weight: 600;
+            font-size: 14px;
+          }
+
+          .exemption-period {
+            font-weight: 600;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+          }
+
+          @media (max-width: 768px) {
+            flex-direction: column;
+            gap: 4px;
+            text-align: center;
+          }
+        }
+      }
+
+      .quick-select-buttons {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+
+        .btn-quick-select {
+          padding: 8px 16px;
+          border: 1px solid #ffc107;
+          background: #fff3cd;
+          color: #856404;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          flex: 1;
+          min-width: 100px;
+
+          &:hover {
+            background: #ffc107;
+            color: #212529;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
+        }
+      }
+
+      .selected-period-info {
+        background: linear-gradient(135deg, #d4edda 0%, #e8f5e8 100%);
+        border: 1px solid #28a745;
+        border-radius: 6px;
+        padding: 15px;
+
+        .info-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+
+          &:last-child {
+            margin-bottom: 0;
+            padding-top: 8px;
+            border-top: 1px solid rgba(21, 87, 36, 0.2);
+            font-weight: 600;
+          }
+
+          .label {
+            font-weight: 500;
+            color: #155724;
+          }
+
+          .value {
+            font-weight: 600;
+            color: #155724;
+            text-align: right;
+          }
+        }
+      }
+    }
+
+    // 特殊事例の個別保存セクション
+    .case-save-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      text-align: center;
+
+      .btn-save-case {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+
+        &:hover:not(:disabled) {
+          background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        &:disabled {
+          background: #6c757d;
+          cursor: not-allowed;
+          opacity: 0.6;
+          transform: none;
+          box-shadow: none;
+        }
+
+        i::before {
+          content: '💾';
+          font-style: normal;
+        }
+      }
+
+      .save-status {
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 500;
+
+        .status-icon {
+          font-size: 16px;
+
+          &.saved {
+            color: #28a745;
+          }
+
+          &.saving {
+            color: #ffc107;
+            animation: pulse 1.5s infinite;
+          }
+
+          &.error {
+            color: #dc3545;
+          }
+        }
+
+        .status-text {
+          &.saved {
+            color: #28a745;
+          }
+
+          &.saving {
+            color: #856404;
+          }
+
+          &.error {
+            color: #dc3545;
+          }
+        }
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
   }
 }
 

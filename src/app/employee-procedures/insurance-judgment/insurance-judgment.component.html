@@ -315,123 +315,259 @@
             (change)="onSpecialCaseTypeChange(i)"
           >
             <option value="">選択してください</option>
-            <option value="social-security-agreement">社会保障協定</option>
-            <option value="leave-without-pay">休職者（私傷病など）の保険料</option>
+            <option value="maternity-leave">産前産後休業期間中の保険料免除</option>
+            <option value="childcare-leave">育休</option>
+            <option value="other-leave">その他の休職</option>
             <option value="secondment">出向者の社会保険加入</option>
             <option value="multiple-workplace">二以上事業所勤務者</option>
             <option value="same-day-acquisition-loss">同日得喪</option>
-            <option value="childcare-end-salary-change">育児休業等終了時報酬月額変更</option>
-            <option value="maternity-end-salary-change">産前産後休業終了時報酬月額変更</option>
-            <option value="overseas-dependent">海外居住被扶養者</option>
-            <option value="trial-period">試用期間中の社会保険加入</option>
           </select>
         </div>
 
-        <!-- 社会保障協定の詳細フォーム -->
-        <div class="case-details" *ngIf="specialCase.type === 'social-security-agreement'">
+        <!-- 産前産後休業の詳細フォーム -->
+        <div class="case-details" *ngIf="specialCase.type === 'maternity-leave'">
           <div class="form-grid">
             <div class="form-group">
-              <label [for]="'agreement-type-' + i">協定適用区分:</label>
-              <select [id]="'agreement-type-' + i" [(ngModel)]="specialCase.details.agreementType">
+              <label [for]="'pregnancy-type-' + i">妊娠の種類:</label>
+              <select
+                [id]="'pregnancy-type-' + i"
+                [(ngModel)]="specialCase.details.pregnancyType"
+                (change)="calculateMaternityPeriod(i)"
+              >
                 <option value="">選択してください</option>
-                <option value="japan-to-overseas">日本から海外派遣（協定適用）</option>
-                <option value="overseas-to-japan">海外から日本派遣（協定適用）</option>
-                <option value="not-applicable">協定非該当</option>
+                <option value="single">単胎</option>
+                <option value="multiple">多胎</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label [for]="'partner-country-' + i">協定相手国名:</label>
+              <label [for]="'expected-birth-date-' + i">出産予定日:</label>
               <input
-                [id]="'partner-country-' + i"
-                type="text"
-                [(ngModel)]="specialCase.details.partnerCountry"
-                placeholder="例: アメリカ"
+                [id]="'expected-birth-date-' + i"
+                type="date"
+                [(ngModel)]="specialCase.details.expectedBirthDate"
+                (change)="calculateMaternityPeriod(i)"
               />
             </div>
 
             <div class="form-group">
-              <div class="field-label">適用証明書の有無:</div>
-              <div class="radio-group">
-                <label
-                  ><input
-                    type="radio"
-                    [(ngModel)]="specialCase.details.hasCertificate"
-                    value="yes"
-                  />
-                  あり</label
-                >
-                <label
-                  ><input
-                    type="radio"
-                    [(ngModel)]="specialCase.details.hasCertificate"
-                    value="no"
-                  />
-                  なし</label
-                >
+              <label [for]="'actual-birth-date-' + i">実際の出産日（任意）:</label>
+              <input
+                [id]="'actual-birth-date-' + i"
+                type="date"
+                [(ngModel)]="specialCase.details.actualBirthDate"
+                (change)="calculateMaternityPeriod(i); onActualBirthDateChange(i)"
+              />
+            </div>
+
+            <!-- 計算された最大期間表示 -->
+            <div class="form-group full-width" *ngIf="getCalculatedMaternityPeriod(i)">
+              <div class="calculated-period">
+                <h5>法定最大期間（参考）</h5>
+                <div class="period-info">
+                  <div class="period-item">
+                    <span class="label">産前期間:</span>
+                    <span class="value">{{ getCalculatedMaternityPeriod(i)?.preNatalPeriod }}</span>
+                  </div>
+                  <div class="period-item">
+                    <span class="label">産後期間:</span>
+                    <span class="value">{{
+                      getCalculatedMaternityPeriod(i)?.postNatalPeriod
+                    }}</span>
+                  </div>
+                  <div class="period-item total">
+                    <span class="label">最大免除期間:</span>
+                    <span class="value">{{ getCalculatedMaternityPeriod(i)?.totalPeriod }}</span>
+                  </div>
+                  <div class="period-item exemption">
+                    <span class="label">社会保険料免除期間:</span>
+                    <span class="value">{{
+                      getCalculatedMaternityPeriod(i)?.exemptionPeriod
+                    }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="form-group" *ngIf="specialCase.details.hasCertificate === 'yes'">
-              <label [for]="'cert-number-' + i">適用証明書番号:</label>
-              <input
-                [id]="'cert-number-' + i"
-                type="text"
-                [(ngModel)]="specialCase.details.certificateNumber"
-              />
-            </div>
+            <!-- 実際の申請期間選択 -->
+            <div class="form-group full-width" *ngIf="getCalculatedMaternityPeriod(i)">
+              <div class="actual-period-selection">
+                <h5>実際の社会保険料免除期間</h5>
 
-            <div class="form-group" *ngIf="specialCase.details.hasCertificate === 'yes'">
-              <label [for]="'cert-start-' + i">適用証明書有効期間（開始日）:</label>
-              <input
-                [id]="'cert-start-' + i"
-                type="date"
-                [(ngModel)]="specialCase.details.certificateStartDate"
-              />
-            </div>
+                <!-- 産前・産後期間の入力 -->
+                <div class="period-breakdown">
+                  <div class="period-section prenatal">
+                    <div class="period-header">
+                      <span class="period-title">産前の期間</span>
+                      <div class="period-inputs">
+                        <input
+                          type="date"
+                          [(ngModel)]="specialCase.details.preNatalStartDate"
+                          [value]="specialCase.details.preNatalStartDate || getPreNatalStartDate(i)"
+                          (ngModelChange)="onPreNatalStartDateChange(i, $event)"
+                          class="period-date-input"
+                          placeholder="開始日"
+                        />
+                        <span class="date-separator">～</span>
+                        <input
+                          type="date"
+                          [(ngModel)]="specialCase.details.preNatalEndDate"
+                          [value]="specialCase.details.preNatalEndDate || getPreNatalEndDate(i)"
+                          (ngModelChange)="onPreNatalEndDateChange(i, $event)"
+                          class="period-date-input"
+                          placeholder="終了日"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="period-section postnatal">
+                    <div class="period-header">
+                      <span class="period-title">産後の期間</span>
+                      <div class="period-inputs">
+                        <input
+                          type="date"
+                          [(ngModel)]="specialCase.details.postNatalStartDate"
+                          [value]="
+                            specialCase.details.postNatalStartDate || getPostNatalStartDate(i)
+                          "
+                          (ngModelChange)="onPostNatalStartDateChange(i, $event)"
+                          class="period-date-input"
+                          placeholder="開始日"
+                        />
+                        <span class="date-separator">～</span>
+                        <input
+                          type="date"
+                          [(ngModel)]="specialCase.details.postNatalEndDate"
+                          [value]="specialCase.details.postNatalEndDate || getPostNatalEndDate(i)"
+                          [min]="getPostNatalStartDate(i)"
+                          [max]="getPostNatalMaxDate(i)"
+                          (ngModelChange)="onPostNatalEndDateChange(i, $event)"
+                          class="period-date-input"
+                          placeholder="終了日"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            <div class="form-group" *ngIf="specialCase.details.hasCertificate === 'yes'">
-              <label [for]="'cert-end-' + i">適用証明書有効期間（終了日）:</label>
-              <input
-                [id]="'cert-end-' + i"
-                type="date"
-                [(ngModel)]="specialCase.details.certificateEndDate"
-              />
-            </div>
+                <!-- 社会保険料免除期間の表示 -->
+                <div class="exemption-period-display">
+                  <div class="exemption-bar">
+                    <span class="exemption-label">社会保険料免除期間:</span>
+                    <span class="exemption-period">{{ getActualExemptionPeriod(i) }}</span>
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label [for]="'foreign-ssn-' + i">相手国での社会保障番号:</label>
-              <input
-                [id]="'foreign-ssn-' + i"
-                type="text"
-                [(ngModel)]="specialCase.details.foreignSocialSecurityNumber"
-              />
-            </div>
-
-            <div class="form-group">
-              <div class="field-label">日本の社会保険適用免除状況:</div>
-              <div class="checkbox-group">
-                <label
-                  ><input type="checkbox" [(ngModel)]="specialCase.details.pensionExemption" />
-                  年金免除</label
+                <div
+                  class="selected-period-info"
+                  *ngIf="specialCase.details.actualStartDate && specialCase.details.actualEndDate"
                 >
-                <label
-                  ><input
-                    type="checkbox"
-                    [(ngModel)]="specialCase.details.healthInsuranceExemption"
-                  />
-                  医療保険免除</label
-                >
+                  <div class="info-item">
+                    <span class="label">選択された期間:</span>
+                    <span class="value"
+                      >{{ specialCase.details.actualStartDate }} ～
+                      {{ specialCase.details.actualEndDate }}</span
+                    >
+                  </div>
+                  <div class="info-item">
+                    <span class="label">申請日数:</span>
+                    <span class="value">{{ getSelectedPeriodDays(i) }}日間</span>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div class="form-group full-width">
-              <label [for]="'remarks-' + i">備考:</label>
+              <label [for]="'maternity-remarks-' + i">備考:</label>
               <textarea
-                [id]="'remarks-' + i"
+                [id]="'maternity-remarks-' + i"
                 [(ngModel)]="specialCase.details.remarks"
-                placeholder="協定に関する特記事項など"
+                placeholder="産前産後休業に関する特記事項など"
               ></textarea>
+            </div>
+          </div>
+
+          <!-- 産前産後休業の保存ボタン -->
+          <div class="case-save-section">
+            <button
+              class="btn-save-case"
+              (click)="saveSpecialCase(i)"
+              [disabled]="!canSaveMaternityCase(i)"
+            >
+              <i class="icon-save"></i>
+              この情報を保存
+            </button>
+            <div class="save-status" *ngIf="specialCase.saveStatus">
+              <span class="status-icon" [class]="specialCase.saveStatus">
+                {{
+                  specialCase.saveStatus === 'saved'
+                    ? '✓'
+                    : specialCase.saveStatus === 'saving'
+                      ? '⏳'
+                      : '✗'
+                }}
+              </span>
+              <span class="status-text">
+                {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 育休の詳細フォーム -->
+        <div class="case-details" *ngIf="specialCase.type === 'childcare-leave'">
+          <div class="form-grid">
+            <div class="form-group">
+              <label [for]="'childcare-start-' + i">開始日:</label>
+              <input
+                [id]="'childcare-start-' + i"
+                type="date"
+                [(ngModel)]="specialCase.details.startDate"
+              />
+            </div>
+
+            <div class="form-group">
+              <label [for]="'childcare-end-' + i">終了予定日:</label>
+              <input
+                [id]="'childcare-end-' + i"
+                type="date"
+                [(ngModel)]="specialCase.details.endDate"
+              />
+            </div>
+
+            <div class="form-group full-width">
+              <label [for]="'childcare-remarks-' + i">備考:</label>
+              <textarea
+                [id]="'childcare-remarks-' + i"
+                [(ngModel)]="specialCase.details.remarks"
+                placeholder="育休に関する特記事項など"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- 育休の保存ボタン -->
+          <div class="case-save-section">
+            <button
+              class="btn-save-case"
+              (click)="saveSpecialCase(i)"
+              [disabled]="!canSaveChildcareCase(i)"
+            >
+              <i class="icon-save"></i>
+              この情報を保存
+            </button>
+            <div class="save-status" *ngIf="specialCase.saveStatus">
+              <span class="status-icon" [class]="specialCase.saveStatus">
+                {{
+                  specialCase.saveStatus === 'saved'
+                    ? '✓'
+                    : specialCase.saveStatus === 'saving'
+                      ? '⏳'
+                      : '✗'
+                }}
+              </span>
+              <span class="status-text">
+                {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
+              </span>
             </div>
           </div>
         </div>
@@ -439,7 +575,11 @@
         <!-- その他の事例の簡易フォーム -->
         <div
           class="case-details"
-          *ngIf="specialCase.type && specialCase.type !== 'social-security-agreement'"
+          *ngIf="
+            specialCase.type &&
+            specialCase.type !== 'maternity-leave' &&
+            specialCase.type !== 'childcare-leave'
+          "
         >
           <div class="form-group full-width">
             <label [for]="'other-remarks-' + i">詳細・備考:</label>
@@ -448,6 +588,32 @@
               [(ngModel)]="specialCase.details.remarks"
               [placeholder]="getPlaceholderText(specialCase.type)"
             ></textarea>
+          </div>
+
+          <!-- その他の事例の保存ボタン -->
+          <div class="case-save-section">
+            <button
+              class="btn-save-case"
+              (click)="saveSpecialCase(i)"
+              [disabled]="!canSaveOtherCase(i)"
+            >
+              <i class="icon-save"></i>
+              この情報を保存
+            </button>
+            <div class="save-status" *ngIf="specialCase.saveStatus">
+              <span class="status-icon" [class]="specialCase.saveStatus">
+                {{
+                  specialCase.saveStatus === 'saved'
+                    ? '✓'
+                    : specialCase.saveStatus === 'saving'
+                      ? '⏳'
+                      : '✗'
+                }}
+              </span>
+              <span class="status-text">
+                {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -67,22 +67,48 @@ interface SavedJudgmentData {
 interface SpecialCase {
   type: string;
   details: SpecialCaseDetails;
+  saveStatus?: 'saved' | 'saving' | 'error';
 }
 
 interface SpecialCaseDetails {
-  // 社会保障協定関連
-  agreementType?: string;
-  partnerCountry?: string;
-  hasCertificate?: string;
-  certificateNumber?: string;
-  certificateStartDate?: string;
-  certificateEndDate?: string;
-  foreignSocialSecurityNumber?: string;
-  pensionExemption?: boolean;
-  healthInsuranceExemption?: boolean;
+  // 産前産後休業関連
+  pregnancyType?: string; // 'single' | 'multiple'
+  expectedBirthDate?: string;
+  actualBirthDate?: string;
+  actualStartDate?: string; // 実際の申請開始日
+  actualEndDate?: string; // 実際の申請終了日
+
+  // 産前産後期間の詳細入力
+  preNatalStartDate?: string; // 産前期間開始日
+  preNatalEndDate?: string; // 産前期間終了日
+  postNatalStartDate?: string; // 産後期間開始日
+  postNatalEndDate?: string; // 産後期間終了日
+
+  // 育休関連
+  childcareType?: string; // 育児休業の種類
+  childBirthDate?: string; // 子の生年月日
+  startDate?: string;
+  endDate?: string;
+  extensionReason?: string; // 延長理由
+  papaSplit?: string; // 産後パパ育休の分割取得
 
   // 共通
   remarks?: string;
+}
+
+interface MaternityPeriodCalculation {
+  preNatalPeriod: string;
+  postNatalPeriod: string;
+  totalPeriod: string;
+  startDate: string;
+  endDate: string;
+  exemptionPeriod: string; // 社会保険料免除期間（年月表示）
+}
+
+interface ChildcarePeriodCalculation {
+  monthlyPremiumExemption: string;
+  bonusNote?: string;
+  specialNote?: string;
 }
 
 @Component({
@@ -970,8 +996,7 @@ export class InsuranceJudgmentComponent implements OnInit {
     this.judgmentResult = null;
     this.employeeAttribute = ''; // 属性もリセット
     this.isJudgmentSaved = false; // 保存状態もリセット
-    this.selectedSpecialCases = []; // 特殊事例もリセット
-    this.initializeSpecialCases(); // 初期状態に戻す
+    this.selectedSpecialCases = []; // 特殊事例もリセット（空のまま）
     this.currentQuestionId = 'employmentType';
     this.currentQuestion = this.allQuestions[this.currentQuestionId];
     this.showQuestionnaire = true;
@@ -1017,6 +1042,8 @@ export class InsuranceJudgmentComponent implements OnInit {
 
     try {
       const firestore = getFirestore();
+
+      // 1. 全体の判定結果を読み込み
       const docRef = doc(firestore, 'insuranceJudgments', this.currentUid);
       const docSnap = await getDoc(docRef);
 
@@ -1035,8 +1062,50 @@ export class InsuranceJudgmentComponent implements OnInit {
 
         console.log('保存済み判定結果を読み込みました:', savedData);
       }
+
+      // 2. 個別保存された特殊事例も読み込み
+      await this.loadIndividualSpecialCases();
     } catch (error) {
       console.error('保存済み判定結果の読み込みに失敗しました:', error);
+    }
+  }
+
+  // 個別保存された特殊事例を読み込む
+  private async loadIndividualSpecialCases() {
+    if (!this.currentUid) return;
+
+    try {
+      const firestore = getFirestore();
+      const specialCasesQuery = query(
+        collection(firestore, 'specialCases'),
+        where('uid', '==', this.currentUid)
+      );
+
+      const querySnapshot = await getDocs(specialCasesQuery);
+      const individualCases: SpecialCase[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        individualCases.push({
+          type: data['caseType'],
+          details: data['caseDetails'],
+          saveStatus: 'saved', // 保存済みステータスを設定
+        });
+      });
+
+      if (individualCases.length > 0) {
+        // 既存の特殊事例と重複しないようにマージ
+        const existingTypes = this.selectedSpecialCases.map((c) => c.type);
+        const newCases = individualCases.filter((c) => !existingTypes.includes(c.type));
+
+        this.selectedSpecialCases = [...this.selectedSpecialCases, ...newCases];
+
+        console.log('個別保存された特殊事例を読み込みました:', individualCases);
+      }
+
+      // 特殊事例は手動で追加するまで空のままにする
+    } catch (error) {
+      console.error('個別特殊事例の読み込みに失敗しました:', error);
     }
   }
 
@@ -1214,25 +1283,568 @@ export class InsuranceJudgmentComponent implements OnInit {
 
   getPlaceholderText(caseType: string): string {
     const placeholders: Record<string, string> = {
-      'leave-without-pay': '休職期間、無給期間の保険料徴収方法など',
+      'other-leave': '休職期間、無給期間の保険料徴収方法など',
       secondment: '出向先企業名、指揮命令関係、給与支払い実態など',
       'multiple-workplace': '勤務事業所名、各事業所での報酬額など',
       'same-day-acquisition-loss': '同日得喪の理由、特例適用の有無など',
-      'childcare-end-salary-change': '育児休業終了日、子の年齢、報酬変更の詳細など',
-      'maternity-end-salary-change': '産前産後休業終了日、報酬変更の詳細など',
-      'overseas-dependent': '被扶養者の居住国、認定に必要な添付書類など',
-      'trial-period': '試用期間の長さ、正規雇用への移行予定など',
     };
     return placeholders[caseType] || '詳細情報を入力してください';
   }
 
   // 特殊事例の初期化
   private initializeSpecialCases() {
-    if (this.selectedSpecialCases.length === 0) {
-      this.selectedSpecialCases.push({
-        type: '',
-        details: {},
-      });
+    // 特殊事例は手動で追加するまで空のままにする
+    this.selectedSpecialCases = [];
+  }
+
+  // 実際の出産日変更時の処理
+  onActualBirthDateChange(index: number) {
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!specialCase.details.actualBirthDate) {
+      return;
     }
+
+    const birthDate = new Date(specialCase.details.actualBirthDate);
+
+    // 産前期間の終了日と産後期間の開始日を出産日に合わせる
+    specialCase.details.preNatalEndDate = specialCase.details.actualBirthDate;
+    specialCase.details.postNatalStartDate = specialCase.details.actualBirthDate;
+
+    // 産前期間の開始日は手動で変更されていない場合のみ再計算
+    // （保存されたデータがある場合や手動で変更された場合は変更しない）
+    if (!this.isPreNatalStartDateManuallySet(index)) {
+      if (specialCase.details.pregnancyType) {
+        const preNatalDays = specialCase.details.pregnancyType === 'multiple' ? 98 : 42;
+        const preNatalStartDate = new Date(birthDate);
+        preNatalStartDate.setDate(birthDate.getDate() - preNatalDays);
+        specialCase.details.preNatalStartDate = this.formatDateToString(preNatalStartDate);
+      }
+    }
+
+    // 産後期間の終了日を再計算
+    const postNatalEndDate = new Date(birthDate);
+    postNatalEndDate.setDate(birthDate.getDate() + 56);
+    specialCase.details.postNatalEndDate = this.formatDateToString(postNatalEndDate);
+  }
+
+  // 産前産後休業期間の計算
+  calculateMaternityPeriod(index: number) {
+    const specialCase = this.selectedSpecialCases[index];
+    if (
+      !specialCase ||
+      !specialCase.details.pregnancyType ||
+      !specialCase.details.expectedBirthDate
+    ) {
+      return;
+    }
+
+    const expectedDate = new Date(specialCase.details.expectedBirthDate);
+    const actualDate = specialCase.details.actualBirthDate
+      ? new Date(specialCase.details.actualBirthDate)
+      : null;
+
+    // 産前期間の計算は常に出産予定日を基準とする
+    const preNatalDays = specialCase.details.pregnancyType === 'multiple' ? 98 : 42;
+    const preNatalStartDate = new Date(expectedDate);
+    preNatalStartDate.setDate(expectedDate.getDate() - preNatalDays);
+
+    // 産前期間の終了日と産後期間の開始日は実際の出産日（なければ予定日）
+    const birthDate = actualDate || expectedDate;
+
+    // 産後期間の計算
+    const postNatalEndDate = new Date(birthDate);
+    postNatalEndDate.setDate(birthDate.getDate() + 56);
+
+    // 期間の自動設定（産前開始日は手動変更されていない場合のみ更新）
+    if (!this.isPreNatalStartDateManuallySet(index)) {
+      specialCase.details.preNatalStartDate = this.formatDateToString(preNatalStartDate);
+    }
+    specialCase.details.preNatalEndDate = this.formatDateToString(birthDate);
+    specialCase.details.postNatalStartDate = this.formatDateToString(birthDate);
+    specialCase.details.postNatalEndDate = this.formatDateToString(postNatalEndDate);
+
+    // 従来の期間の保存も維持
+    specialCase.details.startDate = this.formatDateToString(preNatalStartDate);
+    specialCase.details.endDate = this.formatDateToString(postNatalEndDate);
+  }
+
+  // 計算された産前産後休業期間の取得
+  getCalculatedMaternityPeriod(index: number): MaternityPeriodCalculation | null {
+    const specialCase = this.selectedSpecialCases[index];
+    if (
+      !specialCase ||
+      !specialCase.details.pregnancyType ||
+      !specialCase.details.expectedBirthDate
+    ) {
+      return null;
+    }
+
+    const expectedDate = new Date(specialCase.details.expectedBirthDate);
+    const actualDate = specialCase.details.actualBirthDate
+      ? new Date(specialCase.details.actualBirthDate)
+      : null;
+
+    // 産前期間の計算
+    const preNatalDays = specialCase.details.pregnancyType === 'multiple' ? 98 : 42;
+    const preNatalStartDate = new Date(expectedDate);
+    preNatalStartDate.setDate(expectedDate.getDate() - preNatalDays);
+
+    // 産後期間の計算
+    const birthDate = actualDate || expectedDate;
+    const postNatalEndDate = new Date(birthDate);
+    postNatalEndDate.setDate(birthDate.getDate() + 56);
+
+    // 社会保険料免除期間の計算（月単位）
+    const exemptionStartMonth = `${preNatalStartDate.getFullYear()}年${preNatalStartDate.getMonth() + 1}月`;
+    const exemptionEndMonth = `${postNatalEndDate.getFullYear()}年${postNatalEndDate.getMonth() + 1}月`;
+
+    return {
+      preNatalPeriod: `${this.formatDateToString(preNatalStartDate)} ～ ${this.formatDateToString(expectedDate)} (${preNatalDays}日間)`,
+      postNatalPeriod: `${this.formatDateToString(birthDate)} ～ ${this.formatDateToString(postNatalEndDate)} (56日間)`,
+      totalPeriod: `${this.formatDateToString(preNatalStartDate)} ～ ${this.formatDateToString(postNatalEndDate)}`,
+      startDate: this.formatDateToString(preNatalStartDate),
+      endDate: this.formatDateToString(postNatalEndDate),
+      exemptionPeriod: `${exemptionStartMonth} ～ ${exemptionEndMonth}`,
+    };
+  }
+
+  // 日付をISO文字列に変換するヘルパーメソッド
+  private formatDateToString(date: Date): string {
+    return date.toISOString().split('T')[0];
+  }
+
+  // 最大期間を設定
+  setMaxPeriod(index: number) {
+    const calculation = this.getCalculatedMaternityPeriod(index);
+    if (calculation) {
+      this.selectedSpecialCases[index].details.actualStartDate = calculation.startDate;
+      this.selectedSpecialCases[index].details.actualEndDate = calculation.endDate;
+    }
+  }
+
+  // 選択された期間の日数を計算
+  getSelectedPeriodDays(index: number): number {
+    const specialCase = this.selectedSpecialCases[index];
+    if (specialCase.details.actualStartDate && specialCase.details.actualEndDate) {
+      const startDate = new Date(specialCase.details.actualStartDate);
+      const endDate = new Date(specialCase.details.actualEndDate);
+      const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // 開始日も含むため+1
+      return diffDays;
+    }
+    return 0;
+  }
+
+  // 産前期間の日付範囲を取得
+  getPreNatalDateRange(index: number): string {
+    const calculation = this.getCalculatedMaternityPeriod(index);
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!calculation || !specialCase.details.expectedBirthDate) {
+      return '';
+    }
+
+    const expectedDate = new Date(specialCase.details.expectedBirthDate);
+    const preNatalDays = specialCase.details.pregnancyType === 'multiple' ? 98 : 42;
+    const preNatalStartDate = new Date(expectedDate);
+    preNatalStartDate.setDate(expectedDate.getDate() - preNatalDays);
+
+    return `${this.formatDateToString(preNatalStartDate)} ～ ${this.formatDateToString(expectedDate)}`;
+  }
+
+  // 産後期間の日付範囲を取得
+  getPostNatalDateRange(index: number): string {
+    const calculation = this.getCalculatedMaternityPeriod(index);
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!calculation || !specialCase.details.expectedBirthDate) {
+      return '';
+    }
+
+    const expectedDate = new Date(specialCase.details.expectedBirthDate);
+    const actualDate = specialCase.details.actualBirthDate
+      ? new Date(specialCase.details.actualBirthDate)
+      : null;
+
+    const birthDate = actualDate || expectedDate;
+    const postNatalEndDate = new Date(birthDate);
+    postNatalEndDate.setDate(birthDate.getDate() + 56);
+
+    return `${this.formatDateToString(birthDate)} ～ ${this.formatDateToString(postNatalEndDate)}`;
+  }
+
+  // 産前期間の開始日を取得
+  getPreNatalStartDate(index: number): string {
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!specialCase.details.expectedBirthDate || !specialCase.details.pregnancyType) {
+      return '';
+    }
+
+    const expectedDate = new Date(specialCase.details.expectedBirthDate);
+    const preNatalDays = specialCase.details.pregnancyType === 'multiple' ? 98 : 42;
+    const preNatalStartDate = new Date(expectedDate);
+    preNatalStartDate.setDate(expectedDate.getDate() - preNatalDays);
+
+    return this.formatDateToString(preNatalStartDate);
+  }
+
+  // 産前期間の終了日を取得
+  getPreNatalEndDate(index: number): string {
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!specialCase.details.expectedBirthDate) {
+      return '';
+    }
+
+    return specialCase.details.expectedBirthDate;
+  }
+
+  // 産後期間の開始日を取得
+  getPostNatalStartDate(index: number): string {
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!specialCase.details.expectedBirthDate) {
+      return '';
+    }
+
+    const actualDate = specialCase.details.actualBirthDate
+      ? new Date(specialCase.details.actualBirthDate)
+      : new Date(specialCase.details.expectedBirthDate);
+
+    return this.formatDateToString(actualDate);
+  }
+
+  // 産後期間の終了日を取得
+  getPostNatalEndDate(index: number): string {
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!specialCase.details.expectedBirthDate) {
+      return '';
+    }
+
+    const expectedDate = new Date(specialCase.details.expectedBirthDate);
+    const actualDate = specialCase.details.actualBirthDate
+      ? new Date(specialCase.details.actualBirthDate)
+      : null;
+
+    const birthDate = actualDate || expectedDate;
+    const postNatalEndDate = new Date(birthDate);
+    postNatalEndDate.setDate(birthDate.getDate() + 56);
+
+    return this.formatDateToString(postNatalEndDate);
+  }
+
+  // 産後期間の最大終了日を取得（出産日から56日後）
+  getPostNatalMaxDate(index: number): string {
+    return this.getPostNatalEndDate(index);
+  }
+
+  // 産前開始日が手動で変更されたかどうかを判定
+  private isPreNatalStartDateManuallySet(index: number): boolean {
+    const specialCase = this.selectedSpecialCases[index];
+
+    // 保存されたデータがある場合は手動設定済みとみなす
+    if (specialCase.saveStatus === 'saved') {
+      return true;
+    }
+
+    // 計算値と異なる場合は手動設定済みとみなす
+    if (specialCase.details.pregnancyType && specialCase.details.expectedBirthDate) {
+      const expectedDate = new Date(specialCase.details.expectedBirthDate);
+      const actualDate = specialCase.details.actualBirthDate
+        ? new Date(specialCase.details.actualBirthDate)
+        : null;
+      const birthDate = actualDate || expectedDate;
+
+      const preNatalDays = specialCase.details.pregnancyType === 'multiple' ? 98 : 42;
+      const calculatedStartDate = new Date(birthDate);
+      calculatedStartDate.setDate(birthDate.getDate() - preNatalDays);
+
+      const calculatedStartDateString = this.formatDateToString(calculatedStartDate);
+
+      return specialCase.details.preNatalStartDate !== calculatedStartDateString;
+    }
+
+    return false;
+  }
+
+  // 産前期間の日付変更イベントハンドラー
+  onPreNatalStartDateChange(index: number, value: string) {
+    this.selectedSpecialCases[index].details.preNatalStartDate = value;
+    this.updateExemptionPeriod(index);
+  }
+
+  onPreNatalEndDateChange(index: number, value: string) {
+    const specialCase = this.selectedSpecialCases[index];
+    specialCase.details.preNatalEndDate = value;
+
+    // 産前期間の終了日が変更されたら、産後期間の開始日も同じ日付に設定
+    specialCase.details.postNatalStartDate = value;
+
+    // 実際の出産日も更新
+    if (value) {
+      specialCase.details.actualBirthDate = value;
+    }
+
+    this.updateExemptionPeriod(index);
+  }
+
+  onPostNatalStartDateChange(index: number, value: string) {
+    const specialCase = this.selectedSpecialCases[index];
+    specialCase.details.postNatalStartDate = value;
+
+    // 産後期間の開始日が変更されたら、産前期間の終了日も同じ日付に設定
+    specialCase.details.preNatalEndDate = value;
+
+    // 実際の出産日も更新
+    if (value) {
+      specialCase.details.actualBirthDate = value;
+    }
+
+    this.updateExemptionPeriod(index);
+  }
+
+  onPostNatalEndDateChange(index: number, value: string) {
+    this.selectedSpecialCases[index].details.postNatalEndDate = value;
+    this.updateExemptionPeriod(index);
+  }
+
+  // 免除期間の更新（必要に応じて追加処理）
+  private updateExemptionPeriod(index: number) {
+    // 現在は表示のみなので、特別な処理は不要
+    // 将来的に保存や他の処理が必要な場合はここに追加
+    console.log(`免除期間が更新されました (インデックス: ${index})`);
+  }
+
+  // 実際の社会保険料免除期間を計算
+  getActualExemptionPeriod(index: number): string {
+    const specialCase = this.selectedSpecialCases[index];
+
+    if (!specialCase.details.preNatalStartDate || !specialCase.details.postNatalEndDate) {
+      return '';
+    }
+
+    const startDate = new Date(specialCase.details.preNatalStartDate);
+    const endDate = new Date(specialCase.details.postNatalEndDate);
+
+    // 開始月と終了月を取得
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth() + 1;
+    const endYear = endDate.getFullYear();
+    const endMonth = endDate.getMonth() + 1;
+
+    // 同じ月の場合
+    if (startYear === endYear && startMonth === endMonth) {
+      return `${startYear}年${startMonth}月`;
+    }
+
+    // 異なる月の場合
+    return `${startYear}年${startMonth}月 ～ ${endYear}年${endMonth}月`;
+  }
+
+  // 特殊事例の個別保存
+  async saveSpecialCase(index: number) {
+    const specialCase = this.selectedSpecialCases[index];
+    if (!specialCase || !this.currentUid) return;
+
+    // 保存中状態に設定
+    specialCase.saveStatus = 'saving';
+
+    try {
+      const firestore = getFirestore();
+      const specialCaseData = {
+        uid: this.currentUid,
+        employeeName: this.employeeName,
+        employeeNumber: this.employeeNumber,
+        caseIndex: index,
+        caseType: specialCase.type,
+        caseDetails: specialCase.details,
+        savedAt: new Date(),
+      };
+
+      // 特殊事例専用のコレクションに保存
+      const docRef = doc(firestore, 'specialCases', `${this.currentUid}_${index}`);
+      await setDoc(docRef, specialCaseData);
+
+      // 保存成功
+      specialCase.saveStatus = 'saved';
+      console.log(`特殊事例 ${index} を保存しました:`, specialCaseData);
+
+      // 成功メッセージを表示（3秒後に消去）
+      setTimeout(() => {
+        if (specialCase.saveStatus === 'saved') {
+          specialCase.saveStatus = undefined;
+        }
+      }, 3000);
+    } catch (error) {
+      console.error(`特殊事例 ${index} の保存に失敗しました:`, error);
+      specialCase.saveStatus = 'error';
+
+      // エラーメッセージを表示（5秒後に消去）
+      setTimeout(() => {
+        if (specialCase.saveStatus === 'error') {
+          specialCase.saveStatus = undefined;
+        }
+      }, 5000);
+    }
+  }
+
+  // 産前産後休業の保存可能性チェック
+  canSaveMaternityCase(index: number): boolean {
+    const specialCase = this.selectedSpecialCases[index];
+    return !!(
+      specialCase &&
+      specialCase.type === 'maternity-leave' &&
+      specialCase.details.pregnancyType &&
+      specialCase.details.expectedBirthDate
+    );
+  }
+
+  // 育休の保存可能性チェック
+  canSaveChildcareCase(index: number): boolean {
+    const specialCase = this.selectedSpecialCases[index];
+    return !!(
+      specialCase &&
+      specialCase.type === 'childcare-leave' &&
+      specialCase.details.startDate &&
+      specialCase.details.endDate
+    );
+  }
+
+  // その他の事例の保存可能性チェック
+  canSaveOtherCase(index: number): boolean {
+    const specialCase = this.selectedSpecialCases[index];
+    return !!(
+      specialCase &&
+      specialCase.type &&
+      specialCase.type !== 'maternity-leave' &&
+      specialCase.type !== 'childcare-leave' &&
+      specialCase.details.remarks
+    );
+  }
+
+  // 保存ステータステキスト取得
+  getSpecialCaseSaveStatusText(status: string): string {
+    switch (status) {
+      case 'saved':
+        return '保存済み';
+      case 'saving':
+        return '保存中...';
+      case 'error':
+        return '保存に失敗しました';
+      default:
+        return '';
+    }
+  }
+
+  // 育児休業期間の計算
+  calculateChildcarePeriod(index: number) {
+    const specialCase = this.selectedSpecialCases[index];
+    if (
+      !specialCase ||
+      !specialCase.details.childcareType ||
+      !specialCase.details.startDate ||
+      !specialCase.details.endDate
+    ) {
+      return;
+    }
+
+    // 計算ロジックは実装済み（getCalculatedChildcarePeriodで処理）
+    console.log('育児休業期間を計算:', specialCase);
+  }
+
+  // 計算された育児休業期間の取得
+  getCalculatedChildcarePeriod(index: number): ChildcarePeriodCalculation | null {
+    const specialCase = this.selectedSpecialCases[index];
+    if (
+      !specialCase ||
+      !specialCase.details.childcareType ||
+      !specialCase.details.startDate ||
+      !specialCase.details.endDate
+    ) {
+      return null;
+    }
+
+    const startDate = new Date(specialCase.details.startDate);
+    const endDate = new Date(specialCase.details.endDate);
+
+    // 開始月の計算
+    const startMonth = `${startDate.getFullYear()}年${startDate.getMonth() + 1}月`;
+
+    // 14日ルールの判定
+    const startDay = startDate.getDate();
+    const endDay = endDate.getDate();
+    const isSameMonth =
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getMonth() === endDate.getMonth();
+
+    let monthlyExemption = '';
+    let bonusNote = '';
+    let specialNote = '';
+
+    if (isSameMonth) {
+      // 同一月の場合は14日ルールを適用
+      const daysInMonth = endDay - startDay + 1;
+      if (daysInMonth >= 14) {
+        monthlyExemption = `${startMonth}（14日以上取得のため免除）`;
+        specialNote = '令和4年10月1日以降開始の育児休業に適用される14日ルールにより免除';
+      } else {
+        monthlyExemption = `${startMonth}（14日未満のため免除対象外）`;
+        specialNote = '同一月内で14日未満のため月額保険料は免除されません';
+      }
+    } else {
+      // 複数月にまたがる場合
+      const exemptionEndDate = new Date(endDate);
+      exemptionEndDate.setDate(exemptionEndDate.getDate() + 1); // 終了日の翌日
+      const exemptionEndMonth = `${exemptionEndDate.getFullYear()}年${exemptionEndDate.getMonth() + 1}月`;
+
+      if (startMonth === exemptionEndMonth) {
+        monthlyExemption = '免除対象月なし';
+      } else {
+        monthlyExemption = `${startMonth} ～ ${exemptionEndMonth}の前月まで`;
+      }
+    }
+
+    // 賞与免除の判定
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays > 30) {
+      bonusNote = '育児休業期間に月末が含まれる月の賞与は免除対象（1カ月超の場合）';
+    } else {
+      bonusNote = '1カ月以下のため賞与免除は月末を含む連続1カ月超の条件を確認';
+    }
+
+    // 育児休業種類別の特記事項
+    switch (specialCase.details.childcareType) {
+      case 'papa-leave':
+        specialNote =
+          (specialNote ? specialNote + '。' : '') +
+          '産後パパ育休は出生後8週間以内に4週間まで取得可能';
+        break;
+      case 'extended-1-6':
+      case 'extended-2':
+        specialNote =
+          (specialNote ? specialNote + '。' : '') + '延長育児休業は特別な事情がある場合のみ適用';
+        break;
+    }
+
+    return {
+      monthlyPremiumExemption: monthlyExemption,
+      bonusNote: bonusNote,
+      specialNote: specialNote || undefined,
+    };
+  }
+
+  // 延長育児休業かどうかの判定
+  isExtendedChildcare(index: number): boolean {
+    const specialCase = this.selectedSpecialCases[index];
+    return !!(
+      specialCase &&
+      (specialCase.details.childcareType === 'extended-1-6' ||
+        specialCase.details.childcareType === 'extended-2')
+    );
   }
 }
