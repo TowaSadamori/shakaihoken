@@ -1,522 +1,273 @@
+// ===== 社会保険対象者判定コンポーネント =====
+// 統一幅設定による表示ボックスの整列
+
+// グローバル適用 - 黄色と緑のボックスの幅統一
+:global(.validation-result) {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 2rem !important;
+  margin: 1.5rem 0 !important;
+}
+
+:global(.calculated-period) {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 2rem !important;
+  margin: 1.5rem 0 !important;
+}
+
+:host {
+  display: block;
+  width: 100%;
+}
+
 .judgment-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 30px 20px;
+  padding: 2rem;
   background-color: #f8f9fa;
   min-height: 100vh;
 
-  .header-container {
-    position: relative;
-    margin-bottom: 40px;
+  // 強制的にフォームレイアウトを適用
+  .special-cases .case-item .case-details .form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 2rem !important;
+    align-items: start !important;
 
-    .btn-back {
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-decoration: none;
-      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-      color: white;
+    .form-group {
+      margin-bottom: 2rem !important;
 
-      &:hover {
-        background: linear-gradient(135deg, #495057 0%, #343a40 100%);
-        transform: translateY(-50%) translateY(-2px);
-        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+      &.full-width {
+        grid-column: 1 / -1 !important;
+        margin-bottom: 2.5rem !important;
       }
 
-      i::before {
-        content: '←';
+      label {
+        display: block !important;
+        margin-bottom: 1rem !important;
+        font-weight: 600 !important;
+        color: #495057 !important;
+        font-size: 1.1rem !important;
       }
+
+      input,
+      select,
+      textarea {
+        width: 100% !important;
+        padding: 1rem 1.25rem !important;
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        font-size: 1rem !important;
+        box-sizing: border-box !important;
+
+        &:focus {
+          outline: none !important;
+          border-color: #007bff !important;
+          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+        }
+      }
+
+      .readonly-field {
+        width: 100% !important;
+        padding: 1rem 1.25rem !important;
+        background: #f8f9fa !important;
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        color: #6c757d !important;
+        font-size: 1rem !important;
+        box-sizing: border-box !important;
+      }
+    }
+  }
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+
+  .btn-back {
+    margin-right: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 3px 10px rgba(108, 117, 125, 0.3);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &:hover {
+      background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 14px rgba(108, 117, 125, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(108, 117, 125, 0.3);
+    }
+
+    .icon-arrow-left::before {
+      content: '←';
+      font-size: 1rem;
     }
   }
 
   h2 {
-    color: #2c3e50;
     margin: 0;
-    font-size: 32px;
-    text-align: center;
-    border-bottom: 4px solid #3498db;
-    padding-bottom: 20px;
-    font-weight: 700;
-    letter-spacing: 1px;
+    color: #343a40;
   }
 }
 
-// 対象者情報セクション
 .employee-info {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-radius: 16px;
-  padding: 30px;
-  margin-bottom: 30px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   h3 {
-    color: #2c3e50;
-    margin-bottom: 25px;
-    font-size: 22px;
-    border-left: 5px solid #3498db;
-    padding-left: 20px;
-    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #495057;
   }
 
   .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+  }
 
-    .info-item {
-      display: flex;
-      align-items: center;
-      padding: 12px;
-      background-color: #f8f9fa;
-      border-radius: 8px;
-      border-left: 3px solid #3498db;
+  .info-item {
+    display: flex;
 
-      .label {
-        font-weight: 600;
-        color: #34495e;
-        margin-right: 10px;
-        min-width: 100px;
-      }
-
-      span {
-        color: #2c3e50;
-        font-size: 16px;
-      }
+    .label {
+      font-weight: bold;
+      margin-right: 0.5rem;
+      color: #6c757d;
     }
   }
 }
 
-// 雇用形態選択セクション
-.employment-selection {
-  background: white;
-  border-radius: 12px;
-  padding: 25px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-
-  h3 {
-    color: #2c3e50;
-    margin-bottom: 20px;
-    font-size: 20px;
-    border-left: 4px solid #e67e22;
-    padding-left: 15px;
-  }
-
-  .selection-form {
-    label {
-      display: block;
-      font-weight: 600;
-      color: #34495e;
-      margin-bottom: 10px;
-      font-size: 16px;
-    }
-
-    select {
-      width: 100%;
-      max-width: 400px;
-      padding: 12px 15px;
-      border: 2px solid #bdc3c7;
-      border-radius: 8px;
-      font-size: 16px;
-      background-color: white;
-      transition: border-color 0.3s ease;
-
-      &:focus {
-        outline: none;
-        border-color: #3498db;
-        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-      }
-
-      option {
-        padding: 10px;
-      }
-    }
-  }
-}
-
-// 属性編集セクション
-.attribute-edit-section {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 16px;
-  padding: 50px 40px;
-  margin: 30px 0;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  border: 2px dashed #6c757d;
-  transition: all 0.3s ease;
-
-  &:hover {
-    border-color: #3498db;
-    box-shadow: 0 12px 35px rgba(52, 152, 219, 0.15);
-    transform: translateY(-2px);
-  }
-
-  .edit-prompt {
-    max-width: 600px;
-    margin: 0 auto;
-
-    p {
-      font-size: 20px;
-      color: #495057;
-      margin-bottom: 30px;
-      line-height: 1.8;
-      font-weight: 500;
-    }
-
-    .btn-primary {
-      font-size: 18px;
-      padding: 15px 40px;
-      border-radius: 50px;
-      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-      border: none;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-
-      &:hover {
-        background: linear-gradient(135deg, #2980b9 0%, #1f5f8b 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-      }
-
-      &:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 10px rgba(52, 152, 219, 0.3);
-      }
-    }
-  }
-}
-
-// 質問エリア
 .questionnaire {
-  background: #f8f9fa;
-  border-radius: 8px;
+  background: white;
   padding: 2rem;
-  margin: 2rem 0;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   h3 {
-    color: #2c3e50;
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    color: #495057;
   }
 
-  .question-navigation {
-    margin-bottom: 1.5rem;
+  .question-text {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: #343a40;
+  }
 
-    .btn-previous {
-      background: #6c757d;
-      color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
+  .answer-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    label {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      transition: all 0.3s ease;
+      cursor: pointer;
 
-      &:hover {
-        background: #5a6268;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-
-      &:active {
-        transform: translateY(0);
-      }
-
-      .icon-arrow-left::before {
-        content: '←';
-        font-size: 1rem;
-      }
-    }
-  }
-
-  .questions {
-    .question-item {
-      .question-text {
-        font-size: 1.1rem;
-        font-weight: 500;
-        color: #2c3e50;
-        margin-bottom: 1.5rem;
-        line-height: 1.6;
-      }
-
-      .answer-options {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-
-        label {
-          display: flex;
-          align-items: center;
-          padding: 1rem;
-          background: white;
-          border: 2px solid #e9ecef;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-size: 1rem;
-
-          &:hover {
-            border-color: #007bff;
-            background: #f8f9ff;
-          }
-
-          input[type='radio'] {
-            margin-right: 1rem;
-            transform: scale(1.2);
-            accent-color: #007bff;
-          }
-
-          &:has(input:checked) {
-            border-color: #007bff;
-            background: #e7f3ff;
-            font-weight: 500;
-          }
-        }
-      }
-
-      .date-range-options {
-        .period-selection {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-
-          .period-button {
-            padding: 1rem 1.5rem;
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            background: white;
-            color: #007bff;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-
-            &:hover {
-              background: #007bff;
-              color: white;
-            }
-
-            &.current-button {
-              background: #28a745;
-              color: white;
-              border-color: #28a745;
-
-              &:hover {
-                background: #218838;
-                border-color: #218838;
-              }
-            }
-
-            &.custom-button {
-              &:disabled {
-                background: #6c757d;
-                border-color: #6c757d;
-                color: white;
-                cursor: not-allowed;
-                opacity: 0.6;
-              }
-            }
-          }
-
-          .date-input-section {
-            padding: 1.5rem;
-            background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-
-            h4 {
-              color: #495057;
-              margin-bottom: 1rem;
-              font-size: 1.1rem;
-              font-weight: 600;
-            }
-
-            .date-inputs {
-              display: flex;
-              gap: 1.5rem;
-              margin-bottom: 1.5rem;
-              flex-wrap: wrap;
-
-              .date-field {
-                flex: 1;
-                min-width: 200px;
-
-                .field-label {
-                  font-weight: 500;
-                  color: #495057;
-                  margin-bottom: 0.5rem;
-                  font-size: 0.9rem;
-                }
-
-                .date-input {
-                  width: 100%;
-                  padding: 0.75rem;
-                  border: 2px solid #e9ecef;
-                  border-radius: 6px;
-                  font-size: 1rem;
-                  transition: border-color 0.3s ease;
-
-                  &:focus {
-                    outline: none;
-                    border-color: #007bff;
-                    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-                  }
-                }
-              }
-            }
-          }
-        }
+      input[type='radio'] {
+        margin-right: 0.5rem;
       }
     }
   }
 }
 
-// 判定結果セクション
 .judgment-result {
   background: white;
-  border-radius: 12px;
-  padding: 25px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   .result-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 2rem;
 
     h3 {
-      color: #2c3e50;
       margin: 0;
-      font-size: 20px;
-      border-left: 4px solid #27ae60;
-      padding-left: 15px;
+      color: #495057;
     }
 
     .result-buttons {
       display: flex;
-      gap: 15px;
+      gap: 1rem;
 
-      .btn-reset,
-      .btn-save {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 24px;
+      button {
+        padding: 0.75rem 1.5rem;
         border: none;
         border-radius: 10px;
-        font-size: 16px;
-        font-weight: 600;
         cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
         transition: all 0.3s ease;
-        text-decoration: none;
-        min-width: 140px;
-        justify-content: center;
-
-        i {
-          font-size: 14px;
-        }
-      }
-
-      .btn-reset {
-        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-        color: white;
-
-        &:hover {
-          background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
-        }
-
-        i::before {
-          content: '↻';
-        }
-      }
-
-      .btn-save {
-        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-        color: white;
-
-        &:hover {
-          background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
-        }
-
-        i::before {
-          content: '💾';
-        }
-      }
-    }
-  }
-
-  // 休職情報表示
-  .leave-info {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    border: 2px solid #f39c12;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 25px;
-
-    h4 {
-      color: #d68910;
-      margin: 0 0 15px 0;
-      font-size: 18px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      &::before {
-        content: '📋';
-        font-size: 20px;
-      }
-    }
-
-    .leave-details {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-
-      .leave-type,
-      .leave-period {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 12px;
+        gap: 0.5rem;
 
-        .label {
-          font-weight: 600;
-          color: #8b5a00;
-          min-width: 80px;
+        &.btn-reset {
+          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+          color: white;
+          box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+
+          &:hover {
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 14px rgba(220, 53, 69, 0.4);
+          }
+
+          &:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+          }
+
+          .icon-refresh::before {
+            content: '🔄';
+            font-size: 0.9rem;
+          }
         }
 
-        .value {
-          color: #5d4e00;
-          font-weight: 500;
-          background: rgba(255, 255, 255, 0.7);
-          padding: 4px 12px;
-          border-radius: 6px;
-          border: 1px solid rgba(243, 156, 18, 0.3);
+        &.btn-save {
+          background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+          color: white;
+          box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+
+          &:hover {
+            background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 14px rgba(40, 167, 69, 0.4);
+          }
+
+          &:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+          }
+
+          .icon-save::before {
+            content: '💾';
+            font-size: 0.9rem;
+          }
         }
       }
     }
@@ -525,741 +276,914 @@
   .result-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    gap: 1.5rem;
 
     .result-card {
-      background-color: #f8f9fa;
+      padding: 1.5rem;
       border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-      transition:
-        transform 0.3s ease,
-        box-shadow 0.3s ease;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      }
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
       h4 {
-        color: #2c3e50;
-        margin-bottom: 15px;
-        font-size: 18px;
-        font-weight: 600;
+        margin: 0 0 1rem 0;
+        color: #495057;
       }
 
       .status {
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: 600;
-        margin-bottom: 10px;
-        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: bold;
+        margin-bottom: 1rem;
 
         &.eligible {
-          background-color: #d4edda;
+          background: #d4edda;
           color: #155724;
-          border: 1px solid #c3e6cb;
         }
 
         &.not-eligible {
-          background-color: #f8d7da;
+          background: #f8d7da;
           color: #721c24;
-          border: 1px solid #f5c6cb;
         }
       }
-
-      p {
-        color: #6c757d;
-        font-size: 14px;
-        line-height: 1.4;
-        margin: 0;
-      }
     }
   }
 }
 
-// アクションボタン
-.action-buttons {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 40px;
-  padding: 30px 0;
-  border-top: 2px solid #e9ecef;
-
-  .left-buttons,
-  .right-buttons {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-  }
-
-  .btn-back,
-  .btn-reset,
-  .btn-save {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    min-width: 140px;
-    justify-content: center;
-
-    i {
-      font-size: 14px;
-    }
-  }
-
-  .btn-back {
-    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    color: white;
-
-    &:hover {
-      background: linear-gradient(135deg, #495057 0%, #343a40 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-    }
-  }
-
-  .btn-reset {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-    color: white;
-
-    &:hover {
-      background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
-    }
-  }
-
-  .btn-save {
-    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-    color: white;
-
-    &:hover {
-      background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
-    }
-  }
-
-  // アイコンの代替表示（フォントアイコンがない場合）
-  .btn-back i::before {
-    content: '←';
-  }
-  .btn-reset i::before {
-    content: '↻';
-  }
-  .btn-save i::before {
-    content: '💾';
-  }
-}
-
-// 追加質問セクション
+// ===== 統一幅設定 - 特殊事例セクション =====
 .additional-questions {
   background: white;
-  border-radius: 12px;
-  padding: 30px;
-  margin: 30px 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 
   .section-header {
-    margin-bottom: 25px;
-    text-align: center;
+    margin-bottom: 2rem;
 
     h3 {
-      color: #2c3e50;
-      margin-bottom: 10px;
-      font-size: 22px;
-      border-left: 4px solid #3498db;
-      padding-left: 15px;
-      display: inline-block;
+      margin: 0 0 0.5rem 0;
+      color: #495057;
     }
 
     p {
-      color: #6c757d;
-      font-size: 16px;
       margin: 0;
+      color: #6c757d;
+    }
+  }
+}
+
+.special-cases {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+
+  .case-item {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    .case-header {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1.5rem;
+    }
+
+    .case-selection {
+      margin-bottom: 2rem;
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #495057;
+        font-size: 1rem;
+      }
+
+      select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1rem;
+        background: white;
+        transition: border-color 0.3s ease;
+
+        &:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+      }
+    }
+
+    .case-details {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+
+      .form-grid {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 2rem !important;
+        padding: 1rem !important;
+      }
+    }
+  }
+}
+
+.form-group {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-bottom: 2rem !important;
+
+  &.full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    grid-column: 1 / -1 !important;
+    margin-bottom: 2.5rem !important;
+  }
+
+  label {
+    display: block !important;
+    margin-bottom: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #495057 !important;
+    font-size: 1rem !important;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem !important;
+    border: 2px solid #e9ecef !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    font-size: 1rem !important;
+    transition:
+      border-color 0.3s ease,
+      box-shadow 0.3s ease !important;
+
+    &:focus {
+      outline: none !important;
+      border-color: #007bff !important;
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+    }
+
+    &.invalid {
+      border-color: #dc3545 !important;
+      background-color: #fff5f5 !important;
+      box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
     }
   }
 
-  .special-cases {
-    .case-item {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      border: 1px solid #e9ecef;
+  .readonly-field {
+    padding: 1rem 1.25rem !important;
+    background: #f8f9fa !important;
+    border: 2px solid #e9ecef !important;
+    border-radius: 8px !important;
+    color: #6c757d !important;
+    font-size: 1rem !important;
+  }
 
-      .case-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
+  textarea {
+    min-height: 120px !important;
+    resize: vertical !important;
+  }
 
-        h4 {
-          color: #495057;
-          margin: 0;
-          font-size: 18px;
-        }
+  .field-hint {
+    margin-top: 0.75rem !important;
+    font-size: 0.9rem !important;
+    color: #6c757d !important;
+    font-style: italic !important;
+    line-height: 1.4 !important;
+  }
+}
 
-        .btn-remove {
-          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-          color: white;
-          border: none;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 14px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          transition: all 0.3s ease;
+// ===== 期間入力セクション =====
+.period-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1rem 0;
 
-          &:hover {
-            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
-            transform: translateY(-1px);
-          }
+  .period-section {
+    background: rgba(248, 249, 250, 0.8);
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
 
-          i::before {
-            content: '×';
-          }
-        }
+    &.prenatal {
+      border-left: 4px solid #17a2b8;
+    }
+
+    &.postnatal {
+      border-left: 4px solid #28a745;
+    }
+
+    .period-header {
+      margin-bottom: 0.75rem;
+
+      .period-title {
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.95rem;
+        display: block;
+        margin-bottom: 0.5rem;
       }
 
-      .case-selection {
-        margin-bottom: 20px;
+      .period-inputs {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
 
-        label {
-          display: block;
-          font-weight: 600;
-          color: #495057;
-          margin-bottom: 8px;
-        }
-
-        select {
-          width: 100%;
-          max-width: 400px;
-          padding: 10px 12px;
-          border: 2px solid #ced4da;
+        .period-date-input {
+          flex: 1;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid #ced4da;
           border-radius: 6px;
-          font-size: 16px;
-          background-color: white;
-          transition: border-color 0.3s ease;
+          font-size: 0.9rem;
 
           &:focus {
             outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-          }
-        }
-      }
-
-      .case-details {
-        .form-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
-
-          .form-group {
-            &.full-width {
-              grid-column: 1 / -1;
-            }
-
-            label,
-            .field-label {
-              display: block;
-              font-weight: 600;
-              color: #495057;
-              margin-bottom: 6px;
-              font-size: 14px;
-            }
-
-            input,
-            select,
-            textarea {
-              width: 100%;
-              padding: 8px 12px;
-              border: 1px solid #ced4da;
-              border-radius: 4px;
-              font-size: 14px;
-              transition: border-color 0.3s ease;
-
-              &:focus {
-                outline: none;
-                border-color: #3498db;
-                box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-              }
-            }
-
-            textarea {
-              min-height: 80px;
-              resize: vertical;
-            }
-
-            .radio-group,
-            .checkbox-group {
-              display: flex;
-              gap: 15px;
-              margin-top: 5px;
-
-              label {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-weight: normal;
-                cursor: pointer;
-
-                input[type='radio'],
-                input[type='checkbox'] {
-                  width: auto;
-                  margin: 0;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .add-case-section {
-      text-align: center;
-      padding: 20px 0;
-
-      .btn-add-case {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin: 0 auto;
-        transition: all 0.3s ease;
-
-        &:hover {
-          background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        }
-
-        i::before {
-          content: '+';
-          font-weight: bold;
-        }
-      }
-    }
-
-    // 計算された期間表示
-    .calculated-period {
-      background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
-      border: 2px solid #28a745;
-      border-radius: 8px;
-      padding: 20px;
-      margin-top: 15px;
-
-      h5 {
-        color: #155724;
-        margin: 0 0 15px 0;
-        font-size: 16px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        &::before {
-          content: '📅';
-          font-size: 18px;
-        }
-      }
-
-      .period-info {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-
-        .period-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 12px;
-          background: rgba(255, 255, 255, 0.7);
-          border-radius: 6px;
-          border-left: 3px solid #28a745;
-
-          &.total {
-            background: rgba(40, 167, 69, 0.1);
-            border-left-color: #155724;
-            font-weight: 600;
-
-            .label {
-              color: #155724;
-            }
-          }
-
-          &.exemption {
-            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-            border-left-color: #0056b3;
-            font-weight: 600;
-            color: white;
-
-            .label {
-              color: white;
-              font-weight: 600;
-            }
-
-            .value {
-              color: white;
-              font-weight: 600;
-              font-size: 15px;
-            }
-          }
-
-          .label {
-            font-weight: 600;
-            color: #2d5a3d;
-            min-width: 80px;
-          }
-
-          .value {
-            color: #155724;
-            font-weight: 500;
-            text-align: right;
-
-            &.special-note {
-              background: #fff3cd;
-              padding: 8px;
-              border-radius: 4px;
-              border-left: 3px solid #ffc107;
-              font-size: 13px;
-              line-height: 1.4;
-              color: #856404;
-              text-align: left;
-              margin-top: 4px;
-            }
-          }
-        }
-      }
-    }
-
-    // 実際の申請期間選択
-    .actual-period-selection {
-      background: linear-gradient(135deg, #fff3cd 0%, #fef7e0 100%);
-      border: 2px solid #ffc107;
-      border-radius: 8px;
-      padding: 20px;
-      margin-top: 15px;
-
-      h5 {
-        color: #856404;
-        margin: 0 0 15px 0;
-        font-size: 16px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        &::before {
-          content: '✏️';
-          font-size: 18px;
-        }
-      }
-
-      .period-selection-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        margin-bottom: 15px;
-
-        @media (max-width: 768px) {
-          grid-template-columns: 1fr;
-        }
-
-        .form-group {
-          margin-bottom: 0;
-        }
-      }
-
-      .period-breakdown {
-        margin: 15px 0;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-
-        .period-section {
-          padding: 12px;
-          border-radius: 8px;
-          border: 2px solid transparent;
-
-          &.prenatal {
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            border-color: #2196f3;
-          }
-
-          &.postnatal {
-            background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
-            border-color: #ff9800;
-          }
-
-          .period-header {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-
-            .period-title {
-              font-weight: 600;
-              font-size: 14px;
-              color: #333;
-              margin-bottom: 4px;
-            }
-
-            .period-inputs {
-              display: flex;
-              align-items: center;
-              gap: 8px;
-              flex-wrap: wrap;
-
-              .period-date-input {
-                flex: 1;
-                min-width: 120px;
-                padding: 6px 8px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 12px;
-                background: rgba(255, 255, 255, 0.9);
-
-                &:focus {
-                  outline: none;
-                  border-color: #007bff;
-                  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-                }
-              }
-
-              .date-separator {
-                font-size: 12px;
-                color: #666;
-                font-weight: 500;
-              }
-            }
-
-            .period-range {
-              font-size: 12px;
-              color: #666;
-              font-family: 'Courier New', monospace;
-              background: rgba(255, 255, 255, 0.7);
-              padding: 4px 8px;
-              border-radius: 4px;
-            }
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
           }
         }
 
-        @media (max-width: 768px) {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      .exemption-period-display {
-        margin: 20px 0;
-
-        .exemption-bar {
-          background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-          color: white;
-          padding: 12px 16px;
-          border-radius: 8px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
-
-          .exemption-label {
-            font-weight: 600;
-            font-size: 14px;
-          }
-
-          .exemption-period {
-            font-weight: 600;
-            font-size: 14px;
-            font-family: 'Courier New', monospace;
-          }
-
-          @media (max-width: 768px) {
-            flex-direction: column;
-            gap: 4px;
-            text-align: center;
-          }
-        }
-      }
-
-      .quick-select-buttons {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 15px;
-        flex-wrap: wrap;
-
-        .btn-quick-select {
-          padding: 8px 16px;
-          border: 1px solid #ffc107;
-          background: #fff3cd;
-          color: #856404;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 13px;
+        .date-separator {
+          color: #6c757d;
           font-weight: 500;
-          transition: all 0.2s ease;
-          flex: 1;
-          min-width: 100px;
-
-          &:hover {
-            background: #ffc107;
-            color: #212529;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
-          }
-
-          &:active {
-            transform: translateY(0);
-          }
-        }
-      }
-
-      .selected-period-info {
-        background: linear-gradient(135deg, #d4edda 0%, #e8f5e8 100%);
-        border: 1px solid #28a745;
-        border-radius: 6px;
-        padding: 15px;
-
-        .info-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-
-          &:last-child {
-            margin-bottom: 0;
-            padding-top: 8px;
-            border-top: 1px solid rgba(21, 87, 36, 0.2);
-            font-weight: 600;
-          }
-
-          .label {
-            font-weight: 500;
-            color: #155724;
-          }
-
-          .value {
-            font-weight: 600;
-            color: #155724;
-            text-align: right;
-          }
+          flex-shrink: 0;
         }
       }
     }
+  }
 
-    // 特殊事例の個別保存セクション
-    .case-save-section {
-      margin-top: 20px;
-      padding: 15px;
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border: 1px solid #dee2e6;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+// ===== 統一幅設定 - 計算結果表示（緑色ボックス） =====
+.calculated-period {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  background: linear-gradient(135deg, #e8f5e8 0%, #d4f1d4 100%);
+  border: 2px solid #28a745;
+  border-radius: 12px;
+  padding: 2rem !important;
+  margin: 1.5rem 0 !important;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+
+  h5 {
+    margin: 0 0 1.5rem 0 !important;
+    color: #155724;
+    font-size: 1.25rem !important;
+    font-weight: bold;
+  }
+
+  .period-info {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+
+    .period-item {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.7);
       border-radius: 8px;
-      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+  }
 
-      .btn-save-case {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
+  .exemption-period-display {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 
-        &:hover:not(:disabled) {
-          background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-        }
+    .exemption-bar {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      background: linear-gradient(90deg, #17a2b8, #20c997);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+    }
+  }
+}
 
-        &:disabled {
-          background: #6c757d;
-          cursor: not-allowed;
-          opacity: 0.6;
-          transform: none;
-          box-shadow: none;
-        }
+// ===== ボタンとその他の要素 =====
+.btn-add-case {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 3px 10px rgba(0, 123, 255, 0.25);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 
-        i::before {
-          content: '💾';
-          font-style: normal;
+  &:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px rgba(0, 123, 255, 0.35);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.25);
+  }
+
+  .icon-plus::before {
+    content: '➕';
+    font-size: 0.9rem;
+  }
+}
+
+.btn-save-case {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px rgba(40, 167, 69, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+  }
+
+  &:disabled {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 6px rgba(108, 117, 125, 0.2);
+  }
+
+  .icon-save::before {
+    content: '💾';
+    font-size: 0.9rem;
+  }
+}
+
+.btn-remove {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+  border: 1px solid #dc3545;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+    color: white;
+    border-color: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+  }
+
+  .icon-close::before {
+    content: '🗑️';
+    font-size: 0.9rem;
+  }
+}
+
+.btn-previous {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  box-shadow: 0 3px 10px rgba(108, 117, 125, 0.3);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+
+  &:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px rgba(108, 117, 125, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(108, 117, 125, 0.3);
+  }
+
+  .icon-arrow-left::before {
+    content: '←';
+    font-size: 1rem;
+  }
+}
+
+// ===== 属性編集ボタン =====
+.attribute-edit-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+
+  .edit-prompt {
+    p {
+      margin-bottom: 1.5rem;
+      color: #495057;
+      font-size: 1.1rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2.5rem;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+      }
+
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+      }
+    }
+  }
+}
+
+// ===== 期間選択ボタン =====
+.period-button {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 3px 10px rgba(23, 162, 184, 0.3);
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px rgba(23, 162, 184, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(23, 162, 184, 0.3);
+  }
+
+  &:disabled {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 6px rgba(108, 117, 125, 0.2);
+  }
+}
+
+// ===== 保存ステータス表示 =====
+.case-save-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+
+  .save-status {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .status-icon {
+      font-size: 1rem;
+
+      &.saved {
+        color: #28a745;
+      }
+
+      &.saving {
+        color: #ffc107;
+      }
+
+      &.error {
+        color: #dc3545;
+      }
+    }
+
+    .status-text {
+      font-weight: 500;
+    }
+
+    &:has(.status-icon.saved) {
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    &:has(.status-icon.saving) {
+      background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    &:has(.status-icon.error) {
+      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  }
+}
+
+.debug-info {
+  font-family: monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+// ===== レスポンシブ対応 =====
+@media (max-width: 768px) {
+  .judgment-container {
+    padding: 1rem;
+  }
+
+  .result-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .info-grid,
+  .result-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+// フォームグループとケースアイテムの統一
+.special-cases .case-item .case-details .form-group.full-width {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.special-cases .case-item .case-details .form-group.full-width > * {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+// 新しい統一validation-resultクラス
+.validation-result-unified {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+  box-sizing: border-box !important;
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%) !important;
+  border: 2px solid #ffb300 !important;
+  border-radius: 12px !important;
+  padding: 2rem !important;
+  margin: 1.5rem 0 !important;
+  box-shadow: 0 4px 12px rgba(255, 179, 0, 0.15) !important;
+  overflow: hidden !important;
+  float: none !important;
+  position: relative !important;
+
+  h5 {
+    margin: 0 0 1.5rem 0 !important;
+    color: #e65100 !important;
+    font-size: 1.25rem !important;
+    font-weight: bold !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+
+    &::before {
+      content: '🔍' !important;
+      font-size: 1.1rem !important;
+    }
+  }
+
+  // エラー表示のスタイル
+  .validation-errors {
+    margin-bottom: 1.5rem !important;
+
+    .error-item {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.75rem !important;
+      padding: 1rem 1.25rem !important;
+      margin-bottom: 0.75rem !important;
+      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
+      border: 1px solid #f5c6cb !important;
+      border-radius: 8px !important;
+      color: #721c24 !important;
+      font-weight: 500 !important;
+
+      .icon-warning {
+        color: #dc3545 !important;
+        font-size: 1.1rem !important;
+      }
+    }
+  }
+
+  // 警告表示のスタイル
+  .validation-warnings {
+    margin-bottom: 1.5rem !important;
+
+    .warning-item {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.75rem !important;
+      padding: 1rem 1.25rem !important;
+      margin-bottom: 0.75rem !important;
+      background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+      border: 1px solid #ffeaa7 !important;
+      border-radius: 8px !important;
+      color: #856404 !important;
+      font-weight: 500 !important;
+
+      .icon-info {
+        color: #ffc107 !important;
+        font-size: 1.1rem !important;
+      }
+    }
+  }
+
+  // 期間情報表示のスタイル
+  .period-summary {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.25rem !important;
+    margin-top: 1.5rem !important;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr !important;
+      gap: 1rem !important;
+    }
+
+    .summary-item {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.5rem !important;
+      padding: 1.25rem !important;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+      border: 1px solid #dee2e6 !important;
+      border-radius: 10px !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+      transition: all 0.3s ease !important;
+
+      &:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+      }
+
+      .label {
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        color: #6c757d !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin-bottom: 0.25rem !important;
+      }
+
+      .value {
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        color: #495057 !important;
+        word-break: break-word !important;
+      }
+
+      // 特別なアイテムのスタイル
+      &.similar-measures {
+        background: linear-gradient(135deg, #e8f5e8 0%, #d4f1d4 100%) !important;
+        border-color: #28a745 !important;
+
+        .value.special-measure {
+          color: #155724 !important;
+          font-weight: 800 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 0.5rem !important;
+
+          &::before {
+            content: '🛡️' !important;
+            font-size: 1rem !important;
+          }
         }
       }
 
-      .save-status {
-        margin-top: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 500;
+      &.valid {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+        border-color: #28a745 !important;
 
-        .status-icon {
-          font-size: 16px;
+        .value {
+          color: #155724 !important;
+        }
+      }
 
-          &.saved {
-            color: #28a745;
-          }
+      &.invalid {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
+        border-color: #dc3545 !important;
 
-          &.saving {
-            color: #ffc107;
-            animation: pulse 1.5s infinite;
-          }
+        .value {
+          color: #721c24 !important;
+        }
+      }
 
-          &.error {
-            color: #dc3545;
+      &.extend-available {
+        .value {
+          color: #28a745 !important;
+          font-weight: 700 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 0.5rem !important;
+
+          &::before {
+            content: '✅' !important;
+            font-size: 0.9rem !important;
           }
         }
+      }
 
-        .status-text {
-          &.saved {
-            color: #28a745;
-          }
+      &.max-extension {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+        border-color: #2196f3 !important;
 
-          &.saving {
-            color: #856404;
-          }
+        .value.final-extension {
+          color: #0d47a1 !important;
+          font-weight: 800 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 0.5rem !important;
 
-          &.error {
-            color: #dc3545;
+          &::before {
+            content: '🏁' !important;
+            font-size: 1rem !important;
           }
         }
       }
     }
 
-    @keyframes pulse {
-      0% {
-        opacity: 1;
+    // 全幅のアイテム
+    .summary-item.full-width {
+      grid-column: 1 / -1 !important;
+    }
+  }
+}
+
+// カスタムドロップダウンのスタイル
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select {
+  position: relative;
+  width: 100%;
+  cursor: pointer;
+
+  .select-display {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &:hover {
+      border-color: #007bff;
+    }
+
+    .dropdown-arrow {
+      transition: transform 0.3s ease;
+      color: #6c757d;
+    }
+  }
+
+  &.open .select-display {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+
+    .dropdown-arrow {
+      transform: rotate(180deg);
+    }
+  }
+
+  .options-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #007bff;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 150px; // コンパクトなサイズに制限
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+    .option-item {
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #f8f9fa;
       }
-      50% {
-        opacity: 0.5;
+
+      &.selected {
+        background-color: #007bff;
+        color: white;
       }
-      100% {
-        opacity: 1;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid #e9ecef;
       }
     }
   }
@@ -1268,45 +1192,18 @@
 // レスポンシブ対応
 @media (max-width: 768px) {
   .judgment-container {
-    padding: 15px;
-
-    h2 {
-      font-size: 24px;
-    }
+    padding: 1rem;
   }
 
-  .employee-info .info-grid {
+  .info-grid {
     grid-template-columns: 1fr;
   }
 
-  .employment-selection .selection-form select {
-    max-width: 100%;
-  }
-
-  .questionnaire .questions .question-item .answer-options {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .judgment-result .result-cards {
+  .result-cards {
     grid-template-columns: 1fr;
   }
 
-  .action-buttons {
-    flex-direction: column;
-    gap: 20px;
-
-    .left-buttons,
-    .right-buttons {
-      justify-content: center;
-      width: 100%;
-    }
-
-    .btn-back,
-    .btn-reset,
-    .btn-save {
-      width: 100%;
-      max-width: 280px;
-    }
+  .special-cases .case-item .case-details .form-grid {
+    grid-template-columns: 1fr !important;
   }
 }

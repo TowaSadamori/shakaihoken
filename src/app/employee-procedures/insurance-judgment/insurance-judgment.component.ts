@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -117,6 +117,7 @@ interface ChildcarePeriodCalculation {
   imports: [CommonModule, FormsModule],
   templateUrl: './insurance-judgment.component.html',
   styleUrl: './insurance-judgment.component.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class InsuranceJudgmentComponent implements OnInit {
   // Employee info
@@ -152,6 +153,9 @@ export class InsuranceJudgmentComponent implements OnInit {
 
   // 特殊事例管理
   selectedSpecialCases: SpecialCase[] = [];
+
+  // カスタムドロップダウン制御
+  extensionReasonDropdownOpen: boolean[] = [];
 
   // 質問フロー定義（雇用形態選択から開始）
   private allQuestions: Record<string, Question> = {
@@ -1100,6 +1104,11 @@ export class InsuranceJudgmentComponent implements OnInit {
 
         this.selectedSpecialCases = [...this.selectedSpecialCases, ...newCases];
 
+        // ドロップダウン状態を新しい配列サイズに合わせて初期化
+        while (this.extensionReasonDropdownOpen.length < this.selectedSpecialCases.length) {
+          this.extensionReasonDropdownOpen.push(false);
+        }
+
         console.log('個別保存された特殊事例を読み込みました:', individualCases);
       }
 
@@ -1250,6 +1259,59 @@ export class InsuranceJudgmentComponent implements OnInit {
     this.showDebugInfo = false;
   }
 
+  // カスタムドロップダウン制御メソッド
+  toggleExtensionReasonDropdown(index: number) {
+    // 配列が存在しない場合は初期化
+    if (
+      !this.extensionReasonDropdownOpen[index] &&
+      this.extensionReasonDropdownOpen[index] !== false
+    ) {
+      // 配列のサイズを特殊事例の数に合わせる
+      while (this.extensionReasonDropdownOpen.length <= index) {
+        this.extensionReasonDropdownOpen.push(false);
+      }
+    }
+
+    // 他のドロップダウンを閉じる
+    this.extensionReasonDropdownOpen = this.extensionReasonDropdownOpen.map((_, i) =>
+      i === index ? !this.extensionReasonDropdownOpen[i] : false
+    );
+  }
+
+  selectExtensionReason(index: number, value: string) {
+    // 配列が存在しない場合は初期化
+    if (
+      !this.extensionReasonDropdownOpen[index] &&
+      this.extensionReasonDropdownOpen[index] !== false
+    ) {
+      while (this.extensionReasonDropdownOpen.length <= index) {
+        this.extensionReasonDropdownOpen.push(false);
+      }
+    }
+
+    this.selectedSpecialCases[index].details.extensionReason = value;
+    this.extensionReasonDropdownOpen[index] = false;
+    this.validateExtended16ChildcareInput(index);
+    this.validateExtended2ChildcareInput(index);
+  }
+
+  getExtensionReasonDisplayText(value: string | undefined): string {
+    if (!value) return '選択してください';
+
+    switch (value) {
+      case 'nursery-unavailable':
+        return '保育所等に入所できない';
+      case 'spouse-circumstances':
+        return '配偶者の死亡・負傷・疾病等';
+      case 'spouse-separation':
+        return '配偶者との別居等';
+      case 'spouse-work-restart':
+        return '配偶者の職場復帰';
+      default:
+        return '選択してください';
+    }
+  }
+
   // 社会保険の加入対象者かどうかを判定
   isInsuranceEligible(): boolean {
     if (!this.judgmentResult) return false;
@@ -1268,11 +1330,15 @@ export class InsuranceJudgmentComponent implements OnInit {
       type: '',
       details: {},
     });
+    // ドロップダウン状態も初期化
+    this.extensionReasonDropdownOpen.push(false);
   }
 
   removeSpecialCase(index: number) {
     if (this.selectedSpecialCases.length > 1) {
       this.selectedSpecialCases.splice(index, 1);
+      // ドロップダウン状態も削除
+      this.extensionReasonDropdownOpen.splice(index, 1);
     }
   }
 
@@ -1295,6 +1361,7 @@ export class InsuranceJudgmentComponent implements OnInit {
   private initializeSpecialCases() {
     // 特殊事例は手動で追加するまで空のままにする
     this.selectedSpecialCases = [];
+    this.extensionReasonDropdownOpen = [];
   }
 
   // 実際の出産日変更時の処理
@@ -1708,6 +1775,8 @@ export class InsuranceJudgmentComponent implements OnInit {
     return !!(
       specialCase &&
       specialCase.type === 'childcare-leave' &&
+      specialCase.details.childcareType &&
+      specialCase.details.childBirthDate &&
       specialCase.details.startDate &&
       specialCase.details.endDate
     );
@@ -1753,6 +1822,32 @@ export class InsuranceJudgmentComponent implements OnInit {
 
     // 計算ロジックは実装済み（getCalculatedChildcarePeriodで処理）
     console.log('育児休業期間を計算:', specialCase);
+  }
+
+  // 育児休業の社会保険料免除期間を取得（産休と同様の表示形式）
+  getChildcareExemptionPeriod(index: number): string {
+    const calculation = this.getCalculatedChildcarePeriod(index);
+    if (!calculation || !calculation.monthlyPremiumExemption) {
+      return '';
+    }
+
+    // 月額保険料免除期間から年月形式を抽出
+    const exemptionText = calculation.monthlyPremiumExemption;
+
+    // "YYYY年MM月"の形式を抽出
+    const yearMonthPattern = /(\d{4}年\d{1,2}月)/g;
+    const matches = exemptionText.match(yearMonthPattern);
+
+    if (!matches || matches.length === 0) {
+      return '免除期間なし';
+    }
+
+    if (matches.length === 1) {
+      return matches[0];
+    }
+
+    // 複数の月がある場合は範囲表示
+    return `${matches[0]} ～ ${matches[matches.length - 1]}`;
   }
 
   // 計算された育児休業期間の取得
@@ -1846,5 +1941,975 @@ export class InsuranceJudgmentComponent implements OnInit {
       (specialCase.details.childcareType === 'extended-1-6' ||
         specialCase.details.childcareType === 'extended-2')
     );
+  }
+
+  // === 産後パパ育休のバリデーション機能 ===
+
+  // 産後パパ育休のバリデーション
+  validatePapaLeaveInput(caseIndex: number): void {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType === 'papa-leave') {
+      this.calculateChildcarePeriod(caseIndex);
+    }
+  }
+
+  // 産後パパ育休の最大開始日を取得（出生後8週間以内）
+  getPapaLeaveMaxStartDate(caseIndex: number): string | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const maxStartDate = new Date(childBirthDate);
+    maxStartDate.setDate(maxStartDate.getDate() + 56); // 8週間 = 56日
+
+    return this.formatDateToString(maxStartDate);
+  }
+
+  // 産後パパ育休の最大終了日を取得（開始日から4週間以内）
+  getPapaLeaveMaxEndDate(caseIndex: number): string | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.startDate) {
+      return null;
+    }
+
+    const startDate = new Date(specialCase.details.startDate);
+    const maxEndDate = new Date(startDate);
+    maxEndDate.setDate(maxEndDate.getDate() + 27); // 4週間 = 28日間なので27日後
+
+    return this.formatDateToString(maxEndDate);
+  }
+
+  // 産後パパ育休の開始日が無効かチェック
+  isPapaLeaveStartDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate || !specialCase.details.startDate) {
+      return false;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+    const eightWeeksAfter = new Date(childBirthDate);
+    eightWeeksAfter.setDate(eightWeeksAfter.getDate() + 56);
+
+    return startDate > eightWeeksAfter;
+  }
+
+  // 産後パパ育休の終了日が無効かチェック
+  isPapaLeaveEndDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.startDate || !specialCase.details.endDate) {
+      return false;
+    }
+
+    const startDate = new Date(specialCase.details.startDate);
+    const endDate = new Date(specialCase.details.endDate);
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    return diffDays > 28; // 4週間 = 28日を超える場合は無効
+  }
+
+  // 産後パパ育休のバリデーション結果を取得
+  getPapaLeaveValidation(caseIndex: number): { isValid: boolean; errors: string[] } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType !== 'papa-leave') {
+      return null;
+    }
+
+    const errors: string[] = [];
+
+    if (!specialCase.details.childBirthDate) {
+      errors.push('子の生年月日を入力してください');
+    }
+
+    if (!specialCase.details.startDate) {
+      errors.push('育児休業開始日を入力してください');
+    }
+
+    if (!specialCase.details.endDate) {
+      errors.push('育児休業終了予定日を入力してください');
+    }
+
+    // 基本入力がない場合は早期リターン
+    if (errors.length > 0) {
+      return { isValid: false, errors };
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate!);
+    const startDate = new Date(specialCase.details.startDate!);
+    const endDate = new Date(specialCase.details.endDate!);
+
+    // 1. 出生後8週間以内の開始日チェック
+    const eightWeeksAfter = new Date(childBirthDate);
+    eightWeeksAfter.setDate(eightWeeksAfter.getDate() + 56);
+
+    if (startDate > eightWeeksAfter) {
+      errors.push('産後パパ育休は出生後8週間以内に開始する必要があります');
+    }
+
+    // 2. 最大4週間（28日）の期間制限チェック
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays > 28) {
+      errors.push(`産後パパ育休は最大4週間（28日）まで取得可能です（現在: ${diffDays}日）`);
+    }
+
+    // 3. 開始日が終了日より後でないかチェック
+    if (startDate >= endDate) {
+      errors.push('開始日は終了日より前の日付を入力してください');
+    }
+
+    // 4. 出生日より前の開始日チェック
+    if (startDate < childBirthDate) {
+      errors.push('産後パパ育休は子の出生日以降に開始してください');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  // 産後パパ育休の期間計算結果を取得
+  getPapaLeaveCalculation(caseIndex: number): {
+    requestedDays: number;
+    maxAllowedDays: number;
+    isWithinLimit: boolean;
+  } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (
+      specialCase.details.childcareType !== 'papa-leave' ||
+      !specialCase.details.startDate ||
+      !specialCase.details.endDate
+    ) {
+      return null;
+    }
+
+    const startDate = new Date(specialCase.details.startDate);
+    const endDate = new Date(specialCase.details.endDate);
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const maxAllowedDays = 28; // 4週間
+
+    return {
+      requestedDays,
+      maxAllowedDays,
+      isWithinLimit: requestedDays <= maxAllowedDays,
+    };
+  }
+
+  // === 基本の育児休業のバリデーション機能 ===
+
+  // 基本育児休業のバリデーション
+  validateBasicChildcareInput(caseIndex: number): void {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType === 'basic') {
+      this.calculateChildcarePeriod(caseIndex);
+    }
+  }
+
+  // 基本育児休業の最大終了日を取得（子が1歳になる日まで）
+  getBasicChildcareMaxEndDate(caseIndex: number): string | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 1); // 1歳の誕生日
+    maxEndDate.setDate(maxEndDate.getDate() - 1); // 1歳の誕生日の前日まで
+
+    return this.formatDateToString(maxEndDate);
+  }
+
+  // 基本育児休業の開始日が無効かチェック
+  isBasicChildcareStartDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate || !specialCase.details.startDate) {
+      return false;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+
+    // 産後8週間経過後から開始可能（産後パパ育休との区別）
+    const eightWeeksAfter = new Date(childBirthDate);
+    eightWeeksAfter.setDate(eightWeeksAfter.getDate() + 56);
+
+    // 一般的には産後8週間後から開始だが、例外もあるため警告レベル
+    return startDate < childBirthDate;
+  }
+
+  // 基本育児休業の終了日が無効かチェック
+  isBasicChildcareEndDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate || !specialCase.details.endDate) {
+      return false;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const endDate = new Date(specialCase.details.endDate);
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 1);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    return endDate > maxEndDate;
+  }
+
+  // 基本育児休業のバリデーション結果を取得
+  getBasicChildcareValidation(
+    caseIndex: number
+  ): { isValid: boolean; errors: string[]; warnings: string[] } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType !== 'basic') {
+      return null;
+    }
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!specialCase.details.childBirthDate) {
+      errors.push('子の生年月日を入力してください');
+    }
+
+    if (!specialCase.details.startDate) {
+      errors.push('育児休業開始日を入力してください');
+    }
+
+    if (!specialCase.details.endDate) {
+      errors.push('育児休業終了予定日を入力してください');
+    }
+
+    // 基本入力がない場合は早期リターン
+    if (errors.length > 0) {
+      return { isValid: false, errors, warnings };
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate!);
+    const startDate = new Date(specialCase.details.startDate!);
+    const endDate = new Date(specialCase.details.endDate!);
+
+    // 1. 出生日以降の開始日チェック
+    if (startDate < childBirthDate) {
+      errors.push('育児休業は子の出生日以降に開始してください');
+    }
+
+    // 2. 1歳までの期間制限チェック
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 1);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    if (endDate > maxEndDate) {
+      errors.push(
+        `基本の育児休業は子が1歳になる日（${this.formatDateToString(maxEndDate)}）まで取得可能です`
+      );
+    }
+
+    // 3. 開始日が終了日より後でないかチェック
+    if (startDate >= endDate) {
+      errors.push('開始日は終了日より前の日付を入力してください');
+    }
+
+    // 4. 産後8週間以内の開始日の場合の警告
+    const eightWeeksAfter = new Date(childBirthDate);
+    eightWeeksAfter.setDate(eightWeeksAfter.getDate() + 56);
+
+    if (startDate <= eightWeeksAfter) {
+      warnings.push(
+        '産後8週間以内の期間は「産後パパ育休」の対象期間です。制度の使い分けをご確認ください'
+      );
+    }
+
+    // 5. 期間が短すぎる場合の警告
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays < 30) {
+      warnings.push('1カ月未満の短期間です。社会保険料免除の条件（14日ルール等）をご確認ください');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  }
+
+  // 基本育児休業の期間計算結果を取得
+  getBasicChildcareCalculation(caseIndex: number): {
+    requestedDays: number;
+    maxAllowedDays: number;
+    isWithinLimit: boolean;
+    childAge: string;
+    canExtend: boolean;
+  } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (
+      specialCase.details.childcareType !== 'basic' ||
+      !specialCase.details.childBirthDate ||
+      !specialCase.details.startDate ||
+      !specialCase.details.endDate
+    ) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+    const endDate = new Date(specialCase.details.endDate);
+
+    // 申請期間の計算
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // 最大許可日数の計算（1歳の誕生日まで）
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 1);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    const maxDiffTime = maxEndDate.getTime() - startDate.getTime();
+    const maxAllowedDays = Math.ceil(maxDiffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // 子の年齢計算（終了予定日時点）
+    const childAgeAtEnd = endDate.getFullYear() - childBirthDate.getFullYear();
+    const childAge = childAgeAtEnd < 1 ? '1歳未満' : `${childAgeAtEnd}歳`;
+
+    // 延長可能性の判定
+    const canExtend = endDate <= maxEndDate; // 1歳以内で終了する場合は延長可能
+
+    return {
+      requestedDays,
+      maxAllowedDays: Math.max(maxAllowedDays, 0),
+      isWithinLimit: requestedDays <= maxAllowedDays,
+      childAge,
+      canExtend,
+    };
+  }
+
+  // === 延長育児休業（1歳～1歳6か月）のバリデーション機能 ===
+
+  // 延長育児休業（1歳～1歳6か月）のバリデーション
+  validateExtended16ChildcareInput(caseIndex: number): void {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType === 'extended-1-6') {
+      this.calculateChildcarePeriod(caseIndex);
+    }
+  }
+
+  // 延長育児休業（1歳～1歳6か月）の最大開始日を取得（子が1歳になる日）
+  getExtended16ChildcareMinStartDate(caseIndex: number): string | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const minStartDate = new Date(childBirthDate);
+    minStartDate.setFullYear(minStartDate.getFullYear() + 1); // 1歳の誕生日
+
+    return this.formatDateToString(minStartDate);
+  }
+
+  // 延長育児休業（1歳～1歳6か月）の最大終了日を取得（子が1歳6か月になる日まで）
+  getExtended16ChildcareMaxEndDate(caseIndex: number): string | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setMonth(maxEndDate.getMonth() + 18); // 1歳6か月
+    maxEndDate.setDate(maxEndDate.getDate() - 1); // 1歳6か月の誕生日の前日まで
+
+    return this.formatDateToString(maxEndDate);
+  }
+
+  // 延長育児休業（1歳～1歳6か月）の開始日が無効かチェック
+  isExtended16ChildcareStartDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate || !specialCase.details.startDate) {
+      return false;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+    const oneYearOld = new Date(childBirthDate);
+    oneYearOld.setFullYear(oneYearOld.getFullYear() + 1);
+
+    // 1歳の誕生日より前は無効
+    return startDate < oneYearOld;
+  }
+
+  // 延長育児休業（1歳～1歳6か月）の終了日が無効かチェック
+  isExtended16ChildcareEndDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate || !specialCase.details.endDate) {
+      return false;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const endDate = new Date(specialCase.details.endDate);
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setMonth(maxEndDate.getMonth() + 18);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    return endDate > maxEndDate;
+  }
+
+  // 延長育児休業（1歳～1歳6か月）のバリデーション結果を取得
+  getExtended16ChildcareValidation(
+    caseIndex: number
+  ): { isValid: boolean; errors: string[]; warnings: string[] } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType !== 'extended-1-6') {
+      return null;
+    }
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!specialCase.details.childBirthDate) {
+      errors.push('子の生年月日を入力してください');
+    }
+
+    if (!specialCase.details.startDate) {
+      errors.push('育児休業開始日を入力してください');
+    }
+
+    if (!specialCase.details.endDate) {
+      errors.push('育児休業終了予定日を入力してください');
+    }
+
+    if (!specialCase.details.extensionReason) {
+      errors.push('延長理由を選択してください');
+    }
+
+    // 基本入力がない場合は早期リターン
+    if (errors.length > 0) {
+      return { isValid: false, errors, warnings };
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate!);
+    const startDate = new Date(specialCase.details.startDate!);
+    const endDate = new Date(specialCase.details.endDate!);
+
+    // 1. 1歳の誕生日以降の開始日チェック
+    const oneYearOld = new Date(childBirthDate);
+    oneYearOld.setFullYear(oneYearOld.getFullYear() + 1);
+
+    if (startDate < oneYearOld) {
+      errors.push(
+        `延長育児休業は子が1歳になる日（${this.formatDateToString(oneYearOld)}）以降に開始してください`
+      );
+    }
+
+    // 2. 1歳6か月までの期間制限チェック
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setMonth(maxEndDate.getMonth() + 18);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    if (endDate > maxEndDate) {
+      errors.push(
+        `延長育児休業（1歳～1歳6か月）は子が1歳6か月になる日（${this.formatDateToString(maxEndDate)}）まで取得可能です`
+      );
+    }
+
+    // 3. 開始日が終了日より後でないかチェック
+    if (startDate >= endDate) {
+      errors.push('開始日は終了日より前の日付を入力してください');
+    }
+
+    // 4. 延長理由の妥当性チェック
+    if (specialCase.details.extensionReason) {
+      switch (specialCase.details.extensionReason) {
+        case 'nursery-unavailable':
+          warnings.push(
+            '保育所等への入所申込みを行っているが入所できない場合の延長です。関連書類の準備をご確認ください'
+          );
+          break;
+        case 'spouse-circumstances':
+          warnings.push('配偶者の死亡・負傷・疾病等による延長です。証明書類が必要な場合があります');
+          break;
+        case 'spouse-separation':
+          warnings.push(
+            '配偶者との別居等による延長です。状況に応じて証明書類が必要な場合があります'
+          );
+          break;
+        case 'spouse-work-restart':
+          warnings.push(
+            '配偶者の職場復帰による延長です。配偶者の就労証明書等が必要な場合があります'
+          );
+          break;
+      }
+    }
+
+    // 5. 期間が短すぎる場合の警告
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays < 30) {
+      warnings.push('1カ月未満の短期間です。延長の必要性と社会保険料免除の条件をご確認ください');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  }
+
+  // 延長育児休業（1歳～1歳6か月）の期間計算結果を取得
+  getExtended16ChildcareCalculation(caseIndex: number): {
+    requestedDays: number;
+    maxAllowedDays: number;
+    isWithinLimit: boolean;
+    childAge: string;
+    canExtendFurther: boolean;
+    extensionReason: string;
+  } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (
+      specialCase.details.childcareType !== 'extended-1-6' ||
+      !specialCase.details.childBirthDate ||
+      !specialCase.details.startDate ||
+      !specialCase.details.endDate
+    ) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+    const endDate = new Date(specialCase.details.endDate);
+
+    // 申請期間の計算
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // 最大許可日数の計算（1歳6か月まで）
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setMonth(maxEndDate.getMonth() + 18);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    const maxDiffTime = maxEndDate.getTime() - startDate.getTime();
+    const maxAllowedDays = Math.ceil(maxDiffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // 子の年齢計算（終了予定日時点）
+    const childAgeAtEnd = this.calculateChildAgeAtDate(childBirthDate, endDate);
+    const childAge = childAgeAtEnd;
+
+    // さらなる延長可能性の判定（1歳6か月以内で終了する場合）
+    const canExtendFurther = endDate <= maxEndDate;
+
+    // 延長理由の表示テキスト
+    const extensionReasonText = this.getExtensionReasonText(
+      specialCase.details.extensionReason || ''
+    );
+
+    return {
+      requestedDays,
+      maxAllowedDays: Math.max(maxAllowedDays, 0),
+      isWithinLimit: requestedDays <= maxAllowedDays,
+      childAge,
+      canExtendFurther,
+      extensionReason: extensionReasonText,
+    };
+  }
+
+  // 子の年齢を指定日時点で計算
+  private calculateChildAgeAtDate(birthDate: Date, targetDate: Date): string {
+    const years = targetDate.getFullYear() - birthDate.getFullYear();
+    const months = targetDate.getMonth() - birthDate.getMonth();
+    const days = targetDate.getDate() - birthDate.getDate();
+
+    let totalMonths = years * 12 + months;
+    if (days < 0) {
+      totalMonths--;
+    }
+
+    if (totalMonths < 12) {
+      return `${totalMonths}か月`;
+    } else {
+      const ageYears = Math.floor(totalMonths / 12);
+      const ageMonths = totalMonths % 12;
+      return ageMonths === 0 ? `${ageYears}歳` : `${ageYears}歳${ageMonths}か月`;
+    }
+  }
+
+  // 延長理由の表示テキストを取得
+  private getExtensionReasonText(reason: string): string {
+    switch (reason) {
+      case 'nursery-unavailable':
+        return '保育所等に入所できない';
+      case 'spouse-circumstances':
+        return '配偶者の死亡・負傷・疾病等';
+      case 'spouse-separation':
+        return '配偶者との別居等';
+      case 'spouse-work-restart':
+        return '配偶者の職場復帰';
+      default:
+        return '延長理由未選択';
+    }
+  }
+
+  // === 延長育児休業（1歳6か月～2歳）のバリデーション機能 ===
+
+  // 延長育児休業（1歳6か月～2歳）のバリデーション
+  validateExtended2ChildcareInput(caseIndex: number): void {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType === 'extended-2') {
+      this.calculateChildcarePeriod(caseIndex);
+    }
+  }
+
+  // 延長育児休業（1歳6か月～2歳）の最小開始日を取得（子が1歳6か月になる日）
+  getExtended2ChildcareMinStartDate(caseIndex: number): string | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const minStartDate = new Date(childBirthDate);
+    minStartDate.setMonth(minStartDate.getMonth() + 18); // 1歳6か月
+
+    return this.formatDateToString(minStartDate);
+  }
+
+  // 延長育児休業（1歳6か月～2歳）の最大終了日を取得（子が2歳になる日まで）
+  getExtended2ChildcareMaxEndDate(caseIndex: number): string | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 2); // 2歳の誕生日
+    maxEndDate.setDate(maxEndDate.getDate() - 1); // 2歳の誕生日の前日まで
+
+    return this.formatDateToString(maxEndDate);
+  }
+
+  // 延長育児休業（1歳6か月～2歳）の開始日が無効かチェック
+  isExtended2ChildcareStartDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate || !specialCase.details.startDate) {
+      return false;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+    const oneYearSixMonths = new Date(childBirthDate);
+    oneYearSixMonths.setMonth(oneYearSixMonths.getMonth() + 18);
+
+    // 1歳6か月より前は無効
+    return startDate < oneYearSixMonths;
+  }
+
+  // 延長育児休業（1歳6か月～2歳）の終了日が無効かチェック
+  isExtended2ChildcareEndDateInvalid(caseIndex: number): boolean {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (!specialCase.details.childBirthDate || !specialCase.details.endDate) {
+      return false;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const endDate = new Date(specialCase.details.endDate);
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 2);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    return endDate > maxEndDate;
+  }
+
+  // 延長育児休業（1歳6か月～2歳）のバリデーション結果を取得
+  getExtended2ChildcareValidation(
+    caseIndex: number
+  ): { isValid: boolean; errors: string[]; warnings: string[] } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType !== 'extended-2') {
+      return null;
+    }
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!specialCase.details.childBirthDate) {
+      errors.push('子の生年月日を入力してください');
+    }
+
+    if (!specialCase.details.startDate) {
+      errors.push('育児休業開始日を入力してください');
+    }
+
+    if (!specialCase.details.endDate) {
+      errors.push('育児休業終了予定日を入力してください');
+    }
+
+    if (!specialCase.details.extensionReason) {
+      errors.push('延長理由を選択してください');
+    }
+
+    // 基本入力がない場合は早期リターン
+    if (errors.length > 0) {
+      return { isValid: false, errors, warnings };
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate!);
+    const startDate = new Date(specialCase.details.startDate!);
+    const endDate = new Date(specialCase.details.endDate!);
+
+    // 1. 1歳6か月以降の開始日チェック
+    const oneYearSixMonths = new Date(childBirthDate);
+    oneYearSixMonths.setMonth(oneYearSixMonths.getMonth() + 18);
+
+    if (startDate < oneYearSixMonths) {
+      errors.push(
+        `延長育児休業（2歳まで）は子が1歳6か月になる日（${this.formatDateToString(oneYearSixMonths)}）以降に開始してください`
+      );
+    }
+
+    // 2. 2歳までの期間制限チェック
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 2);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    if (endDate > maxEndDate) {
+      errors.push(
+        `延長育児休業（1歳6か月～2歳）は子が2歳になる日（${this.formatDateToString(maxEndDate)}）まで取得可能です`
+      );
+    }
+
+    // 3. 開始日が終了日より後でないかチェック
+    if (startDate >= endDate) {
+      errors.push('開始日は終了日より前の日付を入力してください');
+    }
+
+    // 4. 延長理由の妥当性チェック（2歳までの延長は特に厳格）
+    if (specialCase.details.extensionReason) {
+      switch (specialCase.details.extensionReason) {
+        case 'nursery-unavailable':
+          warnings.push(
+            '1歳6か月時点でも保育所等への入所ができない場合の延長です。継続的な入所申込みの証明が必要です'
+          );
+          break;
+        case 'spouse-circumstances':
+          warnings.push(
+            '配偶者の死亡・負傷・疾病等が1歳6か月時点でも継続している場合の延長です。最新の証明書類が必要です'
+          );
+          break;
+        case 'spouse-separation':
+          warnings.push(
+            '配偶者との別居等が1歳6か月時点でも継続している場合の延長です。状況の継続を示す書類が必要な場合があります'
+          );
+          break;
+        case 'spouse-work-restart':
+          warnings.push(
+            '配偶者の職場復帰等の状況が1歳6か月時点でも継続している場合の延長です。最新の就労証明書等が必要です'
+          );
+          break;
+      }
+    }
+
+    // 5. 2歳までの延長の特別な注意事項
+    warnings.push(
+      '2歳までの延長育児休業は、1歳6か月時点での特別な事情の継続が前提となります。申請時に詳細な状況説明が必要です'
+    );
+
+    // 6. 期間が短すぎる場合の警告
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays < 30) {
+      warnings.push(
+        '1カ月未満の短期間です。2歳までの延長の必要性と社会保険料免除の条件をご確認ください'
+      );
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  }
+
+  // 延長育児休業（1歳6か月～2歳）の期間計算結果を取得
+  getExtended2ChildcareCalculation(caseIndex: number): {
+    requestedDays: number;
+    maxAllowedDays: number;
+    isWithinLimit: boolean;
+    childAge: string;
+    extensionReason: string;
+    isMaxExtension: boolean;
+  } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (
+      specialCase.details.childcareType !== 'extended-2' ||
+      !specialCase.details.childBirthDate ||
+      !specialCase.details.startDate ||
+      !specialCase.details.endDate
+    ) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+    const endDate = new Date(specialCase.details.endDate);
+
+    // 申請期間の計算
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // 最大許可日数の計算（2歳まで）
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 2);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    const maxDiffTime = maxEndDate.getTime() - startDate.getTime();
+    const maxAllowedDays = Math.ceil(maxDiffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // 子の年齢計算（終了予定日時点）
+    const childAgeAtEnd = this.calculateChildAgeAtDate(childBirthDate, endDate);
+    const childAge = childAgeAtEnd;
+
+    // 延長理由の表示テキスト
+    const extensionReasonText = this.getExtensionReasonText(
+      specialCase.details.extensionReason || ''
+    );
+
+    // 最大延長かどうかの判定（2歳までの延長は法定最大）
+    const isMaxExtension = true;
+
+    return {
+      requestedDays,
+      maxAllowedDays: Math.max(maxAllowedDays, 0),
+      isWithinLimit: requestedDays <= maxAllowedDays,
+      childAge,
+      extensionReason: extensionReasonText,
+      isMaxExtension,
+    };
+  }
+
+  // === 育児休業に準ずる措置のバリデーション機能 ===
+
+  // 育児休業に準ずる措置のバリデーション
+  validateSimilarMeasuresInput(caseIndex: number): void {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType === 'similar-measures') {
+      this.calculateChildcarePeriod(caseIndex);
+    }
+  }
+
+  // 育児休業に準ずる措置のバリデーション結果を取得
+  getSimilarMeasuresValidation(
+    caseIndex: number
+  ): { isValid: boolean; errors: string[]; warnings: string[] } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (specialCase.details.childcareType !== 'similar-measures') {
+      return null;
+    }
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!specialCase.details.childBirthDate) {
+      errors.push('子の生年月日を入力してください');
+    }
+
+    if (!specialCase.details.startDate) {
+      errors.push('措置開始日を入力してください');
+    }
+
+    if (!specialCase.details.endDate) {
+      errors.push('措置終了予定日を入力してください');
+    }
+
+    // 基本入力がない場合は早期リターン
+    if (errors.length > 0) {
+      return { isValid: false, errors, warnings };
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate!);
+    const startDate = new Date(specialCase.details.startDate!);
+    const endDate = new Date(specialCase.details.endDate!);
+
+    // 1. 開始日が終了日より後でないかチェック
+    if (startDate >= endDate) {
+      errors.push('開始日は終了日より前の日付を入力してください');
+    }
+
+    // 2. 3歳までの期間制限チェック（育児休業に準ずる措置の一般的な上限）
+    const maxEndDate = new Date(childBirthDate);
+    maxEndDate.setFullYear(maxEndDate.getFullYear() + 3);
+    maxEndDate.setDate(maxEndDate.getDate() - 1);
+
+    if (endDate > maxEndDate) {
+      warnings.push(
+        `育児休業に準ずる措置は一般的に子が3歳になる日（${this.formatDateToString(maxEndDate)}）まで取得可能です。詳細は就業規則をご確認ください`
+      );
+    }
+
+    // 3. 育児休業に準ずる措置の特別な注意事項
+    warnings.push(
+      '育児休業に準ずる措置の社会保険料免除は、育児休業等と同等の制度であることが必要です。就業規則や労働協約の内容をご確認ください'
+    );
+
+    // 4. 期間が長すぎる場合の警告
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays > 365 * 2) {
+      warnings.push(
+        '2年を超える長期間です。育児休業に準ずる措置の適用条件と社会保険料免除の要件をご確認ください'
+      );
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  }
+
+  // 育児休業に準ずる措置の期間計算結果を取得
+  getSimilarMeasuresCalculation(caseIndex: number): {
+    requestedDays: number;
+    childAge: string;
+    measureType: string;
+  } | null {
+    const specialCase = this.selectedSpecialCases[caseIndex];
+    if (
+      specialCase.details.childcareType !== 'similar-measures' ||
+      !specialCase.details.childBirthDate ||
+      !specialCase.details.startDate ||
+      !specialCase.details.endDate
+    ) {
+      return null;
+    }
+
+    const childBirthDate = new Date(specialCase.details.childBirthDate);
+    const startDate = new Date(specialCase.details.startDate);
+    const endDate = new Date(specialCase.details.endDate);
+
+    // 申請期間の計算
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // 子の年齢計算（終了予定日時点）
+    const childAgeAtEnd = this.calculateChildAgeAtDate(childBirthDate, endDate);
+    const childAge = childAgeAtEnd;
+
+    // 措置の種類
+    const measureType = '育児休業に準ずる措置';
+
+    return {
+      requestedDays,
+      childAge,
+      measureType,
+    };
   }
 }

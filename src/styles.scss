@@ -91,3 +91,13 @@ body,
 .mat-drawer-inner-container::-webkit-scrollbar {
   display: none !important;
 }
+
+/* 社会保険判定 - 黄色と緑のボックス幅統一 */
+.validation-result,
+.calculated-period {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 2rem !important;
+  margin: 1.5rem 0 !important;
+}
