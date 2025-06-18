@@ -300,13 +300,8 @@
 
     <div class="special-cases">
       <div class="case-item" *ngFor="let specialCase of selectedSpecialCases; let i = index">
-        <div class="case-header">
-          <h4>特殊事例 {{ i + 1 }}</h4>
-          <button
-            class="btn-remove"
-            (click)="removeSpecialCase(i)"
-            *ngIf="selectedSpecialCases.length > 1"
-          >
+        <div class="case-header" *ngIf="selectedSpecialCases.length > 1">
+          <button class="btn-remove" (click)="removeSpecialCase(i)">
             <i class="icon-close"></i>
             削除
           </button>
