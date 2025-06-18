@@ -1,5 +1,11 @@
 <div class="judgment-container">
-  <h2>社会保険対象者判定</h2>
+  <div class="header-container">
+    <button class="btn-back" (click)="goBack()">
+      <i class="icon-arrow-left"></i>
+      従業員一覧に戻る
+    </button>
+    <h2>社会保険対象者判定</h2>
+  </div>
 
   <!-- 対象者情報 -->
   <div class="employee-info">
@@ -43,6 +49,58 @@
   <!-- 質問エリア -->
   <div class="questionnaire" *ngIf="showQuestionnaire && currentQuestion">
     <h3>質問 {{ getQuestionNumber() }}</h3>
+
+    <!-- デバッグ情報 -->
+    <div
+      class="debug-info"
+      style="
+        background: #fff3cd;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 4px;
+        position: relative;
+      "
+      *ngIf="showDebugInfo"
+    >
+      <button
+        (click)="hideDebugInfo()"
+        style="
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+          background: #dc3545;
+          color: white;
+          border: none;
+          border-radius: 3px;
+          padding: 0.25rem 0.5rem;
+          cursor: pointer;
+        "
+      >
+        ✕ 閉じる
+      </button>
+      <strong>🔍 リアルタイムデバッグ情報:</strong><br />
+      📋 現在の質問ID: {{ currentQuestionId }}<br />
+      ❓ 現在の質問テキスト: {{ currentQuestion.text }}<br />
+      📝 現在の質問の回答: {{ answers[currentQuestionId] }}<br />
+      📚 質問履歴: {{ questionHistory | json }}<br />
+      📊 履歴の長さ: {{ questionHistory.length }}<br />
+      ⬅️ 戻ることができる: {{ canGoToPreviousQuestion }}<br />
+      🔍 nextQuestion設定: {{ currentQuestion.nextQuestion | json }}<br />
+      📝 全回答データ: {{ answers | json }}<br />
+      🎯 雇用形態: {{ answers['employmentType'] }}<br />
+      <button (click)="debugCurrentState()" style="margin-top: 0.5rem; padding: 0.25rem 0.5rem">
+        詳細デバッグ
+      </button>
+    </div>
+
+    <!-- 前の質問に戻るボタン -->
+    <div class="question-navigation" *ngIf="canGoToPreviousQuestion">
+      <button class="btn-previous" (click)="goToPreviousQuestion()">
+        <i class="icon-arrow-left"></i>
+        前の質問に戻る
+      </button>
+    </div>
+
     <div class="questions">
       <div class="question-item">
         <div class="question-text">{{ currentQuestion.text }}</div>
@@ -69,7 +127,11 @@
               [name]="currentQuestion.id"
               value="yes"
               [(ngModel)]="answers[currentQuestion.id]"
-              (change)="updateAnswers()"
+              (change)="logChangeEvent('はい', currentQuestion.id); updateAnswers()"
+              (click)="
+                logRadioClick('はい', currentQuestion.id);
+                handleRadioClick('yes', currentQuestion.id)
+              "
             />
             はい
           </label>
@@ -79,10 +141,40 @@
               [name]="currentQuestion.id"
               value="no"
               [(ngModel)]="answers[currentQuestion.id]"
-              (change)="updateAnswers()"
+              (change)="logChangeEvent('いいえ', currentQuestion.id); updateAnswers()"
+              (click)="
+                logRadioClick('いいえ', currentQuestion.id);
+                handleRadioClick('no', currentQuestion.id)
+              "
             />
             いいえ
           </label>
+        </div>
+
+        <!-- 日付範囲質問 -->
+        <div class="date-range-options" *ngIf="currentQuestion.type === 'date-range'">
+          <div class="period-selection">
+            <div class="date-input-section">
+              <h4>期間を指定してください</h4>
+              <div class="date-inputs">
+                <div class="date-field">
+                  <div class="field-label">開始日:</div>
+                  <input type="date" #startDate class="date-input" />
+                </div>
+                <div class="date-field">
+                  <div class="field-label">終了予定日:</div>
+                  <input type="date" #endDate class="date-input" />
+                </div>
+              </div>
+              <button
+                class="period-button custom-button"
+                (click)="updateDateRange(startDate.value, endDate.value)"
+                [disabled]="!startDate.value || !endDate.value"
+              >
+                期間を設定して次へ
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -90,10 +182,82 @@
 
   <!-- 判定結果 -->
   <div class="judgment-result" *ngIf="judgmentResult">
-    <h3>判定結果</h3>
+    <div class="result-header">
+      <h3>判定結果</h3>
+      <div class="result-buttons">
+        <button class="btn-reset" (click)="resetQuestionnaire()">
+          <i class="icon-refresh"></i>
+          判定をやり直す
+        </button>
+        <button class="btn-save" (click)="saveJudgment()">
+          <i class="icon-save"></i>
+          判定結果を保存
+        </button>
+      </div>
+    </div>
+
+    <!-- 判定結果デバッグ情報 -->
+    <div
+      class="debug-info"
+      style="
+        background: #e7f3ff;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 4px;
+        position: relative;
+      "
+      *ngIf="showDebugInfo"
+    >
+      <button
+        (click)="hideDebugInfo()"
+        style="
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+          background: #dc3545;
+          color: white;
+          border: none;
+          border-radius: 3px;
+          padding: 0.25rem 0.5rem;
+          cursor: pointer;
+        "
+      >
+        ✕ 閉じる
+      </button>
+      <strong>🔍 判定結果デバッグ情報:</strong><br />
+      📝 全回答データ: {{ answers | json }}<br />
+      🎯 雇用形態: {{ answers['employmentType'] }}<br />
+      📚 質問履歴: {{ questionHistory | json }}<br />
+      🏥 健康保険判定: {{ judgmentResult.healthInsurance | json }}<br />
+      🏛️ 厚生年金判定: {{ judgmentResult.pensionInsurance | json }}<br />
+      🧓 介護保険判定: {{ judgmentResult.careInsurance | json }}<br />
+      📅 年齢: {{ age }}歳<br />
+      🏢 休職状況: {{ answers['leaveStatus'] }}<br />
+      📋 手入力健康保険: {{ answers['manualHealthInsurance'] }}<br />
+      📋 手入力厚生年金: {{ answers['manualPensionInsurance'] }}<br />
+      <button (click)="debugCurrentState()" style="margin-top: 0.5rem; padding: 0.25rem 0.5rem">
+        詳細デバッグ
+      </button>
+    </div>
+
+    <!-- 休職情報表示 -->
+    <div class="leave-info" *ngIf="getLeaveInfo()">
+      <h4>休職情報</h4>
+      <div class="leave-details">
+        <div class="leave-type">
+          <span class="label">休職種別:</span>
+          <span class="value">{{ getLeaveTypeLabel() }}</span>
+        </div>
+        <div class="leave-period" *ngIf="getLeavePeriodInfo()">
+          <span class="label">免除期間:</span>
+          <span class="value">{{ getLeavePeriodInfo() }}</span>
+        </div>
+      </div>
+    </div>
+
     <div class="result-cards">
       <div class="result-card">
-        <h4>健康保険</h4>
+        <h4>健康保険料</h4>
         <div
           class="status"
           [class]="judgmentResult.healthInsurance.eligible ? 'eligible' : 'not-eligible'"
@@ -104,18 +268,7 @@
       </div>
 
       <div class="result-card">
-        <h4>厚生年金保険</h4>
-        <div
-          class="status"
-          [class]="judgmentResult.pensionInsurance.eligible ? 'eligible' : 'not-eligible'"
-        >
-          {{ judgmentResult.pensionInsurance.eligible ? '加入対象' : '加入対象外' }}
-        </div>
-        <p>{{ judgmentResult.pensionInsurance.reason }}</p>
-      </div>
-
-      <div class="result-card">
-        <h4>介護保険</h4>
+        <h4>介護保険料</h4>
         <div
           class="status"
           [class]="judgmentResult.careInsurance?.eligible ? 'eligible' : 'not-eligible'"
@@ -124,29 +277,197 @@
         </div>
         <p>{{ judgmentResult.careInsurance?.reason }}</p>
       </div>
+
+      <div class="result-card">
+        <h4>厚生年金保険料</h4>
+        <div
+          class="status"
+          [class]="judgmentResult.pensionInsurance.eligible ? 'eligible' : 'not-eligible'"
+        >
+          {{ judgmentResult.pensionInsurance.eligible ? '加入対象' : '加入対象外' }}
+        </div>
+        <p>{{ judgmentResult.pensionInsurance.reason }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 追加質問（社会保険加入対象者のみ） -->
+  <div class="additional-questions" *ngIf="judgmentResult && isInsuranceEligible()">
+    <div class="section-header">
+      <h3>追加情報の入力</h3>
+      <p>該当する事例がある場合は選択してください（任意）</p>
+    </div>
+
+    <div class="special-cases">
+      <div class="case-item" *ngFor="let specialCase of selectedSpecialCases; let i = index">
+        <div class="case-header">
+          <h4>特殊事例 {{ i + 1 }}</h4>
+          <button
+            class="btn-remove"
+            (click)="removeSpecialCase(i)"
+            *ngIf="selectedSpecialCases.length > 1"
+          >
+            <i class="icon-close"></i>
+            削除
+          </button>
+        </div>
+
+        <div class="case-selection">
+          <label [for]="'case-type-' + i">事例の種類:</label>
+          <select
+            [id]="'case-type-' + i"
+            [(ngModel)]="specialCase.type"
+            (change)="onSpecialCaseTypeChange(i)"
+          >
+            <option value="">選択してください</option>
+            <option value="social-security-agreement">社会保障協定</option>
+            <option value="leave-without-pay">休職者（私傷病など）の保険料</option>
+            <option value="secondment">出向者の社会保険加入</option>
+            <option value="multiple-workplace">二以上事業所勤務者</option>
+            <option value="same-day-acquisition-loss">同日得喪</option>
+            <option value="childcare-end-salary-change">育児休業等終了時報酬月額変更</option>
+            <option value="maternity-end-salary-change">産前産後休業終了時報酬月額変更</option>
+            <option value="overseas-dependent">海外居住被扶養者</option>
+            <option value="trial-period">試用期間中の社会保険加入</option>
+          </select>
+        </div>
+
+        <!-- 社会保障協定の詳細フォーム -->
+        <div class="case-details" *ngIf="specialCase.type === 'social-security-agreement'">
+          <div class="form-grid">
+            <div class="form-group">
+              <label [for]="'agreement-type-' + i">協定適用区分:</label>
+              <select [id]="'agreement-type-' + i" [(ngModel)]="specialCase.details.agreementType">
+                <option value="">選択してください</option>
+                <option value="japan-to-overseas">日本から海外派遣（協定適用）</option>
+                <option value="overseas-to-japan">海外から日本派遣（協定適用）</option>
+                <option value="not-applicable">協定非該当</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label [for]="'partner-country-' + i">協定相手国名:</label>
+              <input
+                [id]="'partner-country-' + i"
+                type="text"
+                [(ngModel)]="specialCase.details.partnerCountry"
+                placeholder="例: アメリカ"
+              />
+            </div>
+
+            <div class="form-group">
+              <div class="field-label">適用証明書の有無:</div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    [(ngModel)]="specialCase.details.hasCertificate"
+                    value="yes"
+                  />
+                  あり</label
+                >
+                <label
+                  ><input
+                    type="radio"
+                    [(ngModel)]="specialCase.details.hasCertificate"
+                    value="no"
+                  />
+                  なし</label
+                >
+              </div>
+            </div>
+
+            <div class="form-group" *ngIf="specialCase.details.hasCertificate === 'yes'">
+              <label [for]="'cert-number-' + i">適用証明書番号:</label>
+              <input
+                [id]="'cert-number-' + i"
+                type="text"
+                [(ngModel)]="specialCase.details.certificateNumber"
+              />
+            </div>
+
+            <div class="form-group" *ngIf="specialCase.details.hasCertificate === 'yes'">
+              <label [for]="'cert-start-' + i">適用証明書有効期間（開始日）:</label>
+              <input
+                [id]="'cert-start-' + i"
+                type="date"
+                [(ngModel)]="specialCase.details.certificateStartDate"
+              />
+            </div>
+
+            <div class="form-group" *ngIf="specialCase.details.hasCertificate === 'yes'">
+              <label [for]="'cert-end-' + i">適用証明書有効期間（終了日）:</label>
+              <input
+                [id]="'cert-end-' + i"
+                type="date"
+                [(ngModel)]="specialCase.details.certificateEndDate"
+              />
+            </div>
+
+            <div class="form-group">
+              <label [for]="'foreign-ssn-' + i">相手国での社会保障番号:</label>
+              <input
+                [id]="'foreign-ssn-' + i"
+                type="text"
+                [(ngModel)]="specialCase.details.foreignSocialSecurityNumber"
+              />
+            </div>
+
+            <div class="form-group">
+              <div class="field-label">日本の社会保険適用免除状況:</div>
+              <div class="checkbox-group">
+                <label
+                  ><input type="checkbox" [(ngModel)]="specialCase.details.pensionExemption" />
+                  年金免除</label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    [(ngModel)]="specialCase.details.healthInsuranceExemption"
+                  />
+                  医療保険免除</label
+                >
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label [for]="'remarks-' + i">備考:</label>
+              <textarea
+                [id]="'remarks-' + i"
+                [(ngModel)]="specialCase.details.remarks"
+                placeholder="協定に関する特記事項など"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- その他の事例の簡易フォーム -->
+        <div
+          class="case-details"
+          *ngIf="specialCase.type && specialCase.type !== 'social-security-agreement'"
+        >
+          <div class="form-group full-width">
+            <label [for]="'other-remarks-' + i">詳細・備考:</label>
+            <textarea
+              [id]="'other-remarks-' + i"
+              [(ngModel)]="specialCase.details.remarks"
+              [placeholder]="getPlaceholderText(specialCase.type)"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="add-case-section">
+        <button class="btn-add-case" (click)="addSpecialCase()">
+          <i class="icon-plus"></i>
+          特殊事例を追加
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- アクションボタン -->
-  <div class="action-buttons">
-    <!-- 左側：戻るボタン -->
-    <div class="left-buttons">
-      <button class="btn-back" (click)="goBack()">
-        <i class="icon-arrow-left"></i>
-        従業員一覧に戻る
-      </button>
-    </div>
-
-    <!-- 右側：操作ボタン -->
-    <div class="right-buttons">
-      <button class="btn-reset" *ngIf="judgmentResult" (click)="resetQuestionnaire()">
-        <i class="icon-refresh"></i>
-        判定をやり直す
-      </button>
-      <button class="btn-save" *ngIf="judgmentResult" (click)="saveJudgment()">
-        <i class="icon-save"></i>
-        判定結果を保存
-      </button>
-    </div>
+  <div class="action-buttons" *ngIf="!judgmentResult">
+    <!-- 判定結果がない時のみ表示 -->
   </div>
 </div>
