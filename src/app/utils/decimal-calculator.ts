@@ -188,4 +188,64 @@ export class SocialInsuranceCalculator {
     const rounded = divided.round();
     return rounded.times(1000).toNumber();
   }
+
+  /**
+   * 金額を千円単位で切り捨て（標準賞与額計算用）
+   * @param amount 金額
+   * @returns 千円単位で切り捨てした金額
+   */
+  static floorToThousand(amount: number): number {
+    const decimal = new Decimal(amount);
+    const divided = decimal.dividedBy(1000);
+    const floored = divided.floor();
+    return floored.times(1000).toNumber();
+  }
+
+  /**
+   * 乗算して切り捨て（保険料計算用）
+   * @param amount 基準額
+   * @param rate 料率
+   * @returns 乗算結果（1円未満切り捨て）
+   */
+  static multiplyAndFloor(amount: number, rate: number): number {
+    const baseAmount = new Decimal(amount);
+    const rateDecimal = new Decimal(rate);
+    const result = baseAmount.times(rateDecimal);
+    return result.floor().toNumber();
+  }
+
+  /**
+   * 除算（Decimal.js使用）
+   * @param dividend 被除数
+   * @param divisor 除数
+   * @returns 除算結果
+   */
+  static divide(dividend: number, divisor: number): number {
+    const dividendDecimal = new Decimal(dividend);
+    const divisorDecimal = new Decimal(divisor);
+    return dividendDecimal.dividedBy(divisorDecimal).toNumber();
+  }
+
+  /**
+   * 除算して切り捨て
+   * @param dividend 被除数
+   * @param divisor 除数
+   * @returns 除算結果（切り捨て）
+   */
+  static divideAndFloor(dividend: number, divisor: number): number {
+    const dividendDecimal = new Decimal(dividend);
+    const divisorDecimal = new Decimal(divisor);
+    const result = dividendDecimal.dividedBy(divisorDecimal);
+    return result.floor().toNumber();
+  }
+
+  /**
+   * 2つの金額を減算（エイリアス）
+   * @param amount1 被減数
+   * @param amount2 減数
+   * @returns 減算結果
+   */
+  static subtract(amount1: number, amount2: number): number {
+    return this.subtractAmounts(amount1, amount2);
+  }
 }

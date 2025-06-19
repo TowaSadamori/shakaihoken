@@ -23,136 +23,145 @@
         <span class="info-label">事業所所在地:</span>
         <span>{{ employeeInfo.addressPrefecture }}</span>
       </div>
-      <div class="info-item">
-        <span class="info-label">計算対象年度:</span>
-        <span>{{ selectedYear }}年度</span>
-      </div>
     </div>
   </div>
 
-  <!-- 賞与情報入力エリア -->
-  <div class="bonus-input-section">
-    <h3>賞与情報入力</h3>
-    <div class="input-form">
-      <div class="form-row">
-        <label for="bonus-amount" class="form-label">賞与支給額 (円):</label>
-        <input
-          type="number"
-          id="bonus-amount"
-          class="form-input"
-          [(ngModel)]="bonusAmount"
-          placeholder="例: 500000"
-          min="0"
-          step="1"
-        />
-      </div>
+  <!-- 年度選択と取り込みエリア -->
+  <div class="bonus-control-section">
+    <h3>賞与情報取り込み</h3>
 
+    <div class="control-form">
       <div class="form-row">
-        <label for="payment-date" class="form-label">支給年月:</label>
-        <input type="month" id="payment-date" class="form-input" [(ngModel)]="paymentDate" />
-      </div>
-
-      <div class="form-row">
-        <label for="bonus-type" class="form-label">賞与種別:</label>
-        <select id="bonus-type" class="form-select" [(ngModel)]="bonusType">
-          <option value="">選択してください</option>
-          <option value="summer">夏季賞与</option>
-          <option value="winter">冬季賞与</option>
-          <option value="settlement">決算賞与</option>
-          <option value="other">その他</option>
+        <label for="target-year" class="form-label">対象年度:</label>
+        <select id="target-year" class="form-select" [(ngModel)]="targetYear">
+          <option value="2023">2023年度</option>
+          <option value="2024">2024年度</option>
+          <option value="2025">2025年度</option>
+          <option value="2026">2026年度</option>
         </select>
       </div>
-    </div>
 
-    <div class="calculate-button-area">
-      <button class="calculate-btn" (click)="calculateInsurance()" [disabled]="!isFormValid()">
-        保険料を計算する
-      </button>
-    </div>
-  </div>
-
-  <!-- 計算結果表示エリア -->
-  <div class="result-section" *ngIf="calculationResult">
-    <h3>計算結果</h3>
-    <div class="result-content">
-      <div class="standard-bonus-info">
-        <h4>標準賞与額</h4>
-        <div class="amount-display">
-          {{ calculationResult.standardBonusAmount | number: '1.0-0' }}円
-        </div>
-        <p class="note">※1,000円未満切り捨て</p>
-      </div>
-
-      <div class="insurance-breakdown">
-        <h4>保険料内訳</h4>
-        <div class="breakdown-table">
-          <div class="breakdown-row header">
-            <div class="col-type">保険種別</div>
-            <div class="col-rate">料率</div>
-            <div class="col-employee">個人負担</div>
-            <div class="col-company">会社負担</div>
-            <div class="col-total">合計</div>
-          </div>
-
-          <div class="breakdown-row">
-            <div class="col-type">健康保険</div>
-            <div class="col-rate">{{ calculationResult.healthInsurance.rate }}%</div>
-            <div class="col-employee">
-              {{ calculationResult.healthInsurance.employeeBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-company">
-              {{ calculationResult.healthInsurance.companyBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-total">
-              {{ calculationResult.healthInsurance.total | number: '1.0-0' }}円
-            </div>
-          </div>
-
-          <div class="breakdown-row">
-            <div class="col-type">厚生年金保険</div>
-            <div class="col-rate">{{ calculationResult.pensionInsurance.rate }}%</div>
-            <div class="col-employee">
-              {{ calculationResult.pensionInsurance.employeeBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-company">
-              {{ calculationResult.pensionInsurance.companyBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-total">
-              {{ calculationResult.pensionInsurance.total | number: '1.0-0' }}円
-            </div>
-          </div>
-
-          <div class="breakdown-row" *ngIf="calculationResult.careInsurance">
-            <div class="col-type">介護保険</div>
-            <div class="col-rate">{{ calculationResult.careInsurance.rate }}%</div>
-            <div class="col-employee">
-              {{ calculationResult.careInsurance.employeeBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-company">
-              {{ calculationResult.careInsurance.companyBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-total">
-              {{ calculationResult.careInsurance.total | number: '1.0-0' }}円
-            </div>
-          </div>
-
-          <div class="breakdown-row total-row">
-            <div class="col-type">合計</div>
-            <div class="col-rate">-</div>
-            <div class="col-employee">
-              {{ calculationResult.totalEmployeeBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-company">
-              {{ calculationResult.totalCompanyBurden | number: '1.0-0' }}円
-            </div>
-            <div class="col-total">{{ calculationResult.totalInsurance | number: '1.0-0' }}円</div>
-          </div>
-        </div>
+      <div class="import-button-area">
+        <button
+          class="import-btn"
+          (click)="importBonusData()"
+          [disabled]="!employeeInfo || isLoading"
+        >
+          <span *ngIf="isLoading">読み込み中...</span>
+          <span *ngIf="!isLoading">📥 賞与データ取り込み</span>
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- エラーメッセージ -->
+  <!-- Excel形式の計算結果表 -->
+  <div class="result-table-section">
+    <h3>賞与社会保険料計算結果</h3>
+
+    <div class="excel-table">
+      <table>
+        <thead>
+          <tr>
+            <th>支給年月日</th>
+            <th>報酬額</th>
+            <th>健康保険料・介護保険料の等級</th>
+            <th>健康保険料従業員負担分</th>
+            <th>健康保険料会社負担分</th>
+            <th>介護保険料従業員負担分</th>
+            <th>介護保険料会社負担分</th>
+            <th>厚生年金の等級</th>
+            <th>厚生年金保険料従業員負担分</th>
+            <th>厚生年金保険料会社負担分</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let bonus of bonusDataList; let i = index">
+            <td>{{ bonus.paymentDate || '-' }}</td>
+            <td>{{ bonus.amount ? (bonus.amount | number: '1.0-0') : '-' }}</td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? getHealthInsuranceGrade(bonus.calculationResult.standardBonusAmountHealth)
+                  : '-'
+              }}
+            </td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? (bonus.calculationResult.healthInsurance.employeeBurden | number: '1.0-0')
+                  : '-'
+              }}
+            </td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? (bonus.calculationResult.healthInsurance.companyBurden | number: '1.0-0')
+                  : '-'
+              }}
+            </td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? (bonus.calculationResult.careInsurance?.employeeBurden || 0 | number: '1.0-0')
+                  : '-'
+              }}
+            </td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? (bonus.calculationResult.careInsurance?.companyBurden || 0 | number: '1.0-0')
+                  : '-'
+              }}
+            </td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? getPensionInsuranceGrade(bonus.calculationResult.standardBonusAmountPension)
+                  : '-'
+              }}
+            </td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? (bonus.calculationResult.pensionInsurance.employeeBurden | number: '1.0-0')
+                  : '-'
+              }}
+            </td>
+            <td>
+              {{
+                bonus.calculationResult
+                  ? (bonus.calculationResult.pensionInsurance.companyBurden | number: '1.0-0')
+                  : '-'
+              }}
+            </td>
+          </tr>
+          <!-- データがない場合の空行表示 -->
+          <tr *ngIf="bonusDataList.length === 0">
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 上限適用の注記 -->
+    <div class="notes" *ngIf="hasLimitApplied">
+      <h4>⚠️ 注記</h4>
+      <ul>
+        <li *ngFor="let note of limitNotes">{{ note }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- エラーメッセージ表示 -->
   <div class="error-message" *ngIf="errorMessage">
     {{ errorMessage }}
   </div>
