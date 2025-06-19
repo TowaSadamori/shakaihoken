@@ -1,0 +1,160 @@
+<div class="manual-grade-add-container">
+  <div class="header-section">
+    <button class="back-btn" (click)="goBack()">← 戻る</button>
+    <h1 class="page-title">手入力で等級追加</h1>
+  </div>
+
+  <!-- 従業員情報 -->
+  <div class="employee-info-section">
+    <h3>従業員情報</h3>
+
+    <div class="loading" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>読み込み中...</p>
+    </div>
+
+    <div class="error-message" *ngIf="errorMessage && !isLoading">
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <div class="employee-details" *ngIf="employeeInfo && !isLoading">
+      <div class="info-row">
+        <span class="label">従業員名:</span>
+        <span class="value">{{ employeeInfo.name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">従業員番号:</span>
+        <span class="value">{{ employeeInfo.employeeNumber }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">生年月日:</span>
+        <span class="value">{{ employeeInfo.birthDate }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">年齢:</span>
+        <span class="value">{{ employeeInfo.age }}歳</span>
+      </div>
+      <div class="info-row">
+        <span class="label">事業所番号:</span>
+        <span class="value">{{ employeeInfo.branchNumber }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">事業所所在地:</span>
+        <span class="value">{{ employeeInfo.addressPrefecture }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 等級判定入力フォーム -->
+  <div class="grade-input-section">
+    <h3>等級判定情報入力</h3>
+
+    <div class="form-content">
+      <!-- 月額報酬入力 -->
+      <div class="form-group">
+        <label for="monthlyAmount">月額報酬 *</label>
+        <input
+          type="number"
+          id="monthlyAmount"
+          [(ngModel)]="monthlyAmount"
+          placeholder="例: 280000"
+          min="0"
+          step="1000"
+        />
+        <small class="help-text">標準報酬月額の算定に使用する月額報酬を入力してください</small>
+      </div>
+
+      <!-- 適用期間入力 -->
+      <div class="form-group">
+        <label for="applicableYear">適用開始年月 *</label>
+        <div class="date-input-row">
+          <select id="applicableYear" [(ngModel)]="applicableYear">
+            <option value="">年を選択</option>
+            <option *ngFor="let year of availableYears" [value]="year">{{ year }}年</option>
+          </select>
+          <select id="applicableMonth" [(ngModel)]="applicableMonth">
+            <option value="">月を選択</option>
+            <option *ngFor="let month of availableMonths" [value]="month.value">
+              {{ month.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 適用終了期間（任意） -->
+      <div class="form-group">
+        <label for="endYear">適用終了年月（任意）</label>
+        <div class="date-input-row">
+          <select id="endYear" [(ngModel)]="endYear">
+            <option value="">年を選択</option>
+            <option *ngFor="let year of availableYears" [value]="year">{{ year }}年</option>
+          </select>
+          <select id="endMonth" [(ngModel)]="endMonth">
+            <option value="">月を選択</option>
+            <option *ngFor="let month of availableMonths" [value]="month.value">
+              {{ month.label }}
+            </option>
+          </select>
+        </div>
+        <small class="help-text">継続適用の場合は空欄のままにしてください</small>
+      </div>
+    </div>
+
+    <!-- 判定ボタン -->
+    <div class="button-section">
+      <button
+        type="button"
+        class="judgment-button"
+        (click)="calculateGrade()"
+        [disabled]="!isFormValid() || isCalculating"
+      >
+        <span *ngIf="isCalculating">判定中...</span>
+        <span *ngIf="!isCalculating">判定</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 判定結果表示 -->
+  <div class="result-section" *ngIf="judgmentResult">
+    <h3>判定結果</h3>
+
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="result-label">健康保険</div>
+        <div class="result-content">
+          <div class="grade">第{{ judgmentResult.healthInsuranceGrade }}級</div>
+          <div class="standard-salary">
+            標準報酬月額: {{ judgmentResult.healthInsuranceStandardSalary | number }}円
+          </div>
+        </div>
+      </div>
+
+      <div class="result-item">
+        <div class="result-label">厚生年金保険</div>
+        <div class="result-content">
+          <div class="grade">第{{ judgmentResult.pensionInsuranceGrade }}級</div>
+          <div class="standard-salary">
+            標準報酬月額: {{ judgmentResult.pensionInsuranceStandardSalary | number }}円
+          </div>
+        </div>
+      </div>
+
+      <div class="result-item" *ngIf="judgmentResult.careInsuranceGrade">
+        <div class="result-label">介護保険</div>
+        <div class="result-content">
+          <div class="grade">第{{ judgmentResult.careInsuranceGrade }}級</div>
+          <div class="standard-salary">
+            標準報酬月額: {{ judgmentResult.careInsuranceStandardSalary | number }}円
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button type="button" class="save-button">保存</button>
+      <button type="button" class="cancel-button" (click)="judgmentResult = null">
+        キャンセル
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,115 @@
+/* 判定ボタン */
+.judgment-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  min-width: 120px;
+}
+
+.judgment-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.judgment-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 判定結果セクション */
+.result-section {
+  margin-top: 30px;
+  padding: 24px;
+  background: #f8f9ff;
+  border-radius: 12px;
+  border: 1px solid #e0e6ff;
+}
+
+.result-section h3 {
+  margin: 0 0 20px 0;
+  color: #4c63d2;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.result-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.result-item {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e0e6ff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.result-label {
+  font-weight: 600;
+  color: #4c63d2;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.result-content .grade {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 4px;
+}
+
+.result-content .standard-salary {
+  font-size: 14px;
+  color: #666;
+}
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.save-button {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+}
+
+.cancel-button {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-button:hover {
+  background: #edf2f7;
+  transform: translateY(-1px);
+}

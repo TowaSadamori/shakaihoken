@@ -83,6 +83,13 @@ export const routes: Routes = [
           import('./grade-judgment/grade-judgment.component').then((m) => m.GradeJudgmentComponent),
       },
       {
+        path: 'manual-grade-add/:employeeId',
+        loadComponent: () =>
+          import('./grade-management/manual-grade-add/manual-grade-add.component').then(
+            (m) => m.ManualGradeAddComponent
+          ),
+      },
+      {
         path: 'employee-procedures/insured-person-detail/:uid',
         loadComponent: () =>
           import(

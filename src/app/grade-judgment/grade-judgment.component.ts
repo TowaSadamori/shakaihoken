@@ -447,4 +447,8 @@ export class GradeJudgmentComponent implements OnInit {
   goBack(): void {
     this.router.navigate(['/salary-bonus-detail', this.employeeId]);
   }
+
+  navigateToManualAdd(): void {
+    this.router.navigate(['/manual-grade-add', this.employeeId]);
+  }
 }
