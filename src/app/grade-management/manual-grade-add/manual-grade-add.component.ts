@@ -2,7 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { getFirestore, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  Timestamp,
+  collection,
+  deleteDoc,
+} from 'firebase/firestore';
 
 interface EmployeeInfo {
   name: string;
@@ -509,5 +517,114 @@ export class ManualGradeAddComponent implements OnInit {
     }
 
     return '';
+  }
+
+  async saveToGradeJudgmentHistory(): Promise<void> {
+    if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.errorMessage = '';
+
+    try {
+      // 適用開始日を作成
+      const effectiveDate = new Date(this.applicableYear!, this.applicableMonth! - 1, 1);
+
+      // 適用終了日を作成（ある場合のみ）
+      let endDate: Date | undefined;
+      if (this.endYear && this.endMonth) {
+        endDate = new Date(this.endYear, this.endMonth - 1, 1);
+      }
+
+      // 等級判定履歴用のデータを作成
+      const gradeJudgmentRecord = {
+        employeeId: this.employeeId,
+        judgmentType: 'manual' as const,
+        judgmentDate: new Date(),
+        effectiveDate: effectiveDate,
+        endDate: endDate,
+        healthInsuranceGrade: this.judgmentResult.healthInsuranceGrade,
+        pensionInsuranceGrade: this.judgmentResult.pensionInsuranceGrade,
+        careInsuranceGrade: this.judgmentResult.careInsuranceGrade,
+        standardMonthlyAmount: this.monthlyAmount!,
+        reason: '手入力による等級判定',
+        inputData: {
+          manualAmount: this.monthlyAmount!,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // 等級判定履歴コレクションに保存
+      const historyCollectionRef = collection(
+        this.firestore,
+        'gradeJudgments',
+        this.employeeId,
+        'judgments'
+      );
+      await setDoc(doc(historyCollectionRef), gradeJudgmentRecord);
+
+      // 判定結果をクリア
+      this.judgmentResult = null;
+      this.monthlyAmount = null;
+      this.applicableYear = null;
+      this.applicableMonth = null;
+      this.endYear = null;
+      this.endMonth = null;
+
+      // 成功メッセージを表示
+      this.errorMessage = '等級判定結果が履歴に保存されました';
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, 3000);
+    } catch (error) {
+      console.error('履歴保存エラー:', error);
+      this.errorMessage = '履歴への保存に失敗しました: ' + (error as Error).message;
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  async deleteGradeData(): Promise<void> {
+    if (!this.savedGradeData?.id) {
+      // 保存データがない場合は画面上の表示のみクリア
+      this.judgmentResult = null;
+      this.monthlyAmount = null;
+      this.applicableYear = null;
+      this.applicableMonth = null;
+      this.endYear = null;
+      this.endMonth = null;
+      return;
+    }
+
+    this.isSaving = true;
+    this.errorMessage = '';
+
+    try {
+      // Firestoreからデータを削除
+      const docRef = doc(this.firestore, 'employee_grades', this.savedGradeData.id);
+      await deleteDoc(docRef);
+
+      // 画面の表示をクリア
+      this.judgmentResult = null;
+      this.monthlyAmount = null;
+      this.applicableYear = null;
+      this.applicableMonth = null;
+      this.endYear = null;
+      this.endMonth = null;
+      this.savedGradeData = null;
+
+      // 成功メッセージを表示
+      this.errorMessage = 'データが削除されました';
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, 3000);
+    } catch (error) {
+      console.error('削除エラー:', error);
+      this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
+    } finally {
+      this.isSaving = false;
+    }
   }
 }

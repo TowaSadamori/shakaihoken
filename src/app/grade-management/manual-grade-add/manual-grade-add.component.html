@@ -158,6 +158,33 @@
         </div>
       </div>
 
+      <!-- 厚生年金保険 -->
+      <div class="form-group insurance-group">
+        <div class="insurance-label">
+          <span class="insurance-icon">👴</span>
+          厚生年金保険
+        </div>
+        <div class="insurance-info">
+          <div class="info-item">
+            <span class="info-label">等級:</span>
+            <span class="info-value">{{ judgmentResult.pensionInsuranceGrade }}級</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">月額:</span>
+            <span class="info-value"
+              >{{ judgmentResult.pensionInsuranceStandardSalary | number }}円</span
+            >
+          </div>
+          <div class="info-item">
+            <span class="info-label">期間:</span>
+            <span class="info-value">
+              <span *ngIf="!endYear || !endMonth">継続</span>
+              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- 介護保険 -->
       <div class="form-group insurance-group">
         <div class="insurance-label">
@@ -190,33 +217,6 @@
         </div>
       </div>
 
-      <!-- 厚生年金保険 -->
-      <div class="form-group insurance-group">
-        <div class="insurance-label">
-          <span class="insurance-icon">👴</span>
-          厚生年金保険
-        </div>
-        <div class="insurance-info">
-          <div class="info-item">
-            <span class="info-label">等級:</span>
-            <span class="info-value">{{ judgmentResult.pensionInsuranceGrade }}級</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">月額:</span>
-            <span class="info-value"
-              >{{ judgmentResult.pensionInsuranceStandardSalary | number }}円</span
-            >
-          </div>
-          <div class="info-item">
-            <span class="info-label">期間:</span>
-            <span class="info-value">
-              <span *ngIf="!endYear || !endMonth">継続</span>
-              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
-            </span>
-          </div>
-        </div>
-      </div>
-
       <!-- 保存状態表示 -->
       <div class="form-group save-group" *ngIf="savedGradeData">
         <div class="save-status">
@@ -228,7 +228,10 @@
 
     <!-- アクションボタン -->
     <div class="button-section">
-      <button type="button" class="delete-btn" (click)="judgmentResult = null">削除</button>
+      <button type="button" class="delete-btn" (click)="deleteGradeData()" [disabled]="isSaving">
+        <span *ngIf="isSaving">削除中...</span>
+        <span *ngIf="!isSaving">削除</span>
+      </button>
     </div>
   </div>
 </div>

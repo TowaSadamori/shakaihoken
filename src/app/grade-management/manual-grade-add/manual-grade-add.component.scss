@@ -375,16 +375,23 @@
   cursor: pointer;
   transition: all 0.3s ease;
   border: none;
-  min-width: 100px;
-  background: #f44336;
+  min-width: 120px;
+  background: #1976d2;
   color: white;
-  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
 }
 
 .delete-btn:hover {
-  background: #d32f2f;
+  background: #1565c0;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+}
+
+.delete-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 @media (max-width: 768px) {
