@@ -183,3 +183,26 @@
   outline: none;
   border-color: #1565c0;
 }
+
+.grade-judgment-btn {
+  background: linear-gradient(135deg, #ff7043, #ff5722) !important;
+  color: #fff !important;
+  border: 2px solid #ff5722 !important;
+  box-shadow: 0 4px 8px rgba(255, 87, 34, 0.3);
+  font-weight: bold;
+  position: relative;
+  overflow: hidden;
+}
+
+.grade-judgment-btn:hover {
+  background: linear-gradient(135deg, #ff5722, #e64a19) !important;
+  border-color: #e64a19 !important;
+  box-shadow: 0 6px 12px rgba(255, 87, 34, 0.4);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+.grade-judgment-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 87, 34, 0.3);
+}

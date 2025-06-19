@@ -23,6 +23,9 @@
   <button class="csv-import-btn" (click)="removeBonusColumn()" [disabled]="isEditMode">
     賞与列を削除
   </button>
+  <button class="csv-import-btn grade-judgment-btn" (click)="openGradeJudgment()">
+    🎯 等級判定
+  </button>
 </div>
 <div class="csv-table-container" *ngIf="salaryTableReady">
   <table class="csv-table">

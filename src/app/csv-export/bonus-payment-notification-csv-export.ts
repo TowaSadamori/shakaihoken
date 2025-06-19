@@ -76,4 +76,3 @@ export function exportBonusPaymentNotificationToCSV(
     .join('\r\n');
   return csv;
 }
- 

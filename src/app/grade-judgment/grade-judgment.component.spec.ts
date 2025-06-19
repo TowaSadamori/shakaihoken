@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { EditUserDialogComponent } from './edit-user-dialog.component';
+import { GradeJudgmentComponent } from './grade-judgment.component';
 
-describe('EditUserDialogComponent', () => {
-  let component: EditUserDialogComponent;
-  let fixture: ComponentFixture<EditUserDialogComponent>;
+describe('GradeJudgmentComponent', () => {
+  let component: GradeJudgmentComponent;
+  let fixture: ComponentFixture<GradeJudgmentComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [EditUserDialogComponent],
+      imports: [GradeJudgmentComponent],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(EditUserDialogComponent);
+    fixture = TestBed.createComponent(GradeJudgmentComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

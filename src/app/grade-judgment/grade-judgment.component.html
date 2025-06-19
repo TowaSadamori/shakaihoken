@@ -1,0 +1,264 @@
+<div class="grade-judgment-container">
+  <div class="header">
+    <h2>等級判定</h2>
+    <button class="btn btn-outline" (click)="goBack()">← 戻る</button>
+  </div>
+
+  <!-- 従業員情報 -->
+  <div class="employee-info-section">
+    <h3>従業員情報</h3>
+
+    <div class="loading" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>読み込み中...</p>
+    </div>
+
+    <div class="error-message" *ngIf="errorMessage && !isLoading">
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <div class="employee-details" *ngIf="employeeInfo && !isLoading">
+      <div class="info-row">
+        <span class="label">従業員名:</span>
+        <span class="value">{{ employeeInfo.name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">従業員番号:</span>
+        <span class="value">{{ employeeInfo.employeeNumber }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">生年月日:</span>
+        <span class="value">{{ employeeInfo.birthDate }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">年齢:</span>
+        <span class="value">{{ employeeInfo.age }}歳</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 判定方法ボタン -->
+  <div class="judgment-actions">
+    <h3>等級判定の実行</h3>
+    <div class="action-buttons">
+      <button class="btn btn-primary" (click)="openJudgmentDialog('manual')">
+        <i class="icon-edit"></i>
+        手入力で追加
+      </button>
+      <button class="btn btn-success" (click)="openJudgmentDialog('regular')">
+        <i class="icon-calendar"></i>
+        定時決定
+      </button>
+      <button class="btn btn-warning" (click)="openJudgmentDialog('irregular')">
+        <i class="icon-refresh"></i>
+        随時改定
+      </button>
+    </div>
+  </div>
+
+  <!-- 等級判定履歴 -->
+  <div class="judgment-history">
+    <h3>等級判定履歴</h3>
+
+    <div class="loading" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>読み込み中...</p>
+    </div>
+
+    <div class="error-message" *ngIf="errorMessage">
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <div class="history-list" *ngIf="!isLoading && !errorMessage">
+      <div
+        class="history-item"
+        *ngFor="let record of judgmentRecords"
+        [class]="'type-' + record.judgmentType"
+      >
+        <div class="item-header">
+          <span class="judgment-type">{{ getJudgmentTypeLabel(record.judgmentType) }}</span>
+          <span class="judgment-date">{{ formatDate(record.judgmentDate) }}</span>
+        </div>
+
+        <div class="item-content">
+          <div class="period">
+            <strong>適用期間:</strong>
+            {{ formatDate(record.effectiveDate) }}
+            <span *ngIf="record.endDate">～ {{ formatDate(record.endDate) }}</span>
+            <span *ngIf="!record.endDate">～ 継続中</span>
+          </div>
+
+          <div class="grades">
+            <div class="grade-item">
+              <span class="grade-label">健康保険:</span>
+              <span class="grade-value">{{ record.healthInsuranceGrade }}等級</span>
+            </div>
+            <div class="grade-item">
+              <span class="grade-label">厚生年金:</span>
+              <span class="grade-value">{{ record.pensionInsuranceGrade }}等級</span>
+            </div>
+            <div class="grade-item" *ngIf="record.careInsuranceGrade">
+              <span class="grade-label">介護保険:</span>
+              <span class="grade-value">{{ record.careInsuranceGrade }}等級</span>
+            </div>
+          </div>
+
+          <div class="standard-amount">
+            <strong>標準報酬月額:</strong> {{ formatCurrency(record.standardMonthlyAmount) }}
+          </div>
+
+          <div class="reason" *ngIf="record.reason">
+            <strong>判定理由:</strong> {{ record.reason }}
+          </div>
+        </div>
+      </div>
+
+      <div class="no-records" *ngIf="judgmentRecords.length === 0">
+        <p>等級判定履歴がありません。</p>
+        <p>上記のボタンから新しい判定を実行してください。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 判定ダイアログ -->
+  <div
+    class="dialog-overlay"
+    *ngIf="showDialog"
+    (click)="closeDialog()"
+    (keyup.escape)="closeDialog()"
+    tabindex="-1"
+  >
+    <div
+      class="dialog-content"
+      (click)="$event.stopPropagation()"
+      (keyup.escape)="closeDialog()"
+      tabindex="0"
+    >
+      <div class="dialog-header">
+        <h3>{{ getJudgmentTypeLabel(dialogData.judgmentType) }}</h3>
+        <button class="close-btn" (click)="closeDialog()">×</button>
+      </div>
+
+      <div class="dialog-body">
+        <!-- 基本情報 -->
+        <div class="form-section">
+          <h4>適用期間</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="effectiveDate">適用開始日 *</label>
+              <input
+                type="date"
+                id="effectiveDate"
+                [(ngModel)]="dialogData.effectiveDate"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="endDate">適用終了日</label>
+              <input
+                type="date"
+                id="endDate"
+                [(ngModel)]="dialogData.endDate"
+                placeholder="継続の場合は空欄"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 判定方法別の入力項目 -->
+        <div class="form-section">
+          <h4>標準報酬月額の算定</h4>
+
+          <!-- 手入力の場合 -->
+          <div *ngIf="dialogData.judgmentType === 'manual'">
+            <div class="form-group">
+              <label for="manualAmount">標準報酬月額 *</label>
+              <input
+                type="number"
+                id="manualAmount"
+                [(ngModel)]="dialogData.inputData.manualAmount"
+                (ngModelChange)="calculateGradesFromAmount()"
+                placeholder="金額を直接入力"
+              />
+            </div>
+          </div>
+
+          <!-- 定時決定・随時改定の場合 -->
+          <div
+            *ngIf="dialogData.judgmentType === 'regular' || dialogData.judgmentType === 'irregular'"
+          >
+            <div class="auto-calculated" *ngIf="salaryData">
+              <p><strong>自動取得されたデータ:</strong></p>
+              <div class="salary-info">
+                <div class="salary-item">
+                  <span>月平均給与:</span>
+                  <span>{{ formatCurrency(dialogData.inputData.averageMonthly || 0) }}</span>
+                </div>
+                <div class="salary-item" *ngIf="dialogData.judgmentType === 'regular'">
+                  <span>年間賞与:</span>
+                  <span>{{ formatCurrency(dialogData.inputData.totalBonus || 0) }}</span>
+                </div>
+                <div class="salary-item">
+                  <span>年間総額:</span>
+                  <span>{{ formatCurrency(dialogData.inputData.annualTotal || 0) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="calculatedAmount">算定標準報酬月額</label>
+              <input
+                type="number"
+                id="calculatedAmount"
+                [(ngModel)]="dialogData.standardMonthlyAmount"
+                (ngModelChange)="calculateGradesFromAmount()"
+                readonly
+              />
+              <small class="help-text">給与データから自動計算されます</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- 等級判定結果 -->
+        <div class="form-section">
+          <h4>等級判定結果</h4>
+          <div class="grade-results">
+            <div class="grade-result-item">
+              <span class="grade-label">健康保険等級:</span>
+              <span class="grade-display">{{ dialogData.healthInsuranceGrade }}等級</span>
+            </div>
+            <div class="grade-result-item">
+              <span class="grade-label">厚生年金保険等級:</span>
+              <span class="grade-display">{{ dialogData.pensionInsuranceGrade }}等級</span>
+            </div>
+            <div class="grade-result-item" *ngIf="dialogData.careInsuranceGrade">
+              <span class="grade-label">介護保険等級:</span>
+              <span class="grade-display">{{ dialogData.careInsuranceGrade }}等級</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 判定理由 -->
+        <div class="form-section">
+          <h4>判定理由</h4>
+          <div class="form-group">
+            <label for="judgmentReason">判定理由</label>
+            <textarea
+              id="judgmentReason"
+              [(ngModel)]="dialogData.reason"
+              placeholder="判定理由を入力してください..."
+              rows="3"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="btn btn-secondary" (click)="closeDialog()">キャンセル</button>
+        <button class="btn btn-primary" (click)="saveJudgment()" [disabled]="!isDialogValid()">
+          保存
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

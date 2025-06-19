@@ -8,9 +8,8 @@ describe('Over70NonApplicationComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Over70NonApplicationComponent]
-    })
-    .compileComponents();
+      imports: [Over70NonApplicationComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Over70NonApplicationComponent);
     component = fixture.componentInstance;

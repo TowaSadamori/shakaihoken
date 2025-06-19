@@ -249,6 +249,15 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
     this.router.navigate(['/employee-salary-bonus']);
   }
 
+  openGradeJudgment() {
+    if (this.employeeId) {
+      // 新しい等級判定ページに遷移
+      this.router.navigate(['/grade-judgment', this.employeeId]);
+    } else {
+      alert('従業員情報が取得できませんでした。');
+    }
+  }
+
   // CSV取り込み
   onCsvImport(event: Event) {
     const input = event.target as HTMLInputElement;

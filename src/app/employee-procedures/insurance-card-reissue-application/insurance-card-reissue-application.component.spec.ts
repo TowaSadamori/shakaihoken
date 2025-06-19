@@ -8,9 +8,8 @@ describe('InsuranceCardReissueApplicationComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [InsuranceCardReissueApplicationComponent]
-    })
-    .compileComponents();
+      imports: [InsuranceCardReissueApplicationComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(InsuranceCardReissueApplicationComponent);
     component = fixture.componentInstance;

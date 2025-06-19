@@ -78,6 +78,11 @@ export const routes: Routes = [
           ).then((m) => m.EmployeeSalaryBonusDetailComponent),
       },
       {
+        path: 'grade-judgment/:employeeId',
+        loadComponent: () =>
+          import('./grade-judgment/grade-judgment.component').then((m) => m.GradeJudgmentComponent),
+      },
+      {
         path: 'employee-procedures/insured-person-detail/:uid',
         loadComponent: () =>
           import(
