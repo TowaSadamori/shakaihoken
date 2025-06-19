@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 interface EmployeeInfo {
   name: string;
@@ -38,6 +38,33 @@ interface GradeJudgmentResult {
   careInsuranceStandardSalary?: number;
 }
 
+interface SavedGradeData {
+  id?: string;
+  employeeId: string;
+  monthlyAmount: number;
+  applicableYear: number;
+  applicableMonth: number;
+  endYear?: number;
+  endMonth?: number;
+  judgmentResult: GradeJudgmentResult;
+  createdAt: Date;
+  updatedAt: Date;
+  judgmentType: 'manual';
+}
+
+interface FirestoreGradeData {
+  employeeId: string;
+  monthlyAmount: number;
+  applicableYear: number;
+  applicableMonth: number;
+  endYear?: number;
+  endMonth?: number;
+  judgmentResult: GradeJudgmentResult;
+  createdAt: Date;
+  updatedAt: Date;
+  judgmentType: 'manual';
+}
+
 @Component({
   selector: 'app-manual-grade-add',
   standalone: true,
@@ -60,6 +87,8 @@ export class ManualGradeAddComponent implements OnInit {
   // 判定結果
   judgmentResult: GradeJudgmentResult | null = null;
   isCalculating = false;
+  isSaving = false;
+  savedGradeData: SavedGradeData | null = null;
 
   // 選択肢用データ
   availableYears: number[] = [];
@@ -87,14 +116,14 @@ export class ManualGradeAddComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    this.employeeId = this.route.snapshot.paramMap.get('employeeId');
-    if (!this.employeeId) {
-      this.errorMessage = '従業員IDが見つかりません';
-      return;
-    }
-
+    this.route.paramMap.subscribe((params) => {
+      this.employeeId = params.get('employeeId');
+      if (this.employeeId) {
+        this.loadEmployeeInfo();
+        this.loadExistingGradeData();
+      }
+    });
     this.initializeYears();
-    await this.loadEmployeeInfo();
   }
 
   private initializeYears(): void {
@@ -194,26 +223,12 @@ export class ManualGradeAddComponent implements OnInit {
       // 都道府県を取得（Firestore用に変換）
       const prefecture = this.convertPrefectureForFirestore(this.employeeInfo.addressPrefecture);
 
-      console.log('判定パラメータ:', {
-        monthlyAmount: this.monthlyAmount,
-        applicableYear: this.applicableYear,
-        applicableMonth: this.applicableMonth,
-        targetYear: targetYear,
-        originalPrefecture: this.employeeInfo.addressPrefecture,
-        convertedPrefecture: prefecture,
-      });
-
       // 保険料表を取得
       const tables = await this.getInsuranceTable(targetYear, prefecture);
 
       if (!tables || !tables.insuranceTable || tables.insuranceTable.length === 0) {
         throw new Error('保険料表が見つかりません');
       }
-
-      console.log('取得したテーブル数:', {
-        insuranceTableLength: tables.insuranceTable.length,
-        pensionTableLength: tables.pensionTable.length,
-      });
 
       // 報酬月額から等級を判定
       const result = this.findGradeByAmount(tables, this.monthlyAmount!);
@@ -222,7 +237,6 @@ export class ManualGradeAddComponent implements OnInit {
         throw new Error('該当する等級が見つかりません');
       }
 
-      console.log('判定結果:', result);
       this.judgmentResult = result;
     } catch (error) {
       console.error('等級判定エラー:', error);
@@ -233,15 +247,69 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   private convertPrefectureForFirestore(prefecture: string): string {
-    // 都道府県名からFirestore用の形式に変換
+    // 都道府県名からFirestore用の形式に変換（全都道府県対応）
     const prefectureMap: Record<string, string> = {
+      // 都
       東京都: '東京',
+      // 府
       大阪府: '大阪',
       京都府: '京都',
-      // 他の都道府県も必要に応じて追加
+      // 道
+      北海道: '北海道',
+      // 県
+      青森県: '青森',
+      岩手県: '岩手',
+      宮城県: '宮城',
+      秋田県: '秋田',
+      山形県: '山形',
+      福島県: '福島',
+      茨城県: '茨城',
+      栃木県: '栃木',
+      群馬県: '群馬',
+      埼玉県: '埼玉',
+      千葉県: '千葉',
+      神奈川県: '神奈川',
+      新潟県: '新潟',
+      富山県: '富山',
+      石川県: '石川',
+      福井県: '福井',
+      山梨県: '山梨',
+      長野県: '長野',
+      岐阜県: '岐阜',
+      静岡県: '静岡',
+      愛知県: '愛知',
+      三重県: '三重',
+      滋賀県: '滋賀',
+      兵庫県: '兵庫',
+      奈良県: '奈良',
+      和歌山県: '和歌山',
+      鳥取県: '鳥取',
+      島根県: '島根',
+      岡山県: '岡山',
+      広島県: '広島',
+      山口県: '山口',
+      徳島県: '徳島',
+      香川県: '香川',
+      愛媛県: '愛媛',
+      高知県: '高知',
+      福岡県: '福岡',
+      佐賀県: '佐賀',
+      長崎県: '長崎',
+      熊本県: '熊本',
+      大分県: '大分',
+      宮崎県: '宮崎',
+      鹿児島県: '鹿児島',
+      沖縄県: '沖縄',
     };
 
-    return prefectureMap[prefecture] || prefecture.replace(/[都道府県]$/, '');
+    const converted = prefectureMap[prefecture];
+    if (!converted) {
+      console.warn(`未対応の都道府県: ${prefecture}`);
+      // フォールバック: 都道府県を削除
+      return prefecture.replace(/[都道府県]$/, '');
+    }
+
+    return converted;
   }
 
   private async getInsuranceTable(
@@ -249,11 +317,6 @@ export class ManualGradeAddComponent implements OnInit {
     prefecture: string
   ): Promise<{ insuranceTable: InsuranceTableItem[]; pensionTable: InsuranceTableItem[] }> {
     try {
-      console.log(
-        'Firestore参照パス:',
-        `insurance_rates/${year}/prefectures/${prefecture}/rate_table/main`
-      );
-
       const docRef = doc(
         this.firestore,
         'insurance_rates',
@@ -267,16 +330,11 @@ export class ManualGradeAddComponent implements OnInit {
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('Firestoreから取得した全データ:', data);
-        console.log('insuranceTableの内容:', data['insuranceTable']);
-        console.log('pensionTableの内容:', data['pensionTable']);
-
         return {
           insuranceTable: data['insuranceTable'] || [],
           pensionTable: data['pensionTable'] || [],
         };
       } else {
-        console.error('ドキュメントが存在しません');
         throw new Error(`${year}年度の${prefecture}の保険料表が見つかりません`);
       }
     } catch (error) {
@@ -345,5 +403,111 @@ export class ManualGradeAddComponent implements OnInit {
     }
 
     return result;
+  }
+
+  private async loadExistingGradeData(): Promise<void> {
+    if (!this.employeeId) return;
+
+    try {
+      // 一時的な回避策: 単純なクエリを使用
+      const docId = `${this.employeeId}_manual`;
+      const docRef = doc(this.firestore, 'employee_grades', docId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data() as SavedGradeData;
+        this.savedGradeData = { ...data, id: docSnap.id };
+
+        // フォームに既存データを設定
+        this.monthlyAmount = data.monthlyAmount;
+        this.applicableYear = data.applicableYear;
+        this.applicableMonth = data.applicableMonth;
+        this.endYear = data.endYear || null;
+        this.endMonth = data.endMonth || null;
+        this.judgmentResult = data.judgmentResult;
+      }
+    } catch (error) {
+      console.error('既存データ読み込みエラー:', error);
+    }
+  }
+
+  async saveGradeData(): Promise<void> {
+    if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.errorMessage = '';
+
+    try {
+      const gradeData: FirestoreGradeData = {
+        employeeId: this.employeeId,
+        monthlyAmount: this.monthlyAmount!,
+        applicableYear: this.applicableYear!,
+        applicableMonth: this.applicableMonth!,
+        judgmentResult: this.judgmentResult,
+        createdAt: this.savedGradeData?.createdAt || new Date(),
+        updatedAt: new Date(),
+        judgmentType: 'manual',
+      };
+
+      // undefinedの場合はフィールドを除外、値がある場合は含める
+      if (this.endYear !== null && this.endYear !== undefined) {
+        gradeData.endYear = this.endYear;
+      }
+      if (this.endMonth !== null && this.endMonth !== undefined) {
+        gradeData.endMonth = this.endMonth;
+      }
+
+      const docId = this.savedGradeData?.id || `${this.employeeId}_manual`;
+      const docRef = doc(this.firestore, 'employee_grades', docId);
+
+      await setDoc(docRef, gradeData);
+
+      this.savedGradeData = { ...gradeData, id: docId };
+
+      // 成功メッセージを表示（3秒後に消去）
+      this.errorMessage = '等級データが保存されました';
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, 3000);
+    } catch (error) {
+      console.error('保存エラー:', error);
+      this.errorMessage = '保存に失敗しました: ' + (error as Error).message;
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  private isFirestoreTimestamp(value: unknown): value is Timestamp {
+    return value !== null && typeof value === 'object' && 'toDate' in (value as object);
+  }
+
+  getFormattedDate(timestamp: Date | Timestamp): string {
+    if (!timestamp) return '';
+
+    // FirestoreのTimestampオブジェクトの場合
+    if (this.isFirestoreTimestamp(timestamp)) {
+      return timestamp.toDate().toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    // 既にDateオブジェクトの場合
+    if (timestamp instanceof Date) {
+      return timestamp.toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    return '';
   }
 }

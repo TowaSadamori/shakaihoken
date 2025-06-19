@@ -25,91 +25,192 @@
   box-shadow: none;
 }
 
-/* 判定結果セクション */
-.result-section {
-  margin-top: 30px;
-  padding: 24px;
-  background: #f8f9ff;
-  border-radius: 12px;
-  border: 1px solid #e0e6ff;
-}
-
-.result-section h3 {
-  margin: 0 0 20px 0;
-  color: #4c63d2;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.result-grid {
-  display: grid;
-  gap: 16px;
+/* 適用期間表示 */
+.application-period {
   margin-bottom: 24px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+  border: 2px solid #fc8181;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(252, 129, 129, 0.2);
 }
 
-.result-item {
-  background: white;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #e0e6ff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.result-label {
-  font-weight: 600;
-  color: #4c63d2;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.result-content .grade {
-  font-size: 18px;
-  font-weight: 700;
-  color: #2d3748;
-  margin-bottom: 4px;
-}
-
-.result-content .standard-salary {
-  font-size: 14px;
-  color: #666;
-}
-
-.result-actions {
+.period-info {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
-  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
-.save-button {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 14px;
+.period-label {
+  font-weight: 700;
+  color: #742a2a;
+  font-size: 16px;
+}
+
+.period-value {
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.save-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
-}
-
-.cancel-button {
-  background: #f7fafc;
-  color: #4a5568;
-  border: 1px solid #e2e8f0;
-  padding: 10px 20px;
+  color: #2d3748;
+  font-size: 16px;
+  background: white;
+  padding: 6px 12px;
   border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  border: 1px solid #fc8181;
 }
 
-.cancel-button:hover {
-  background: #edf2f7;
-  transform: translateY(-1px);
+/* 判定結果セクション - 強制適用 */
+.manual-grade-add-container .result-section {
+  background: white !important;
+  border-radius: 12px !important;
+  padding: 32px !important;
+  margin-top: 32px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e3f2fd !important;
+}
+
+.manual-grade-add-container .result-content {
+  margin-top: 24px !important;
+}
+
+/* 適用期間グループ - 強制適用 */
+.manual-grade-add-container .period-group {
+  margin-bottom: 24px !important;
+}
+
+.manual-grade-add-container .period-group .period-label {
+  display: block !important;
+  font-size: 1rem !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  margin-bottom: 8px !important;
+}
+
+.manual-grade-add-container .period-display {
+  background: #f8f9fa !important;
+  border: 2px solid #e1f5fe !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  transition: all 0.3s ease !important;
+}
+
+.manual-grade-add-container .period-text {
+  font-size: 1.1rem !important;
+  color: #1976d2 !important;
+  font-weight: 600 !important;
+}
+
+/* 保険グループ - 強制適用 */
+.manual-grade-add-container .insurance-group {
+  margin-bottom: 24px !important;
+}
+
+.manual-grade-add-container .insurance-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 1rem !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  margin-bottom: 8px !important;
+}
+
+.manual-grade-add-container .insurance-icon {
+  font-size: 18px !important;
+}
+
+.manual-grade-add-container .insurance-info {
+  background: #f8f9fa !important;
+  border: 2px solid #e1f5fe !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  transition: all 0.3s ease !important;
+}
+
+.manual-grade-add-container .insurance-info:hover {
+  border-color: #1976d2 !important;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15) !important;
+}
+
+.manual-grade-add-container .info-item {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 8px !important;
+  padding: 4px 0 !important;
+}
+
+.manual-grade-add-container .info-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+.manual-grade-add-container .info-label {
+  font-size: 0.95rem !important;
+  color: #666 !important;
+  font-weight: 500 !important;
+  min-width: 60px !important;
+}
+
+.manual-grade-add-container .info-value {
+  font-size: 1rem !important;
+  color: #333 !important;
+  font-weight: 600 !important;
+  text-align: right !important;
+}
+
+.manual-grade-add-container .not-applicable-text {
+  color: #666 !important;
+  font-style: italic !important;
+  text-align: center !important;
+}
+
+.manual-grade-add-container .insurance-info.not-applicable {
+  background: #f5f5f5 !important;
+  border-color: #e0e0e0 !important;
+}
+
+/* 保存グループ - 強制適用 */
+.manual-grade-add-container .save-group {
+  margin-bottom: 0 !important;
+}
+
+.manual-grade-add-container .save-status {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 16px !important;
+  background: #e8f5e8 !important;
+  border: 2px solid #4caf50 !important;
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  color: #2e7d32 !important;
+  font-weight: 600 !important;
+}
+
+.manual-grade-add-container .save-icon {
+  font-size: 18px !important;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .result-section {
+    margin-top: 20px;
+    padding: 24px 16px;
+  }
+
+  .insurance-info {
+    padding: 12px;
+  }
+
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .info-value {
+    text-align: left;
+  }
 }

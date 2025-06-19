@@ -116,45 +116,119 @@
 
   <!-- 判定結果表示 -->
   <div class="result-section" *ngIf="judgmentResult">
-    <h3>判定結果</h3>
+    <h3 class="section-title">判定結果</h3>
 
-    <div class="result-grid">
-      <div class="result-item">
-        <div class="result-label">健康保険</div>
-        <div class="result-content">
-          <div class="grade">第{{ judgmentResult.healthInsuranceGrade }}級</div>
-          <div class="standard-salary">
-            標準報酬月額: {{ judgmentResult.healthInsuranceStandardSalary | number }}円
+    <div class="result-content">
+      <!-- 適用期間表示 -->
+      <div class="form-group period-group">
+        <div class="period-label">適用期間</div>
+        <div class="period-display">
+          <span class="period-text">
+            {{ applicableYear }}年{{ applicableMonth }}月 ～
+            <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月</span>
+            <span *ngIf="!endYear || !endMonth">継続</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- 健康保険 -->
+      <div class="form-group insurance-group">
+        <div class="insurance-label">
+          <span class="insurance-icon">🏥</span>
+          健康保険
+        </div>
+        <div class="insurance-info">
+          <div class="info-item">
+            <span class="info-label">等級:</span>
+            <span class="info-value">{{ judgmentResult.healthInsuranceGrade }}級</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">月額:</span>
+            <span class="info-value"
+              >{{ judgmentResult.healthInsuranceStandardSalary | number }}円</span
+            >
+          </div>
+          <div class="info-item">
+            <span class="info-label">期間:</span>
+            <span class="info-value">
+              <span *ngIf="!endYear || !endMonth">継続</span>
+              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
+            </span>
           </div>
         </div>
       </div>
 
-      <div class="result-item">
-        <div class="result-label">厚生年金保険</div>
-        <div class="result-content">
-          <div class="grade">第{{ judgmentResult.pensionInsuranceGrade }}級</div>
-          <div class="standard-salary">
-            標準報酬月額: {{ judgmentResult.pensionInsuranceStandardSalary | number }}円
+      <!-- 介護保険 -->
+      <div class="form-group insurance-group">
+        <div class="insurance-label">
+          <span class="insurance-icon">🤝</span>
+          介護保険
+        </div>
+        <div class="insurance-info" *ngIf="judgmentResult.careInsuranceGrade">
+          <div class="info-item">
+            <span class="info-label">等級:</span>
+            <span class="info-value">{{ judgmentResult.careInsuranceGrade }}級</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">月額:</span>
+            <span class="info-value"
+              >{{ judgmentResult.careInsuranceStandardSalary | number }}円</span
+            >
+          </div>
+          <div class="info-item">
+            <span class="info-label">期間:</span>
+            <span class="info-value">
+              <span *ngIf="!endYear || !endMonth">継続</span>
+              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
+            </span>
+          </div>
+        </div>
+        <div class="insurance-info not-applicable" *ngIf="!judgmentResult.careInsuranceGrade">
+          <div class="info-item">
+            <span class="info-value not-applicable-text">対象外（40歳未満）</span>
           </div>
         </div>
       </div>
 
-      <div class="result-item" *ngIf="judgmentResult.careInsuranceGrade">
-        <div class="result-label">介護保険</div>
-        <div class="result-content">
-          <div class="grade">第{{ judgmentResult.careInsuranceGrade }}級</div>
-          <div class="standard-salary">
-            標準報酬月額: {{ judgmentResult.careInsuranceStandardSalary | number }}円
+      <!-- 厚生年金保険 -->
+      <div class="form-group insurance-group">
+        <div class="insurance-label">
+          <span class="insurance-icon">👴</span>
+          厚生年金保険
+        </div>
+        <div class="insurance-info">
+          <div class="info-item">
+            <span class="info-label">等級:</span>
+            <span class="info-value">{{ judgmentResult.pensionInsuranceGrade }}級</span>
           </div>
+          <div class="info-item">
+            <span class="info-label">月額:</span>
+            <span class="info-value"
+              >{{ judgmentResult.pensionInsuranceStandardSalary | number }}円</span
+            >
+          </div>
+          <div class="info-item">
+            <span class="info-label">期間:</span>
+            <span class="info-value">
+              <span *ngIf="!endYear || !endMonth">継続</span>
+              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 保存状態表示 -->
+      <div class="form-group save-group" *ngIf="savedGradeData">
+        <div class="save-status">
+          <span class="save-icon">✅</span>
+          <span class="save-text">保存済み ({{ getFormattedDate(savedGradeData.updatedAt) }})</span>
         </div>
       </div>
     </div>
 
-    <div class="result-actions">
-      <button type="button" class="save-button">保存</button>
-      <button type="button" class="cancel-button" (click)="judgmentResult = null">
-        キャンセル
-      </button>
+    <!-- アクションボタン -->
+    <div class="button-section">
+      <button type="button" class="delete-btn" (click)="judgmentResult = null">削除</button>
     </div>
   </div>
 </div>

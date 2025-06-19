@@ -221,6 +221,172 @@
   box-shadow: none;
 }
 
+// 判定結果セクション
+.result-section {
+  background: #fff;
+  margin-bottom: 24px;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.result-section h3,
+.section-title {
+  margin: 0 0 20px 0;
+  font-size: 1.4rem;
+  color: #1976d2;
+  border-bottom: 2px solid #e3f2fd;
+  padding-bottom: 8px;
+}
+
+.result-content {
+  margin-top: 24px;
+}
+
+// 適用期間グループ
+.period-group {
+  margin-bottom: 24px;
+}
+
+.period-label {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.period-display {
+  background: #f8f9fa;
+  border: 2px solid #e1f5fe;
+  border-radius: 6px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.period-display:hover {
+  border-color: #1976d2;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
+}
+
+.period-text {
+  font-size: 1.1rem;
+  color: #1976d2;
+  font-weight: 600;
+}
+
+// 保険グループ
+.insurance-group {
+  margin-bottom: 24px;
+}
+
+.insurance-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.insurance-icon {
+  font-size: 18px;
+}
+
+.insurance-info {
+  background: #f8f9fa;
+  border: 2px solid #e1f5fe;
+  border-radius: 6px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.insurance-info:hover {
+  border-color: #1976d2;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 0;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-size: 0.95rem;
+  color: #666;
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.info-value {
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+  text-align: right;
+}
+
+.not-applicable-text {
+  color: #666 !important;
+  font-style: italic;
+  text-align: center !important;
+}
+
+.insurance-info.not-applicable {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+}
+
+// 保存グループ
+.save-group {
+  margin-bottom: 0;
+}
+
+.save-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: #e8f5e8;
+  border: 2px solid #4caf50;
+  border-radius: 6px;
+  font-size: 1rem;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.save-icon {
+  font-size: 18px;
+}
+
+// ボタンスタイル
+.delete-btn {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  min-width: 100px;
+  background: #f44336;
+  color: white;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.delete-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+}
+
 @media (max-width: 768px) {
   .manual-grade-add-container {
     padding: 12px;
