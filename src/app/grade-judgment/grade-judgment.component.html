@@ -1,7 +1,7 @@
 <div class="grade-judgment-container">
-  <div class="header">
-    <h2>等級判定</h2>
-    <button class="btn btn-outline" (click)="goBack()">← 戻る</button>
+  <div class="header-section">
+    <button class="back-btn" (click)="goBack()">← 戻る</button>
+    <h1 class="page-title">等級判定</h1>
   </div>
 
   <!-- 従業員情報 -->
@@ -46,7 +46,7 @@
   </div>
 
   <!-- 判定方法ボタン -->
-  <div class="judgment-actions">
+  <div class="judgment-actions-section">
     <h3>等級判定の実行</h3>
     <div class="action-buttons">
       <button class="btn btn-primary" (click)="navigateToManualAdd()">
@@ -65,7 +65,7 @@
   </div>
 
   <!-- 等級判定履歴 -->
-  <div class="judgment-history">
+  <div class="judgment-history-section">
     <h3>等級判定履歴</h3>
 
     <div class="loading" *ngIf="isLoading">

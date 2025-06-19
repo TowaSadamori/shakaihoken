@@ -218,46 +218,68 @@ export class GradeJudgmentComponent implements OnInit {
         });
       });
 
-      // 手入力で保存されたデータ（employee_gradesコレクション）も読み込み
-      const employeeGradeDocId = `${this.employeeId}_manual`;
-      const employeeGradeDocRef = doc(this.firestore, 'employee_grades', employeeGradeDocId);
-      const employeeGradeDoc = await getDoc(employeeGradeDocRef);
+      // employee_gradesコレクションから手入力と定時決定データを読み込み
+      const gradeTypes = [
+        { type: 'manual', docId: `${this.employeeId}_manual` },
+        { type: 'regular', docId: `${this.employeeId}_regular` },
+      ];
 
-      if (employeeGradeDoc.exists()) {
-        const data = employeeGradeDoc.data();
+      for (const gradeType of gradeTypes) {
+        const employeeGradeDocRef = doc(this.firestore, 'employee_grades', gradeType.docId);
+        const employeeGradeDoc = await getDoc(employeeGradeDocRef);
 
-        // 適用開始日を作成
-        const effectiveDate = new Date(data['applicableYear'], data['applicableMonth'] - 1, 1);
+        if (employeeGradeDoc.exists()) {
+          const data = employeeGradeDoc.data();
 
-        // 適用終了日を作成（ある場合のみ）
-        let endDate: Date | undefined;
-        if (data['endYear'] && data['endMonth']) {
-          endDate = new Date(data['endYear'], data['endMonth'] - 1, 1);
+          // 適用開始日を作成
+          const effectiveDate = new Date(data['applicableYear'], data['applicableMonth'] - 1, 1);
+
+          // 適用終了日を作成（ある場合のみ）
+          let endDate: Date | undefined;
+          if (data['endYear'] && data['endMonth']) {
+            endDate = new Date(data['endYear'], data['endMonth'] - 1, 1);
+          }
+
+          // 判定結果から等級を取得
+          const judgmentResult = data['judgmentResult'];
+
+          // 標準報酬月額を取得（手入力の場合はmonthlyAmount、定時決定の場合はaverageAmount）
+          const standardMonthlyAmount =
+            gradeType.type === 'manual' ? data['monthlyAmount'] : data['averageAmount'];
+
+          // 判定理由を設定
+          const reason =
+            gradeType.type === 'manual' ? '手入力による等級判定' : '定時決定による等級判定';
+
+          // 入力データを設定
+          const inputData =
+            gradeType.type === 'manual'
+              ? { manualAmount: data['monthlyAmount'] }
+              : {
+                  targetYear: data['targetYear'],
+                  monthlyPayments: data['monthlyPayments'],
+                  averageAmount: data['averageAmount'],
+                };
+
+          const gradeRecord: GradeJudgmentRecord = {
+            id: employeeGradeDoc.id,
+            employeeId: this.employeeId,
+            judgmentType: gradeType.type as 'manual' | 'regular',
+            judgmentDate: data['updatedAt'].toDate(),
+            effectiveDate: effectiveDate,
+            endDate: endDate,
+            healthInsuranceGrade: judgmentResult['healthInsuranceGrade'],
+            pensionInsuranceGrade: judgmentResult['pensionInsuranceGrade'],
+            careInsuranceGrade: judgmentResult['careInsuranceGrade'],
+            standardMonthlyAmount: standardMonthlyAmount,
+            reason: reason,
+            inputData: inputData,
+            createdAt: data['createdAt'].toDate(),
+            updatedAt: data['updatedAt'].toDate(),
+          };
+
+          this.judgmentRecords.push(gradeRecord);
         }
-
-        // 判定結果から等級を取得
-        const judgmentResult = data['judgmentResult'];
-
-        const manualRecord: GradeJudgmentRecord = {
-          id: employeeGradeDoc.id,
-          employeeId: this.employeeId,
-          judgmentType: 'manual',
-          judgmentDate: data['updatedAt'].toDate(),
-          effectiveDate: effectiveDate,
-          endDate: endDate,
-          healthInsuranceGrade: judgmentResult['healthInsuranceGrade'],
-          pensionInsuranceGrade: judgmentResult['pensionInsuranceGrade'],
-          careInsuranceGrade: judgmentResult['careInsuranceGrade'],
-          standardMonthlyAmount: data['monthlyAmount'],
-          reason: '手入力による等級判定',
-          inputData: {
-            manualAmount: data['monthlyAmount'],
-          },
-          createdAt: data['createdAt'].toDate(),
-          updatedAt: data['updatedAt'].toDate(),
-        };
-
-        this.judgmentRecords.push(manualRecord);
       }
 
       // 効力発生日の降順でソート
@@ -500,7 +522,8 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/']);
+    // 従業員の給与賞与詳細画面に戻る
+    this.router.navigate(['/employee-salary-bonus/detail', this.employeeId]);
   }
 
   navigateToManualAdd(): void {

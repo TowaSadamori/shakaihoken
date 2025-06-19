@@ -14,6 +14,9 @@ import {
 } from 'firebase/firestore';
 import { AuthService } from '../../services/auth.service';
 
+// 従業員区分の型定義
+type EmployeeType = 'general' | 'part_timer' | 'short_time_worker';
+
 interface EmployeeInfo {
   name: string;
   employeeNumber: string;
@@ -22,13 +25,25 @@ interface EmployeeInfo {
   companyId: string;
   branchNumber: string;
   addressPrefecture: string;
+  employeeType: EmployeeType; // 従業員区分を追加
+  previousStandardRemuneration?: number; // 従前の標準報酬月額
 }
 
 interface MonthlyPayment {
   month: number;
   amount: number | null;
-  workingDays: number | null;
+  workingDays: number | null; // これが支払基礎日数に相当
+  totalRemuneration?: number; // 報酬総額（通貨によるもの）
+  retroactivePay?: number; // 遡及支払額
+  isPartialMonth?: boolean; // 途中入社等で満額でない月かどうか
+  isLowPayment?: boolean; // 休職給等の低額支給月かどうか
 }
+
+// 賞与情報の追加（将来使用予定）
+// interface AnnualBonusInfo {
+//   annualBonusTotal: number; // 前年7月1日から当年6月30日までの賞与合計
+//   isFourTimesOrMore: boolean; // 年4回以上支給かどうか
+// }
 
 interface GradeJudgmentResult {
   healthInsuranceGrade: number;
@@ -170,6 +185,8 @@ export class RegularDeterminationAddComponent implements OnInit {
           companyId: userData['companyId'] || '',
           branchNumber: userData['branchNumber'] || '',
           addressPrefecture: userData['addressPrefecture'] || '',
+          employeeType: userData['employeeType'] || 'general', // デフォルトは一般
+          previousStandardRemuneration: userData['previousStandardRemuneration'],
         };
       } else {
         // テスト用データを設定
@@ -181,6 +198,8 @@ export class RegularDeterminationAddComponent implements OnInit {
           companyId: 'test-company',
           branchNumber: '001',
           addressPrefecture: '東京都',
+          employeeType: 'general',
+          previousStandardRemuneration: 280000,
         };
       }
     } catch (error) {
@@ -194,6 +213,8 @@ export class RegularDeterminationAddComponent implements OnInit {
         companyId: 'test-company',
         branchNumber: '001',
         addressPrefecture: '東京都',
+        employeeType: 'general',
+        previousStandardRemuneration: 280000,
       };
     } finally {
       this.isLoading = false;
@@ -588,18 +609,101 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   private calculateAverage(): void {
-    const validPayments = this.monthlyPayments.filter(
-      (payment) => payment.amount !== null && payment.amount > 0
-    );
-
-    if (validPayments.length === 0) {
+    if (!this.employeeInfo) {
       this.averageAmount = 0;
       this.judgmentResult = null;
       return;
     }
 
-    const total = validPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-    this.averageAmount = Math.round(total / validPayments.length);
+    // Step 1: 算定対象月の特定（支払基礎日数による厳密な判定）
+    const targetMonths = this.filterTargetMonths(
+      this.employeeInfo.employeeType,
+      this.monthlyPayments
+    );
+
+    if (targetMonths.length === 0) {
+      console.log('算定対象月が0ヶ月のため、従前の標準報酬月額を使用');
+      // 従前の標準報酬月額がある場合はそれを使用、なければ0
+      this.averageAmount = this.employeeInfo.previousStandardRemuneration || 0;
+      this.judgmentResult = null;
+      return;
+    }
+
+    // Step 2: 各月の報酬額を調整
+    let totalRemuneration = 0;
+
+    for (const month of targetMonths) {
+      let adjustedAmount = month.amount || 0;
+
+      // 遡及払いがある場合は減算
+      if (month.retroactivePay && month.retroactivePay > 0) {
+        adjustedAmount -= month.retroactivePay;
+        console.log(`${month.month}月: 遡及払い ${month.retroactivePay}円を減算`);
+      }
+
+      // 将来実装: 年4回以上の賞与加算
+      // if (annualBonusTotal > 0) {
+      //   adjustedAmount += (annualBonusTotal / 12);
+      // }
+
+      totalRemuneration += adjustedAmount;
+    }
+
+    // Step 3: 平均報酬月額の計算（1円未満切り捨て）
+    this.averageAmount = Math.floor(totalRemuneration / targetMonths.length);
+
+    console.log('算定結果:', {
+      targetMonths: targetMonths.map((m) => `${m.month}月`),
+      totalRemuneration,
+      monthCount: targetMonths.length,
+      averageAmount: this.averageAmount,
+    });
+  }
+
+  /**
+   * 従業員区分に応じた算定対象月の厳密な判定
+   */
+  private filterTargetMonths(
+    employeeType: EmployeeType,
+    monthlyPayments: MonthlyPayment[]
+  ): MonthlyPayment[] {
+    const validPayments = monthlyPayments.filter(
+      (payment) =>
+        payment.amount !== null &&
+        payment.amount > 0 &&
+        payment.workingDays !== null &&
+        !payment.isPartialMonth && // 途中入社等の月は除外
+        !payment.isLowPayment // 休職給等の月は除外
+    );
+
+    switch (employeeType) {
+      case 'general':
+        // 一般の被保険者: 支払基礎日数が17日以上
+        return validPayments.filter((payment) => (payment.workingDays || 0) >= 17);
+
+      case 'part_timer': {
+        // 短時間就労者: まず17日以上を探し、なければ15日以上17日未満
+        const seventeenDaysOrMore = validPayments.filter(
+          (payment) => (payment.workingDays || 0) >= 17
+        );
+        if (seventeenDaysOrMore.length > 0) {
+          return seventeenDaysOrMore;
+        }
+        // 17日以上がない場合のみ15日以上17日未満を対象
+        return validPayments.filter((payment) => {
+          const days = payment.workingDays || 0;
+          return days >= 15 && days < 17;
+        });
+      }
+
+      case 'short_time_worker':
+        // 短時間労働者: 支払基礎日数が11日以上
+        return validPayments.filter((payment) => (payment.workingDays || 0) >= 11);
+
+      default:
+        console.warn('未知の従業員区分:', employeeType);
+        return validPayments.filter((payment) => (payment.workingDays || 0) >= 17);
+    }
   }
 
   async calculateGrade(): Promise<void> {
@@ -619,8 +723,36 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   private findGradeByAmountFromStandardTable(amount: number): GradeJudgmentResult {
-    // 令和6年度（2024年度）標準報酬月額表（健康保険・厚生年金保険共通）
-    const gradeTable = [
+    // 健康保険の等級を決定
+    const healthGrade = this.findGradeFromHealthInsuranceTable(amount);
+
+    // 厚生年金保険の等級を決定
+    const pensionGrade = this.findGradeFromPensionInsuranceTable(amount);
+
+    const result: GradeJudgmentResult = {
+      healthInsuranceGrade: healthGrade.grade,
+      healthInsuranceStandardSalary: healthGrade.standardSalary,
+      pensionInsuranceGrade: pensionGrade.grade,
+      pensionInsuranceStandardSalary: pensionGrade.standardSalary,
+    };
+
+    // 40歳以上の場合は介護保険も設定（健康保険と同じ等級）
+    if (this.employeeInfo && this.employeeInfo.age >= 40) {
+      result.careInsuranceGrade = healthGrade.grade;
+      result.careInsuranceStandardSalary = healthGrade.standardSalary;
+    }
+
+    return result;
+  }
+
+  /**
+   * 健康保険の等級表（令和6年度 - 全50等級）
+   */
+  private findGradeFromHealthInsuranceTable(amount: number): {
+    grade: number;
+    standardSalary: number;
+  } {
+    const healthInsuranceTable = [
       { grade: 1, standardSalary: 58000, min: 0, max: 63000 },
       { grade: 2, standardSalary: 68000, min: 63000, max: 73000 },
       { grade: 3, standardSalary: 78000, min: 73000, max: 83000 },
@@ -673,28 +805,58 @@ export class RegularDeterminationAddComponent implements OnInit {
       { grade: 50, standardSalary: 1390000, min: 1355000, max: Number.MAX_SAFE_INTEGER },
     ];
 
-    // 該当する等級を検索
-    let targetGrade = gradeTable.find((grade) => amount >= grade.min && amount < grade.max);
+    const targetGrade = healthInsuranceTable.find(
+      (grade) => amount >= grade.min && amount < grade.max
+    );
+    return targetGrade || healthInsuranceTable[healthInsuranceTable.length - 1];
+  }
 
-    // 見つからない場合は最高等級を設定
-    if (!targetGrade) {
-      targetGrade = gradeTable[gradeTable.length - 1];
-    }
+  /**
+   * 厚生年金保険の等級表（令和6年度 - 全32等級）
+   */
+  private findGradeFromPensionInsuranceTable(amount: number): {
+    grade: number;
+    standardSalary: number;
+  } {
+    const pensionInsuranceTable = [
+      { grade: 1, standardSalary: 88000, min: 0, max: 93000 },
+      { grade: 2, standardSalary: 98000, min: 93000, max: 101000 },
+      { grade: 3, standardSalary: 104000, min: 101000, max: 107000 },
+      { grade: 4, standardSalary: 110000, min: 107000, max: 114000 },
+      { grade: 5, standardSalary: 118000, min: 114000, max: 122000 },
+      { grade: 6, standardSalary: 126000, min: 122000, max: 130000 },
+      { grade: 7, standardSalary: 134000, min: 130000, max: 138000 },
+      { grade: 8, standardSalary: 142000, min: 138000, max: 146000 },
+      { grade: 9, standardSalary: 150000, min: 146000, max: 155000 },
+      { grade: 10, standardSalary: 160000, min: 155000, max: 165000 },
+      { grade: 11, standardSalary: 170000, min: 165000, max: 175000 },
+      { grade: 12, standardSalary: 180000, min: 175000, max: 185000 },
+      { grade: 13, standardSalary: 190000, min: 185000, max: 195000 },
+      { grade: 14, standardSalary: 200000, min: 195000, max: 210000 },
+      { grade: 15, standardSalary: 220000, min: 210000, max: 230000 },
+      { grade: 16, standardSalary: 240000, min: 230000, max: 250000 },
+      { grade: 17, standardSalary: 260000, min: 250000, max: 270000 },
+      { grade: 18, standardSalary: 280000, min: 270000, max: 290000 },
+      { grade: 19, standardSalary: 300000, min: 290000, max: 310000 },
+      { grade: 20, standardSalary: 320000, min: 310000, max: 330000 },
+      { grade: 21, standardSalary: 340000, min: 330000, max: 350000 },
+      { grade: 22, standardSalary: 360000, min: 350000, max: 370000 },
+      { grade: 23, standardSalary: 380000, min: 370000, max: 395000 },
+      { grade: 24, standardSalary: 410000, min: 395000, max: 425000 },
+      { grade: 25, standardSalary: 440000, min: 425000, max: 455000 },
+      { grade: 26, standardSalary: 470000, min: 455000, max: 485000 },
+      { grade: 27, standardSalary: 500000, min: 485000, max: 515000 },
+      { grade: 28, standardSalary: 530000, min: 515000, max: 545000 },
+      { grade: 29, standardSalary: 560000, min: 545000, max: 575000 },
+      { grade: 30, standardSalary: 590000, min: 575000, max: 605000 },
+      { grade: 31, standardSalary: 620000, min: 605000, max: 635000 },
+      { grade: 32, standardSalary: 650000, min: 635000, max: Number.MAX_SAFE_INTEGER },
+    ];
 
-    const result: GradeJudgmentResult = {
-      healthInsuranceGrade: targetGrade.grade,
-      healthInsuranceStandardSalary: targetGrade.standardSalary,
-      pensionInsuranceGrade: targetGrade.grade,
-      pensionInsuranceStandardSalary: targetGrade.standardSalary,
-    };
-
-    // 40歳以上の場合は介護保険も設定
-    if (this.employeeInfo && this.employeeInfo.age >= 40) {
-      result.careInsuranceGrade = targetGrade.grade;
-      result.careInsuranceStandardSalary = targetGrade.standardSalary;
-    }
-
-    return result;
+    const targetGrade = pensionInsuranceTable.find(
+      (grade) => amount >= grade.min && amount < grade.max
+    );
+    return targetGrade || pensionInsuranceTable[pensionInsuranceTable.length - 1];
   }
 
   private async loadExistingGradeData(): Promise<void> {
