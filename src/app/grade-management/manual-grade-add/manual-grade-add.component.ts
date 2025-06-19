@@ -353,8 +353,36 @@ export class ManualGradeAddComponent implements OnInit {
 
   // 標準的な等級表を使用した等級判定（一の位まで対応）
   private findGradeByAmountFromStandardTable(amount: number): GradeJudgmentResult {
-    // 令和6年度（2024年度）標準報酬月額表（健康保険・厚生年金保険共通）
-    const gradeTable = [
+    // 健康保険の等級を決定
+    const healthGrade = this.findGradeFromHealthInsuranceTable(amount);
+
+    // 厚生年金保険の等級を決定
+    const pensionGrade = this.findGradeFromPensionInsuranceTable(amount);
+
+    const result: GradeJudgmentResult = {
+      healthInsuranceGrade: healthGrade.grade,
+      healthInsuranceStandardSalary: healthGrade.standardSalary,
+      pensionInsuranceGrade: pensionGrade.grade,
+      pensionInsuranceStandardSalary: pensionGrade.standardSalary,
+    };
+
+    // 40歳以上の場合は介護保険も設定（健康保険と同じ等級）
+    if (this.employeeInfo && this.employeeInfo.age >= 40) {
+      result.careInsuranceGrade = healthGrade.grade;
+      result.careInsuranceStandardSalary = healthGrade.standardSalary;
+    }
+
+    return result;
+  }
+
+  /**
+   * 健康保険の等級表（令和6年度 - 全50等級）
+   */
+  private findGradeFromHealthInsuranceTable(amount: number): {
+    grade: number;
+    standardSalary: number;
+  } {
+    const healthInsuranceTable = [
       { grade: 1, standardSalary: 58000, min: 0, max: 63000 },
       { grade: 2, standardSalary: 68000, min: 63000, max: 73000 },
       { grade: 3, standardSalary: 78000, min: 73000, max: 83000 },
@@ -407,40 +435,58 @@ export class ManualGradeAddComponent implements OnInit {
       { grade: 50, standardSalary: 1390000, min: 1355000, max: Number.MAX_SAFE_INTEGER },
     ];
 
-    // 該当する等級を検索（一の位まで正確に判定）
-    const matchedGrade = gradeTable.find((grade) => amount >= grade.min && amount < grade.max);
+    const targetGrade = healthInsuranceTable.find(
+      (grade) => amount >= grade.min && amount < grade.max
+    );
+    return targetGrade || healthInsuranceTable[healthInsuranceTable.length - 1];
+  }
 
-    if (!matchedGrade) {
-      // 最低等級にフォールバック
-      const fallbackGrade = gradeTable[0];
-      return {
-        healthInsuranceGrade: fallbackGrade.grade,
-        healthInsuranceStandardSalary: fallbackGrade.standardSalary,
-        pensionInsuranceGrade: fallbackGrade.grade,
-        pensionInsuranceStandardSalary: fallbackGrade.standardSalary,
-        careInsuranceGrade:
-          this.employeeInfo && this.employeeInfo.age >= 40 ? fallbackGrade.grade : undefined,
-        careInsuranceStandardSalary:
-          this.employeeInfo && this.employeeInfo.age >= 40
-            ? fallbackGrade.standardSalary
-            : undefined,
-      };
-    }
+  /**
+   * 厚生年金保険の等級表（令和6年度 - 全32等級）
+   */
+  private findGradeFromPensionInsuranceTable(amount: number): {
+    grade: number;
+    standardSalary: number;
+  } {
+    const pensionInsuranceTable = [
+      { grade: 1, standardSalary: 88000, min: 0, max: 93000 },
+      { grade: 2, standardSalary: 98000, min: 93000, max: 101000 },
+      { grade: 3, standardSalary: 104000, min: 101000, max: 107000 },
+      { grade: 4, standardSalary: 110000, min: 107000, max: 114000 },
+      { grade: 5, standardSalary: 118000, min: 114000, max: 122000 },
+      { grade: 6, standardSalary: 126000, min: 122000, max: 130000 },
+      { grade: 7, standardSalary: 134000, min: 130000, max: 138000 },
+      { grade: 8, standardSalary: 142000, min: 138000, max: 146000 },
+      { grade: 9, standardSalary: 150000, min: 146000, max: 155000 },
+      { grade: 10, standardSalary: 160000, min: 155000, max: 165000 },
+      { grade: 11, standardSalary: 170000, min: 165000, max: 175000 },
+      { grade: 12, standardSalary: 180000, min: 175000, max: 185000 },
+      { grade: 13, standardSalary: 190000, min: 185000, max: 195000 },
+      { grade: 14, standardSalary: 200000, min: 195000, max: 210000 },
+      { grade: 15, standardSalary: 220000, min: 210000, max: 230000 },
+      { grade: 16, standardSalary: 240000, min: 230000, max: 250000 },
+      { grade: 17, standardSalary: 260000, min: 250000, max: 270000 },
+      { grade: 18, standardSalary: 280000, min: 270000, max: 290000 },
+      { grade: 19, standardSalary: 300000, min: 290000, max: 310000 },
+      { grade: 20, standardSalary: 320000, min: 310000, max: 330000 },
+      { grade: 21, standardSalary: 340000, min: 330000, max: 350000 },
+      { grade: 22, standardSalary: 360000, min: 350000, max: 370000 },
+      { grade: 23, standardSalary: 380000, min: 370000, max: 395000 },
+      { grade: 24, standardSalary: 410000, min: 395000, max: 425000 },
+      { grade: 25, standardSalary: 440000, min: 425000, max: 455000 },
+      { grade: 26, standardSalary: 470000, min: 455000, max: 485000 },
+      { grade: 27, standardSalary: 500000, min: 485000, max: 515000 },
+      { grade: 28, standardSalary: 530000, min: 515000, max: 545000 },
+      { grade: 29, standardSalary: 560000, min: 545000, max: 575000 },
+      { grade: 30, standardSalary: 590000, min: 575000, max: 605000 },
+      { grade: 31, standardSalary: 620000, min: 605000, max: 635000 },
+      { grade: 32, standardSalary: 650000, min: 635000, max: Number.MAX_SAFE_INTEGER },
+    ];
 
-    const result: GradeJudgmentResult = {
-      healthInsuranceGrade: matchedGrade.grade,
-      healthInsuranceStandardSalary: matchedGrade.standardSalary,
-      pensionInsuranceGrade: matchedGrade.grade,
-      pensionInsuranceStandardSalary: matchedGrade.standardSalary,
-    };
-
-    // 40歳以上の場合は介護保険も設定
-    if (this.employeeInfo && this.employeeInfo.age >= 40) {
-      result.careInsuranceGrade = matchedGrade.grade;
-      result.careInsuranceStandardSalary = matchedGrade.standardSalary;
-    }
-
-    return result;
+    const targetGrade = pensionInsuranceTable.find(
+      (grade) => amount >= grade.min && amount < grade.max
+    );
+    return targetGrade || pensionInsuranceTable[pensionInsuranceTable.length - 1];
   }
 
   private findGradeByAmount(
