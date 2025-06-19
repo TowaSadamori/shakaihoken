@@ -1,0 +1,83 @@
+<button class="home-button" (click)="goBack()">戻る</button>
+
+<h2 class="page-title">社会保険料計算</h2>
+
+<div class="calculation-container">
+  <!-- 従業員情報表示エリア -->
+  <div class="employee-info-section" *ngIf="employeeInfo">
+    <h3>従業員情報</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">従業員番号:</span>
+        <span>{{ employeeInfo.employeeNumber }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">氏名:</span>
+        <span>{{ employeeInfo.name }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">年齢:</span>
+        <span>{{ employeeInfo.age }}歳</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">事業所所在地:</span>
+        <span>{{ employeeInfo.addressPrefecture }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 年度選択エリア -->
+  <div class="year-selection-section">
+    <h3>計算対象年度選択</h3>
+    <div class="year-selector">
+      <label for="target-year" class="year-label">対象年度:</label>
+      <select
+        id="target-year"
+        class="year-dropdown"
+        [(ngModel)]="selectedYear"
+        (ngModelChange)="onYearChange()"
+      >
+        <option value="" disabled>年度を選択してください</option>
+        <option *ngFor="let year of availableYears" [value]="year">{{ year }}年度</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 計算タイプ選択エリア -->
+  <div class="calculation-type-section" *ngIf="selectedYear">
+    <h3>{{ selectedYear }}年度 社会保険料計算</h3>
+    <div class="calculation-buttons">
+      <button class="calculation-type-btn salary-btn" (click)="navigateToSalaryCalculation()">
+        <div class="btn-content">
+          <div class="btn-icon">💰</div>
+          <div class="btn-text">
+            <div class="btn-title">社会保険料（給与）</div>
+            <div class="btn-description">月額給与からの保険料計算</div>
+          </div>
+        </div>
+      </button>
+
+      <button class="calculation-type-btn bonus-btn" (click)="navigateToBonusCalculation()">
+        <div class="btn-content">
+          <div class="btn-icon">🎁</div>
+          <div class="btn-text">
+            <div class="btn-title">社会保険料（賞与）</div>
+            <div class="btn-description">賞与からの保険料計算</div>
+          </div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- 説明エリア -->
+  <div class="info-section" *ngIf="!selectedYear">
+    <div class="info-content">
+      <h4>社会保険料計算について</h4>
+      <p>まず計算対象年度を選択してください。</p>
+      <ul>
+        <li><strong>給与計算</strong>: 月額給与から健康保険料、厚生年金保険料、介護保険料を計算</li>
+        <li><strong>賞与計算</strong>: 賞与額から各種保険料を計算</li>
+      </ul>
+    </div>
+  </div>
+</div>

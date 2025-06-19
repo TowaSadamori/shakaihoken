@@ -115,3 +115,70 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+// ボタンスタイル
+.action-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  min-width: 100px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// 等級判定ボタン
+.grade-judgment-btn {
+  background: linear-gradient(135deg, #4caf50, #45a049);
+  color: white;
+  margin-right: 8px;
+
+  &:hover {
+    background: linear-gradient(135deg, #45a049, #3e8e41);
+  }
+}
+
+// 社会保険料計算ボタン
+.insurance-calc-btn {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  color: white;
+
+  &:hover {
+    background: linear-gradient(135deg, #1976d2, #1565c0);
+  }
+}
+
+// ボタンコンテナのレスポンシブ対応
+.button-container {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  min-height: 60px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 4px;
+
+    .action-button {
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      min-width: 80px;
+    }
+  }
+}

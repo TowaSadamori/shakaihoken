@@ -90,4 +90,8 @@ export class EmployeeSalaryBonusComponent implements OnInit {
   navigateToGradeJudgment(employeeNumber: string) {
     this.router.navigate(['/grade-judgment', employeeNumber]);
   }
+
+  navigateToInsuranceCalculation(employeeNumber: string) {
+    this.router.navigate(['/insurance-calculation', employeeNumber]);
+  }
 }

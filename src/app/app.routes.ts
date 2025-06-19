@@ -78,6 +78,20 @@ export const routes: Routes = [
           ).then((m) => m.EmployeeSalaryBonusDetailComponent),
       },
       {
+        path: 'insurance-calculation/:employeeId',
+        loadComponent: () =>
+          import('./insurance-calculation/insurance-calculation.component').then(
+            (m) => m.InsuranceCalculationComponent
+          ),
+      },
+      {
+        path: 'insurance-calculation-bonus/:employeeId',
+        loadComponent: () =>
+          import('./insurance-calculation-bonus/insurance-calculation-bonus.component').then(
+            (m) => m.InsuranceCalculationBonusComponent
+          ),
+      },
+      {
         path: 'grade-judgment/:employeeId',
         loadComponent: () =>
           import('./grade-judgment/grade-judgment.component').then((m) => m.GradeJudgmentComponent),
