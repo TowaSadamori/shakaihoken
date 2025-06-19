@@ -57,11 +57,14 @@
           type="number"
           id="monthlyAmount"
           [(ngModel)]="monthlyAmount"
-          placeholder="例: 280000"
+          (ngModelChange)="onMonthlyAmountChange()"
+          placeholder="例: 376479"
           min="0"
-          step="1000"
+          step="1"
         />
-        <small class="help-text">標準報酬月額の算定に使用する月額報酬を入力してください</small>
+        <small class="help-text"
+          >標準報酬月額の算定に使用する月額報酬を入力してください（一の位まで入力可能）</small
+        >
       </div>
 
       <!-- 適用期間入力 -->
@@ -100,16 +103,15 @@
       </div>
     </div>
 
-    <!-- 判定ボタン -->
-    <div class="button-section">
+    <!-- フォーム下のボタン（判定結果がない場合も表示） -->
+    <div class="form-button-section">
       <button
         type="button"
-        class="judgment-button"
+        class="judgment-btn"
         (click)="calculateGrade()"
-        [disabled]="!isFormValid() || isCalculating"
+        [disabled]="!isFormValid()"
       >
-        <span *ngIf="isCalculating">判定中...</span>
-        <span *ngIf="!isCalculating">判定</span>
+        判定
       </button>
     </div>
   </div>
@@ -228,7 +230,24 @@
 
     <!-- アクションボタン -->
     <div class="button-section">
-      <button type="button" class="delete-btn" (click)="deleteGradeData()" [disabled]="isSaving">
+      <button
+        type="button"
+        class="save-btn"
+        (click)="saveGradeData()"
+        [disabled]="!isSaveValid() || isSaving"
+        *ngIf="!savedGradeData"
+      >
+        <span *ngIf="isSaving">保存中...</span>
+        <span *ngIf="!isSaving">保存</span>
+      </button>
+
+      <button
+        type="button"
+        class="delete-btn"
+        (click)="deleteGradeData()"
+        [disabled]="isSaving"
+        *ngIf="savedGradeData"
+      >
         <span *ngIf="isSaving">削除中...</span>
         <span *ngIf="!isSaving">削除</span>
       </button>

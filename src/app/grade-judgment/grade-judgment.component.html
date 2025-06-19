@@ -77,49 +77,34 @@
       <p>{{ errorMessage }}</p>
     </div>
 
-    <div class="history-list" *ngIf="!isLoading && !errorMessage">
-      <div
-        class="history-item"
-        *ngFor="let record of judgmentRecords"
-        [class]="'type-' + record.judgmentType"
-      >
-        <div class="item-header">
-          <span class="judgment-type">{{ getJudgmentTypeLabel(record.judgmentType) }}</span>
-          <span class="judgment-date">{{ formatDate(record.judgmentDate) }}</span>
-        </div>
-
-        <div class="item-content">
-          <div class="period">
-            <strong>適用期間:</strong>
-            {{ formatDate(record.effectiveDate) }}
-            <span *ngIf="record.endDate">～ {{ formatDate(record.endDate) }}</span>
-            <span *ngIf="!record.endDate">～ 継続中</span>
-          </div>
-
-          <div class="grades">
-            <div class="grade-item">
-              <span class="grade-label">健康保険:</span>
-              <span class="grade-value">{{ record.healthInsuranceGrade }}等級</span>
-            </div>
-            <div class="grade-item">
-              <span class="grade-label">厚生年金:</span>
-              <span class="grade-value">{{ record.pensionInsuranceGrade }}等級</span>
-            </div>
-            <div class="grade-item" *ngIf="record.careInsuranceGrade">
-              <span class="grade-label">介護保険:</span>
-              <span class="grade-value">{{ record.careInsuranceGrade }}等級</span>
-            </div>
-          </div>
-
-          <div class="standard-amount">
-            <strong>標準報酬月額:</strong> {{ formatCurrency(record.standardMonthlyAmount) }}
-          </div>
-
-          <div class="reason" *ngIf="record.reason">
-            <strong>判定理由:</strong> {{ record.reason }}
-          </div>
-        </div>
-      </div>
+    <div class="history-table-container" *ngIf="!isLoading && !errorMessage">
+      <table class="history-table" *ngIf="judgmentRecords.length > 0">
+        <thead>
+          <tr>
+            <th>判定方法</th>
+            <th>適用期間</th>
+            <th>健康保険等級</th>
+            <th>介護保険等級</th>
+            <th>厚生年金保険等級</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of judgmentRecords" [class]="'type-' + record.judgmentType">
+            <td class="judgment-type">{{ getJudgmentTypeLabel(record.judgmentType) }}</td>
+            <td class="period">
+              {{ formatDate(record.effectiveDate) }}
+              <span *ngIf="record.endDate"> ～ {{ formatDate(record.endDate) }}</span>
+              <span *ngIf="!record.endDate"> ～ 継続中</span>
+            </td>
+            <td class="grade">{{ record.healthInsuranceGrade }}等級</td>
+            <td class="grade">
+              <span *ngIf="record.careInsuranceGrade">{{ record.careInsuranceGrade }}等級</span>
+              <span *ngIf="!record.careInsuranceGrade">-</span>
+            </td>
+            <td class="grade">{{ record.pensionInsuranceGrade }}等級</td>
+          </tr>
+        </tbody>
+      </table>
 
       <div class="no-records" *ngIf="judgmentRecords.length === 0">
         <p>等級判定履歴がありません。</p>

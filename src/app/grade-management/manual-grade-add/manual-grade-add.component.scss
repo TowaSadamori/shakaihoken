@@ -194,6 +194,14 @@
   text-align: center;
 }
 
+// フォーム内の判定ボタンセクション
+.form-button-section {
+  margin-top: 24px;
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
 .judgment-btn {
   background: #1976d2;
   color: #fff;
@@ -205,6 +213,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+  min-width: 120px;
 }
 
 .judgment-btn:hover:not(:disabled) {
@@ -366,7 +375,34 @@
   font-size: 18px;
 }
 
+// リアルタイム判定メッセージ
+.realtime-info {
+  text-align: center;
+  margin: 16px 0;
+  padding: 12px 20px;
+  background: #e8f5e8;
+  border: 2px solid #4caf50;
+  border-radius: 6px;
+}
+
+.realtime-info .info-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #2e7d32;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.realtime-info .icon {
+  font-size: 1.1rem;
+  color: #4caf50;
+}
+
 // ボタンスタイル
+.save-btn,
 .delete-btn {
   padding: 12px 24px;
   border-radius: 6px;
@@ -376,17 +412,32 @@
   transition: all 0.3s ease;
   border: none;
   min-width: 120px;
-  background: #1976d2;
-  color: white;
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
 }
 
-.delete-btn:hover {
+.save-btn {
+  background: #1976d2;
+  color: white;
+}
+
+.save-btn:hover:not(:disabled) {
   background: #1565c0;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
 }
 
+.delete-btn {
+  background: #1976d2;
+  color: white;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: #1565c0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+}
+
+.save-btn:disabled,
 .delete-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
