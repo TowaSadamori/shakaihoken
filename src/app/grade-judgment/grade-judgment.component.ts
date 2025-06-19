@@ -20,6 +20,8 @@ interface EmployeeInfo {
   birthDate: string;
   age: number;
   companyId: string;
+  branchNumber: string;
+  addressPrefecture: string;
 }
 
 interface SalaryData {
@@ -140,6 +142,8 @@ export class GradeJudgmentComponent implements OnInit {
           birthDate: userData['birthDate'] || '',
           age: age,
           companyId: userData['companyId'] || '',
+          branchNumber: userData['branchNumber'] || '',
+          addressPrefecture: userData['addressPrefecture'] || '',
         };
       } else {
         // Firestoreにデータがない場合はテスト用データを設定
@@ -149,6 +153,8 @@ export class GradeJudgmentComponent implements OnInit {
           birthDate: '1999-08-21',
           age: 25,
           companyId: 'test-company',
+          branchNumber: '001',
+          addressPrefecture: '東京都',
         };
       }
     } catch (error) {
@@ -160,6 +166,8 @@ export class GradeJudgmentComponent implements OnInit {
         birthDate: '1999-08-21',
         age: 25,
         companyId: 'test-company',
+        branchNumber: '001',
+        addressPrefecture: '東京都',
       };
     }
   }

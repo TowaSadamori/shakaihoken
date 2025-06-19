@@ -34,6 +34,14 @@
         <span class="label">年齢:</span>
         <span class="value">{{ employeeInfo.age }}歳</span>
       </div>
+      <div class="info-row">
+        <span class="label">事業所番号:</span>
+        <span class="value">{{ employeeInfo.branchNumber }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">事業所所在地:</span>
+        <span class="value">{{ employeeInfo.addressPrefecture }}</span>
+      </div>
     </div>
   </div>
 
@@ -47,11 +55,11 @@
       </button>
       <button class="btn btn-success" (click)="openJudgmentDialog('regular')">
         <i class="icon-calendar"></i>
-        定時決定
+        定時決定情報を追加
       </button>
       <button class="btn btn-warning" (click)="openJudgmentDialog('irregular')">
         <i class="icon-refresh"></i>
-        随時改定
+        随時改定情報を追加
       </button>
     </div>
   </div>
