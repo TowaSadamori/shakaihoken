@@ -506,4 +506,8 @@ export class GradeJudgmentComponent implements OnInit {
   navigateToManualAdd(): void {
     this.router.navigate(['/manual-grade-add', this.employeeId]);
   }
+
+  navigateToRegularDeterminationAdd(): void {
+    this.router.navigate(['/regular-determination-add', this.employeeId]);
+  }
 }

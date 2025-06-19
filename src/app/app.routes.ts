@@ -90,6 +90,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'regular-determination-add/:employeeId',
+        loadComponent: () =>
+          import(
+            './grade-management/regular-determination-add/regular-determination-add.component'
+          ).then((m) => m.RegularDeterminationAddComponent),
+      },
+      {
         path: 'employee-procedures/insured-person-detail/:uid',
         loadComponent: () =>
           import(
