@@ -10,10 +10,9 @@
         <th>名前</th>
         <th>事業所番号</th>
         <th>事業所所在地</th>
-        <th>等級</th>
-        <th>標準月額報酬</th>
-        <th>報酬月額</th>
-        <th>詳細</th>
+        <th>等級判定</th>
+        <th>社会保険料計算</th>
+        <th>給与の詳細</th>
       </tr>
     </thead>
     <tbody>
@@ -22,14 +21,22 @@
         <td>{{ emp.name }}</td>
         <td>{{ emp.officeNumber }}</td>
         <td>{{ emp.officeAddress }}</td>
-        <td>{{ emp.grade }}</td>
-        <td>{{ emp.standardMonthlySalary }}</td>
-        <td>{{ emp.monthlySalary }}</td>
+        <td>
+          <button
+            class="action-button grade-judgment-btn"
+            (click)="navigateToGradeJudgment(emp.employeeNumber)"
+          >
+            等級判定
+          </button>
+        </td>
+        <td>
+          <button class="action-button insurance-calc-btn">社会保険料計算</button>
+        </td>
         <td>
           <a
             class="detail-link"
             [routerLink]="['/employee-salary-bonus/detail', emp.employeeNumber]"
-            >詳細を見る</a
+            >給与詳細を見る</a
           >
         </td>
       </tr>

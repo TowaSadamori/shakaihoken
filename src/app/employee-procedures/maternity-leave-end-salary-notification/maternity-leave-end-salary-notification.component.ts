@@ -10,6 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { exportMaternityLeaveEndSalaryNotificationToCSV } from '../../csv-export/maternity-leave-end-salary-notification-csv-export';
+import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 
 @Component({
   selector: 'app-maternity-leave-end-salary-notification',
@@ -197,7 +198,7 @@ export class MaternityLeaveEndSalaryNotificationComponent implements OnInit {
   calculateTotal(monthIndex: number) {
     const currency = this.form.get(`通貨によるものの額${monthIndex}`)?.value || 0;
     const goods = this.form.get(`現物によるものの額${monthIndex}`)?.value || 0;
-    const total = Number(currency) + Number(goods);
+    const total = SocialInsuranceCalculator.addAmounts(Number(currency), Number(goods));
     this.form.patchValue({ [`合計${monthIndex}`]: total.toString() });
     this.calculateGrandTotal();
   }
@@ -206,13 +207,20 @@ export class MaternityLeaveEndSalaryNotificationComponent implements OnInit {
     const total1 = Number(this.form.get('合計1')?.value || 0);
     const total2 = Number(this.form.get('合計2')?.value || 0);
     const total3 = Number(this.form.get('合計3')?.value || 0);
-    const grandTotal = total1 + total2 + total3;
-    const average = grandTotal / 3;
+    const grandTotal = SocialInsuranceCalculator.addAmounts(
+      SocialInsuranceCalculator.addAmounts(total1, total2),
+      total3
+    );
+    const average = SocialInsuranceCalculator.calculateAverageRemuneration([
+      total1,
+      total2,
+      total3,
+    ]);
 
     this.form.patchValue({
       総計: grandTotal.toString(),
-      平均額: Math.round(average).toString(),
-      修正平均額: Math.round(average).toString(),
+      平均額: average.toString(),
+      修正平均額: average.toString(),
     });
   }
 }

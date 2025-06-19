@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { EmployeeSalaryBonusCsvImportComponent } from '../employee-salary-bonus-csv-import/employee-salary-bonus-csv-import.component';
 import Decimal from 'decimal.js';
+import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 
 export type SalaryTable = Record<string, Record<string, number | string | null>>;
 
@@ -150,11 +151,11 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
         continue;
       if (row === '欠勤控除額') continue;
       const val = this.salaryTable[row]?.[col];
-      if (typeof val === 'number') sum += val;
+      if (typeof val === 'number') sum = SocialInsuranceCalculator.addAmounts(sum, val);
     }
     // 欠勤控除額を引く
     const minus = this.salaryTable['欠勤控除額']?.[col];
-    if (typeof minus === 'number') sum -= minus;
+    if (typeof minus === 'number') sum = SocialInsuranceCalculator.subtractAmounts(sum, minus);
     return sum;
   }
 

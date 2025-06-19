@@ -11,8 +11,12 @@ import {
   collection,
   deleteDoc,
   getDocs,
+  query,
+  where,
 } from 'firebase/firestore';
 import { AuthService } from '../../services/auth.service';
+import { OfficeService } from '../../services/office.service';
+import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 
 // 従業員区分の型定義
 type EmployeeType = 'general' | 'part_timer' | 'short_time_worker';
@@ -140,7 +144,8 @@ export class RegularDeterminationAddComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private authService: AuthService
+    private authService: AuthService,
+    private officeService: OfficeService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -169,53 +174,70 @@ export class RegularDeterminationAddComponent implements OnInit {
 
     this.isLoading = true;
     try {
-      const docRef = doc(this.firestore, 'users', this.employeeId);
-      const docSnap = await getDoc(docRef);
+      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
 
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
+      // employeeNumberで検索（等級判定画面と同じ方法）
+      const usersRef = collection(this.firestore, 'users');
+      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        console.log('Firestoreから取得した従業員データ:', userData);
+
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
+
+        // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
+        const formattedBirthDate = birthDate.toISOString().split('T')[0];
+
+        // 事業所情報から addressPrefecture を取得
+        let addressPrefecture = userData['addressPrefecture'] || '';
+
+        // ユーザーデータに addressPrefecture がない場合、事業所データから取得
+        if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
+          try {
+            console.log('=== 事業所データ取得開始 ===');
+            console.log('対象companyId:', userData['companyId']);
+            console.log('対象branchNumber:', userData['branchNumber']);
+
+            addressPrefecture = await this.officeService.findOfficeAddressPrefecture(
+              userData['companyId'],
+              userData['branchNumber']
+            );
+
+            if (addressPrefecture) {
+              console.log('✅ 事業所所在地取得成功:', addressPrefecture);
+            } else {
+              console.warn('⚠️ 事業所所在地が見つかりませんでした');
+            }
+          } catch (officeError) {
+            console.error('❌ 事業所データ取得エラー:', officeError);
+          }
+        }
 
         this.employeeInfo = {
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
-          birthDate: userData['birthDate'] || '',
+          birthDate: formattedBirthDate,
           age: age,
           companyId: userData['companyId'] || '',
           branchNumber: userData['branchNumber'] || '',
-          addressPrefecture: userData['addressPrefecture'] || '',
+          addressPrefecture: addressPrefecture,
           employeeType: userData['employeeType'] || 'general', // デフォルトは一般
           previousStandardRemuneration: userData['previousStandardRemuneration'],
         };
+
+        console.log('設定された従業員情報:', this.employeeInfo);
       } else {
-        // テスト用データを設定
-        this.employeeInfo = {
-          name: '定森 統和',
-          employeeNumber: '1',
-          birthDate: '1999-08-21',
-          age: 25,
-          companyId: 'test-company',
-          branchNumber: '001',
-          addressPrefecture: '東京都',
-          employeeType: 'general',
-          previousStandardRemuneration: 280000,
-        };
+        console.error(`従業員番号 ${this.employeeId} のデータがFirestoreに存在しません`);
+        this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
+        this.employeeInfo = null;
       }
     } catch (error) {
       console.error('従業員情報取得エラー:', error);
-      // エラー時もテスト用データを設定
-      this.employeeInfo = {
-        name: '定森 統和',
-        employeeNumber: '1',
-        birthDate: '1999-08-21',
-        age: 25,
-        companyId: 'test-company',
-        branchNumber: '001',
-        addressPrefecture: '東京都',
-        employeeType: 'general',
-        previousStandardRemuneration: 280000,
-      };
+      this.errorMessage = `従業員情報の取得に失敗しました: ${error}`;
+      this.employeeInfo = null;
     } finally {
       this.isLoading = false;
     }
@@ -234,23 +256,17 @@ export class RegularDeterminationAddComponent implements OnInit {
           console.log('✅ AuthServiceからCompanyID取得:', this.companyId);
         } else {
           console.log('❌ ユーザードキュメントが存在しません');
-          this.companyId = '67e7930-bc24-4c06-b9c4-5e5f3a3d3a3d';
+          this.companyId = null;
         }
       } else {
         console.log('❌ 認証ユーザーが存在しません');
-        this.companyId = '67e7930-bc24-4c06-b9c4-5e5f3a3d3a3d';
-      }
-
-      if (!this.companyId) {
-        console.log('⚠️ CompanyIDが取得できないため、デフォルト値を使用');
-        this.companyId = '67e7930-bc24-4c06-b9c4-5e5f3a3d3a3d';
+        this.companyId = null;
       }
 
       console.log('🎯 最終CompanyID:', this.companyId);
     } catch (error) {
       console.error('❌ CompanyID取得エラー:', error);
-      this.companyId = '67e7930-bc24-4c06-b9c4-5e5f3a3d3a3d';
-      console.log('🔄 フォールバック CompanyID:', this.companyId);
+      this.companyId = null;
     }
   }
 
@@ -270,7 +286,8 @@ export class RegularDeterminationAddComponent implements OnInit {
 
   isFormValid(): boolean {
     const validPayments = this.monthlyPayments.filter(
-      (payment) => payment.amount !== null && payment.amount > 0
+      (payment) =>
+        payment.amount !== null && SocialInsuranceCalculator.compare(payment.amount, 0) > 0
     );
     return validPayments.length >= 2 && this.applicableYear > 0 && this.applicableMonth > 0;
   }
@@ -465,10 +482,6 @@ export class RegularDeterminationAddComponent implements OnInit {
           : null,
         // パターン2: 直接employeeIdを使用
         `employee-salary-bonus/${this.employeeId}/years/${this.targetYear}`,
-        // パターン3: テスト用固定companyId
-        `employee-salary-bonus/67e7930-bc24-4c06-b9c4-5e5f3a3d3a3d/employees/${this.employeeId}/years/${this.targetYear}`,
-        // パターン4: 画像で見た構造に基づく
-        `employee-salary-bonus/67e7930-bc24-4c06-b9c4-5e5f3a3d3a3d/employees/${this.employeeId}/years/${this.targetYear}`,
       ].filter((path): path is string => path !== null);
 
       console.log('試行するパス:', possiblePaths);
@@ -635,22 +648,27 @@ export class RegularDeterminationAddComponent implements OnInit {
     for (const month of targetMonths) {
       let adjustedAmount = month.amount || 0;
 
-      // 遡及払いがある場合は減算
-      if (month.retroactivePay && month.retroactivePay > 0) {
-        adjustedAmount -= month.retroactivePay;
+      // 遡及払いがある場合は減算（Decimal.js使用）
+      if (month.retroactivePay && SocialInsuranceCalculator.compare(month.retroactivePay, 0) > 0) {
+        adjustedAmount = SocialInsuranceCalculator.adjustForRetroactivePay(
+          adjustedAmount,
+          month.retroactivePay
+        );
         console.log(`${month.month}月: 遡及払い ${month.retroactivePay}円を減算`);
       }
 
       // 将来実装: 年4回以上の賞与加算
       // if (annualBonusTotal > 0) {
-      //   adjustedAmount += (annualBonusTotal / 12);
+      //   const monthlyBonusAdjustment = SocialInsuranceCalculator.calculateMonthlyBonusAdjustment(annualBonusTotal);
+      //   adjustedAmount += monthlyBonusAdjustment;
       // }
 
-      totalRemuneration += adjustedAmount;
+      totalRemuneration = SocialInsuranceCalculator.addAmounts(totalRemuneration, adjustedAmount);
     }
 
     // Step 3: 平均報酬月額の計算（1円未満切り捨て）
-    this.averageAmount = Math.floor(totalRemuneration / targetMonths.length);
+    const amounts = targetMonths.map((month) => month.amount || 0);
+    this.averageAmount = SocialInsuranceCalculator.calculateAverageRemuneration(amounts);
 
     console.log('算定結果:', {
       targetMonths: targetMonths.map((m) => `${m.month}月`),
@@ -670,7 +688,7 @@ export class RegularDeterminationAddComponent implements OnInit {
     const validPayments = monthlyPayments.filter(
       (payment) =>
         payment.amount !== null &&
-        payment.amount > 0 &&
+        SocialInsuranceCalculator.compare(payment.amount, 0) > 0 &&
         payment.workingDays !== null &&
         !payment.isPartialMonth && // 途中入社等の月は除外
         !payment.isLowPayment // 休職給等の月は除外
@@ -805,8 +823,9 @@ export class RegularDeterminationAddComponent implements OnInit {
       { grade: 50, standardSalary: 1390000, min: 1355000, max: Number.MAX_SAFE_INTEGER },
     ];
 
-    const targetGrade = healthInsuranceTable.find(
-      (grade) => amount >= grade.min && amount < grade.max
+    // Decimal.jsを使用した正確な範囲判定
+    const targetGrade = healthInsuranceTable.find((grade) =>
+      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
     );
     return targetGrade || healthInsuranceTable[healthInsuranceTable.length - 1];
   }
@@ -853,8 +872,9 @@ export class RegularDeterminationAddComponent implements OnInit {
       { grade: 32, standardSalary: 650000, min: 635000, max: Number.MAX_SAFE_INTEGER },
     ];
 
-    const targetGrade = pensionInsuranceTable.find(
-      (grade) => amount >= grade.min && amount < grade.max
+    // Decimal.jsを使用した正確な範囲判定
+    const targetGrade = pensionInsuranceTable.find((grade) =>
+      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
     );
     return targetGrade || pensionInsuranceTable[pensionInsuranceTable.length - 1];
   }

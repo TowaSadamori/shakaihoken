@@ -97,6 +97,13 @@ export const routes: Routes = [
           ).then((m) => m.RegularDeterminationAddComponent),
       },
       {
+        path: 'revision-add/:employeeId',
+        loadComponent: () =>
+          import('./grade-management/revision-add/revision-add.component').then(
+            (m) => m.RevisionAddComponent
+          ),
+      },
+      {
         path: 'employee-procedures/insured-person-detail/:uid',
         loadComponent: () =>
           import(

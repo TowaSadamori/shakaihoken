@@ -8,6 +8,7 @@ import {
   doc,
   serverTimestamp,
   setDoc,
+  getDoc,
 } from 'firebase/firestore';
 import { AuthService } from './auth.service';
 
@@ -45,6 +46,119 @@ export class OfficeService {
       return { id: doc.id, ...doc.data() };
     }
     return null;
+  }
+
+  /**
+   * 動的にFirestore構造を調査して事業所の所在地を取得
+   * 複数のパターンでFirestore構造を検索し、事業所の addressPrefecture を取得
+   */
+  async findOfficeAddressPrefecture(companyId: string, branchNumber: string): Promise<string> {
+    console.log('🔍 Firestore構造の動的調査開始');
+
+    // パターン1: companies/{companyId}/offices サブコレクション
+    try {
+      console.log('パターン1: companies サブコレクション検索');
+      const officesRef = collection(this.firestore, 'companies', companyId, 'offices');
+      const officesQuery = query(officesRef, where('branchNumber', '==', branchNumber));
+      const officesSnapshot = await getDocs(officesQuery);
+
+      if (!officesSnapshot.empty) {
+        const officeData = officesSnapshot.docs[0].data();
+        const addressPrefecture = officeData['addressPrefecture'] || '';
+        if (addressPrefecture) {
+          console.log('✅ パターン1で発見:', addressPrefecture);
+          return addressPrefecture;
+        }
+      }
+    } catch (error) {
+      console.log('パターン1エラー:', error);
+    }
+
+    // パターン2: offices コレクション直接検索
+    try {
+      console.log('パターン2: offices コレクション直接検索');
+      const directOfficesRef = collection(this.firestore, 'offices');
+      const directQuery = query(
+        directOfficesRef,
+        where('companyId', '==', companyId),
+        where('branchNumber', '==', branchNumber)
+      );
+      const directSnapshot = await getDocs(directQuery);
+
+      if (!directSnapshot.empty) {
+        const officeData = directSnapshot.docs[0].data();
+        const addressPrefecture = officeData['addressPrefecture'] || '';
+        if (addressPrefecture) {
+          console.log('✅ パターン2で発見:', addressPrefecture);
+          return addressPrefecture;
+        }
+      }
+    } catch (error) {
+      console.log('パターン2エラー:', error);
+    }
+
+    // パターン3: offices/{officeId} 直接アクセス（IDパターン推測）
+    try {
+      console.log('パターン3: offices ドキュメント直接アクセス');
+      const possibleOfficeIds = [
+        companyId, // companyIdがofficeIdと同じ場合
+        `${companyId}_${branchNumber}`, // 結合パターン
+        `${companyId}-${branchNumber}`, // ハイフン結合
+        `office_${branchNumber}`, // プレフィックス付き
+      ];
+
+      for (const officeId of possibleOfficeIds) {
+        try {
+          const officeDocRef = doc(this.firestore, 'offices', officeId);
+          const officeDoc = await getDoc(officeDocRef);
+
+          if (officeDoc.exists()) {
+            const officeData = officeDoc.data();
+            // 会社IDとブランチ番号が一致するかチェック
+            if (
+              officeData['companyId'] === companyId &&
+              officeData['branchNumber']?.toString() === branchNumber.toString()
+            ) {
+              const addressPrefecture = officeData['addressPrefecture'] || '';
+              if (addressPrefecture) {
+                console.log('✅ パターン3で発見:', addressPrefecture, 'officeId:', officeId);
+                return addressPrefecture;
+              }
+            }
+          }
+        } catch (innerError) {
+          console.log(`officeId ${officeId} 検索エラー:`, innerError);
+        }
+      }
+    } catch (error) {
+      console.log('パターン3エラー:', error);
+    }
+
+    // パターン4: 全offices走査（最後の手段）
+    try {
+      console.log('パターン4: 全offices走査');
+      const allOfficesRef = collection(this.firestore, 'offices');
+      const allOfficesSnapshot = await getDocs(allOfficesRef);
+
+      for (const officeDoc of allOfficesSnapshot.docs) {
+        const officeData = officeDoc.data();
+        if (
+          officeData['companyId'] === companyId &&
+          officeData['branchNumber']?.toString() === branchNumber.toString()
+        ) {
+          const addressPrefecture = officeData['addressPrefecture'] || '';
+          if (addressPrefecture) {
+            console.log('✅ パターン4で発見:', addressPrefecture, 'officeId:', officeDoc.id);
+            return addressPrefecture;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('パターン4エラー:', error);
+    }
+
+    console.log('❌ すべてのパターンで事業所が見つかりませんでした');
+    return '';
   }
 
   /**

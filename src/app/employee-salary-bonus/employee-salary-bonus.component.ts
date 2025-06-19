@@ -9,9 +9,6 @@ interface Employee {
   name: string;
   officeNumber: string;
   officeAddress: string;
-  grade: string;
-  standardMonthlySalary: string;
-  monthlySalary: string;
 }
 
 @Component({
@@ -27,9 +24,8 @@ export class EmployeeSalaryBonusComponent implements OnInit {
     'name',
     'officeNumber',
     'officeAddress',
-    'grade',
-    'standardMonthlySalary',
-    'monthlySalary',
+    'gradeJudgment',
+    'insuranceCalculation',
     'detail',
   ];
 
@@ -81,9 +77,6 @@ export class EmployeeSalaryBonusComponent implements OnInit {
         name: (data['lastName'] || '') + ' ' + (data['firstName'] || ''),
         officeNumber: officeNumber,
         officeAddress: officeAddress,
-        grade: '',
-        standardMonthlySalary: '',
-        monthlySalary: '',
       });
     }
     // 従業員番号で昇順ソート
@@ -92,5 +85,9 @@ export class EmployeeSalaryBonusComponent implements OnInit {
 
   goHome() {
     this.router.navigate(['/']);
+  }
+
+  navigateToGradeJudgment(employeeNumber: string) {
+    this.router.navigate(['/grade-judgment', employeeNumber]);
   }
 }

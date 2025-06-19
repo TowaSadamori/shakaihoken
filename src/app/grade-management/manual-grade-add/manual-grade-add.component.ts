@@ -10,7 +10,13 @@ import {
   Timestamp,
   collection,
   deleteDoc,
+  query,
+  where,
+  getDocs,
 } from 'firebase/firestore';
+import { AuthService } from '../../services/auth.service';
+import { OfficeService } from '../../services/office.service';
+import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 
 interface EmployeeInfo {
   name: string;
@@ -120,7 +126,9 @@ export class ManualGradeAddComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private authService: AuthService,
+    private officeService: OfficeService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -146,53 +154,75 @@ export class ManualGradeAddComponent implements OnInit {
 
     this.isLoading = true;
     try {
-      const docRef = doc(this.firestore, 'users', this.employeeId);
-      const docSnap = await getDoc(docRef);
+      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
 
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
+      // employeeNumberで検索（等級判定画面と同じ方法）
+      const usersRef = collection(this.firestore, 'users');
+      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        console.log('Firestoreから取得した従業員データ:', userData);
+
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
+
+        // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
+        const formattedBirthDate = birthDate.toISOString().split('T')[0];
+
+        // 事業所情報から addressPrefecture を取得
+        let addressPrefecture = userData['addressPrefecture'] || '';
+
+        // ユーザーデータに addressPrefecture がない場合、事業所データから取得
+        if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
+          try {
+            console.log('=== 事業所データ取得開始 ===');
+            console.log('対象companyId:', userData['companyId']);
+            console.log('対象branchNumber:', userData['branchNumber']);
+
+            addressPrefecture = await this.officeService.findOfficeAddressPrefecture(
+              userData['companyId'],
+              userData['branchNumber']
+            );
+
+            if (addressPrefecture) {
+              console.log('✅ 事業所所在地取得成功:', addressPrefecture);
+            } else {
+              console.warn('⚠️ 事業所所在地が見つかりませんでした');
+            }
+          } catch (officeError) {
+            console.error('❌ 事業所データ取得エラー:', officeError);
+          }
+        }
 
         this.employeeInfo = {
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
-          birthDate: userData['birthDate'] || '',
+          birthDate: formattedBirthDate,
           age: age,
           companyId: userData['companyId'] || '',
           branchNumber: userData['branchNumber'] || '',
-          addressPrefecture: userData['addressPrefecture'] || '',
+          addressPrefecture: addressPrefecture,
         };
+
+        console.log('設定された従業員情報:', this.employeeInfo);
       } else {
-        // テスト用データを設定
-        this.employeeInfo = {
-          name: '定森 統和',
-          employeeNumber: '1',
-          birthDate: '1999-08-21',
-          age: 25,
-          companyId: 'test-company',
-          branchNumber: '001',
-          addressPrefecture: '東京都',
-        };
+        console.error(`従業員番号 ${this.employeeId} のデータがFirestoreに存在しません`);
+        this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
+        this.employeeInfo = null;
       }
     } catch (error) {
       console.error('従業員情報取得エラー:', error);
-      // エラー時もテスト用データを設定
-      this.employeeInfo = {
-        name: '定森 統和',
-        employeeNumber: '1',
-        birthDate: '1999-08-21',
-        age: 25,
-        companyId: 'test-company',
-        branchNumber: '001',
-        addressPrefecture: '東京都',
-      };
+      this.errorMessage = `従業員情報の取得に失敗しました: ${error}`;
+      this.employeeInfo = null;
     } finally {
       this.isLoading = false;
     }
   }
 
   private calculateAge(birthDate: Date): number {
+    // 年齢計算は整数の年月日計算なので通常計算で問題なし
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -209,7 +239,7 @@ export class ManualGradeAddComponent implements OnInit {
   isFormValid(): boolean {
     return !!(
       this.monthlyAmount &&
-      this.monthlyAmount > 0 &&
+      SocialInsuranceCalculator.compare(this.monthlyAmount, 0) > 0 &&
       this.applicableYear &&
       this.applicableMonth
     );
@@ -435,8 +465,9 @@ export class ManualGradeAddComponent implements OnInit {
       { grade: 50, standardSalary: 1390000, min: 1355000, max: Number.MAX_SAFE_INTEGER },
     ];
 
-    const targetGrade = healthInsuranceTable.find(
-      (grade) => amount >= grade.min && amount < grade.max
+    // Decimal.jsを使用した正確な範囲判定
+    const targetGrade = healthInsuranceTable.find((grade) =>
+      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
     );
     return targetGrade || healthInsuranceTable[healthInsuranceTable.length - 1];
   }
@@ -483,8 +514,9 @@ export class ManualGradeAddComponent implements OnInit {
       { grade: 32, standardSalary: 650000, min: 635000, max: Number.MAX_SAFE_INTEGER },
     ];
 
-    const targetGrade = pensionInsuranceTable.find(
-      (grade) => amount >= grade.min && amount < grade.max
+    // Decimal.jsを使用した正確な範囲判定
+    const targetGrade = pensionInsuranceTable.find((grade) =>
+      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
     );
     return targetGrade || pensionInsuranceTable[pensionInsuranceTable.length - 1];
   }
