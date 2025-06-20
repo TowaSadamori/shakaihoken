@@ -15,16 +15,17 @@ export class SocialInsuranceCalculator {
    * @returns 平均報酬月額（1円未満切り捨て後）
    */
   static calculateAverageRemuneration(amounts: string[]): string {
-    if (amounts.length === 0) return '0';
+    if (amounts.length === 0) {
+      throw new Error('報酬額の配列が空です');
+    }
 
-    // Decimalで正確な計算
-    const total = amounts.reduce((sum, amount) => {
-      return sum.add(new Decimal(amount));
-    }, new Decimal(0));
+    // カンマを除去してから合計を計算
+    const cleanAmounts = amounts.map((amount) => amount.replace(/,/g, ''));
+    const total = cleanAmounts.reduce((sum, amount) => {
+      return new Decimal(sum).add(new Decimal(amount)).toString();
+    }, '0');
 
-    const average = total.dividedBy(amounts.length);
-
-    // 1円未満切り捨て
+    const average = new Decimal(total).dividedBy(amounts.length);
     return average.floor().toString();
   }
 
@@ -35,8 +36,11 @@ export class SocialInsuranceCalculator {
    * @returns 調整後報酬額
    */
   static adjustForRetroactivePay(totalAmount: string, retroactivePay = '0'): string {
-    const total = new Decimal(totalAmount);
-    const retro = new Decimal(retroactivePay);
+    const cleanTotalAmount = totalAmount.replace(/,/g, '');
+    const cleanRetroactivePay = retroactivePay.replace(/,/g, '');
+
+    const total = new Decimal(cleanTotalAmount);
+    const retro = new Decimal(cleanRetroactivePay);
 
     return total.minus(retro).toString();
   }
@@ -47,9 +51,9 @@ export class SocialInsuranceCalculator {
    * @returns 月割り賞与額（1円未満切り捨て）
    */
   static calculateMonthlyBonusAdjustment(annualBonusTotal: string): string {
-    const bonusDecimal = new Decimal(annualBonusTotal);
-    const monthlyAdjustment = bonusDecimal.dividedBy(12);
-
+    const cleanAnnualBonusTotal = annualBonusTotal.replace(/,/g, '');
+    const total = new Decimal(cleanAnnualBonusTotal);
+    const monthlyAdjustment = total.dividedBy(12);
     return monthlyAdjustment.floor().toString();
   }
 
@@ -61,11 +65,17 @@ export class SocialInsuranceCalculator {
    * @returns 範囲内かどうか
    */
   static isInGradeRange(amount: string, min: string, max: string): boolean {
-    const amountDecimal = new Decimal(amount);
-    const minDecimal = new Decimal(min);
-    const maxDecimal = new Decimal(max);
+    const cleanAmount = amount.replace(/,/g, '');
+    const cleanMin = min.replace(/,/g, '');
+    const cleanMax = max.replace(/,/g, '');
 
-    return amountDecimal.greaterThanOrEqualTo(minDecimal) && amountDecimal.lessThan(maxDecimal);
+    const amountDecimal = new Decimal(cleanAmount);
+    const minDecimal = new Decimal(cleanMin);
+    const maxDecimal = new Decimal(cleanMax);
+
+    return (
+      amountDecimal.greaterThanOrEqualTo(minDecimal) && amountDecimal.lessThanOrEqualTo(maxDecimal)
+    );
   }
 
   /**
@@ -75,8 +85,11 @@ export class SocialInsuranceCalculator {
    * @returns 変動額（正の値は増加、負の値は減少）
    */
   static calculateFixedWageChange(beforeAmount: string, afterAmount: string): string {
-    const before = new Decimal(beforeAmount);
-    const after = new Decimal(afterAmount);
+    const cleanBeforeAmount = beforeAmount.replace(/,/g, '');
+    const cleanAfterAmount = afterAmount.replace(/,/g, '');
+
+    const before = new Decimal(cleanBeforeAmount);
+    const after = new Decimal(cleanAfterAmount);
 
     return after.minus(before).toString();
   }
@@ -88,8 +101,11 @@ export class SocialInsuranceCalculator {
    * @returns 計算結果（1円未満切り捨て）
    */
   static calculatePercentage(amount: string, rate: string): string {
-    const baseAmount = new Decimal(amount);
-    const rateDecimal = new Decimal(rate);
+    const cleanAmount = amount.replace(/,/g, '');
+    const cleanRate = rate.replace(/,/g, '');
+
+    const baseAmount = new Decimal(cleanAmount);
+    const rateDecimal = new Decimal(cleanRate);
 
     const result = baseAmount.times(rateDecimal.dividedBy(100));
     return result.floor().toString();
@@ -102,8 +118,11 @@ export class SocialInsuranceCalculator {
    * @returns 等級差
    */
   static calculateGradeDifference(beforeGrade: string, afterGrade: string): string {
-    const before = new Decimal(beforeGrade);
-    const after = new Decimal(afterGrade);
+    const cleanBeforeGrade = beforeGrade.replace(/,/g, '');
+    const cleanAfterGrade = afterGrade.replace(/,/g, '');
+
+    const before = new Decimal(cleanBeforeGrade);
+    const after = new Decimal(cleanAfterGrade);
 
     return after.minus(before).toString();
   }
@@ -137,7 +156,8 @@ export class SocialInsuranceCalculator {
    * @returns カンマ区切り文字列
    */
   static formatCurrency(amount: string): string {
-    return new Decimal(amount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const cleanAmount = amount.replace(/,/g, '');
+    return new Decimal(cleanAmount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
   /**
@@ -155,7 +175,8 @@ export class SocialInsuranceCalculator {
    * @returns 絶対値
    */
   static abs(amount: string): string {
-    return new Decimal(amount).abs().toString();
+    const cleanAmount = amount.replace(/,/g, '');
+    return new Decimal(cleanAmount).abs().toString();
   }
 
   /**
@@ -165,8 +186,12 @@ export class SocialInsuranceCalculator {
    * @returns 比較結果 (-1: amount1 < amount2, 0: 等しい, 1: amount1 > amount2)
    */
   static compare(amount1: string, amount2: string): number {
-    const decimal1 = new Decimal(amount1);
-    const decimal2 = new Decimal(amount2);
+    // カンマを除去してからDecimalオブジェクトを作成
+    const cleanAmount1 = amount1.replace(/,/g, '');
+    const cleanAmount2 = amount2.replace(/,/g, '');
+
+    const decimal1 = new Decimal(cleanAmount1);
+    const decimal2 = new Decimal(cleanAmount2);
 
     if (decimal1.lessThan(decimal2)) return -1;
     if (decimal1.greaterThan(decimal2)) return 1;
@@ -180,8 +205,11 @@ export class SocialInsuranceCalculator {
    * @returns 加算結果
    */
   static addAmounts(amount1: string, amount2: string): string {
-    const decimal1 = new Decimal(amount1);
-    const decimal2 = new Decimal(amount2);
+    const cleanAmount1 = amount1.replace(/,/g, '');
+    const cleanAmount2 = amount2.replace(/,/g, '');
+
+    const decimal1 = new Decimal(cleanAmount1);
+    const decimal2 = new Decimal(cleanAmount2);
     return decimal1.add(decimal2).toString();
   }
 
@@ -192,8 +220,11 @@ export class SocialInsuranceCalculator {
    * @returns 減算結果
    */
   static subtractAmounts(amount1: string, amount2: string): string {
-    const decimal1 = new Decimal(amount1);
-    const decimal2 = new Decimal(amount2);
+    const cleanAmount1 = amount1.replace(/,/g, '');
+    const cleanAmount2 = amount2.replace(/,/g, '');
+
+    const decimal1 = new Decimal(cleanAmount1);
+    const decimal2 = new Decimal(cleanAmount2);
     return decimal1.minus(decimal2).toString();
   }
 
@@ -203,7 +234,8 @@ export class SocialInsuranceCalculator {
    * @returns 千円単位で四捨五入した金額
    */
   static roundToThousand(amount: string): string {
-    const decimal = new Decimal(amount);
+    const cleanAmount = amount.replace(/,/g, '');
+    const decimal = new Decimal(cleanAmount);
     const divided = decimal.dividedBy(1000);
     const rounded = divided.round();
     return rounded.times(1000).toString();
@@ -215,7 +247,8 @@ export class SocialInsuranceCalculator {
    * @returns 千円単位で切り捨てした金額
    */
   static floorToThousand(amount: string): string {
-    const decimal = new Decimal(amount);
+    const cleanAmount = amount.replace(/,/g, '');
+    const decimal = new Decimal(cleanAmount);
     const divided = decimal.dividedBy(1000);
     const floored = divided.floor();
     return floored.times(1000).toString();
@@ -228,8 +261,11 @@ export class SocialInsuranceCalculator {
    * @returns 計算結果（1円未満切り捨て）
    */
   static multiplyAndFloor(amount: string, rate: string): string {
-    const baseAmount = new Decimal(amount);
-    const rateDecimal = new Decimal(rate);
+    const cleanAmount = amount.replace(/,/g, '');
+    const cleanRate = rate.replace(/,/g, '');
+
+    const baseAmount = new Decimal(cleanAmount);
+    const rateDecimal = new Decimal(cleanRate);
 
     const result = baseAmount.times(rateDecimal);
     return result.floor().toString();
@@ -242,8 +278,11 @@ export class SocialInsuranceCalculator {
    * @returns 除算結果
    */
   static divide(dividend: string, divisor: string): string {
-    const dividendDecimal = new Decimal(dividend);
-    const divisorDecimal = new Decimal(divisor);
+    const cleanDividend = dividend.replace(/,/g, '');
+    const cleanDivisor = divisor.replace(/,/g, '');
+
+    const dividendDecimal = new Decimal(cleanDividend);
+    const divisorDecimal = new Decimal(cleanDivisor);
 
     return dividendDecimal.dividedBy(divisorDecimal).toString();
   }
@@ -255,8 +294,11 @@ export class SocialInsuranceCalculator {
    * @returns 除算結果（1円未満切り捨て）
    */
   static divideAndFloor(dividend: string, divisor: string): string {
-    const dividendDecimal = new Decimal(dividend);
-    const divisorDecimal = new Decimal(divisor);
+    const cleanDividend = dividend.replace(/,/g, '');
+    const cleanDivisor = divisor.replace(/,/g, '');
+
+    const dividendDecimal = new Decimal(cleanDividend);
+    const divisorDecimal = new Decimal(cleanDivisor);
 
     const result = dividendDecimal.dividedBy(divisorDecimal);
     return result.floor().toString();
@@ -269,8 +311,11 @@ export class SocialInsuranceCalculator {
    * @returns 減算結果
    */
   static subtract(amount1: string, amount2: string): string {
-    const decimal1 = new Decimal(amount1);
-    const decimal2 = new Decimal(amount2);
+    const cleanAmount1 = amount1.replace(/,/g, '');
+    const cleanAmount2 = amount2.replace(/,/g, '');
+
+    const decimal1 = new Decimal(cleanAmount1);
+    const decimal2 = new Decimal(cleanAmount2);
     return decimal1.minus(decimal2).toString();
   }
 }

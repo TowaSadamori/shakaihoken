@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { BonusCalculationService } from '../services/bonus-calculation.service';
@@ -47,6 +47,14 @@ interface BonusDataItem {
   month: bigint;
   year: bigint;
   calculationResult?: BonusCalculationResult;
+  healthInsuranceGrade?: string;
+  pensionInsuranceGrade?: string;
+}
+
+interface GradeTableItem {
+  salaryRange?: string;
+  standardSalary?: string;
+  grade?: string;
 }
 
 @Component({
@@ -85,10 +93,14 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
   // 計算モード選択
   calculationMode: 'traditional' | 'gradeBased' | 'comparison' = 'traditional';
-  gradeBasedResult: any = null;
-  comparisonResult: any = null;
+  gradeBasedResult: object | null = null;
+  comparisonResult: object | null = null;
 
   private firestore = getFirestore();
+
+  // 等級データのキャッシュ
+  private healthInsuranceGradeCache = new Map<string, GradeTableItem[]>();
+  private pensionInsuranceGradeCache = new Map<string, GradeTableItem[]>();
 
   constructor(
     private router: Router,
@@ -415,136 +427,248 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   }
 
   /**
-   * 健康保険等級の取得（正確な等級表対応）
+   * 健康保険等級の取得（Firestoreから年度・都道府県別に取得）
    */
-  getHealthInsuranceGrade(amount: string): string {
-    if (amount === '0') return '-';
+  async getHealthInsuranceGradeFromFirestore(amount: string): Promise<string> {
+    console.log('健康保険等級取得開始 - 入力金額:', amount);
 
-    // 健康保険標準報酬等級表（令和5年度版）
-    const gradeTable = [
-      { min: '0', max: '63000', grade: '1' },
-      { min: '63001', max: '73000', grade: '2' },
-      { min: '73001', max: '83000', grade: '3' },
-      { min: '83001', max: '93000', grade: '4' },
-      { min: '93001', max: '101000', grade: '5' },
-      { min: '101001', max: '107000', grade: '6' },
-      { min: '107001', max: '114000', grade: '7' },
-      { min: '114001', max: '122000', grade: '8' },
-      { min: '122001', max: '130000', grade: '9' },
-      { min: '130001', max: '138000', grade: '10' },
-      { min: '138001', max: '146000', grade: '11' },
-      { min: '146001', max: '155000', grade: '12' },
-      { min: '155001', max: '165000', grade: '13' },
-      { min: '165001', max: '175000', grade: '14' },
-      { min: '175001', max: '185000', grade: '15' },
-      { min: '185001', max: '195000', grade: '16' },
-      { min: '195001', max: '210000', grade: '17' },
-      { min: '210001', max: '230000', grade: '18' },
-      { min: '230001', max: '250000', grade: '19' },
-      { min: '250001', max: '270000', grade: '20' },
-      { min: '270001', max: '290000', grade: '21' },
-      { min: '290001', max: '310000', grade: '22' },
-      { min: '310001', max: '330000', grade: '23' },
-      { min: '330001', max: '350000', grade: '24' },
-      { min: '350001', max: '370000', grade: '25' },
-      { min: '370001', max: '395000', grade: '26' },
-      { min: '395001', max: '425000', grade: '27' },
-      { min: '425001', max: '455000', grade: '28' },
-      { min: '455001', max: '485000', grade: '29' },
-      { min: '485001', max: '515000', grade: '30' },
-      { min: '515001', max: '545000', grade: '31' },
-      { min: '545001', max: '575000', grade: '32' },
-      { min: '575001', max: '605000', grade: '33' },
-      { min: '605001', max: '635000', grade: '34' },
-      { min: '635001', max: '665000', grade: '35' },
-      { min: '665001', max: '695000', grade: '36' },
-      { min: '695001', max: '730000', grade: '37' },
-      { min: '730001', max: '770000', grade: '38' },
-      { min: '770001', max: '810000', grade: '39' },
-      { min: '810001', max: '855000', grade: '40' },
-      { min: '855001', max: '905000', grade: '41' },
-      { min: '905001', max: '955000', grade: '42' },
-      { min: '955001', max: '1005000', grade: '43' },
-      { min: '1005001', max: '1055000', grade: '44' },
-      { min: '1055001', max: '1115000', grade: '45' },
-      { min: '1115001', max: '1175000', grade: '46' },
-      { min: '1175001', max: '1235000', grade: '47' },
-      { min: '1235001', max: '1295000', grade: '48' },
-      { min: '1295001', max: '1355000', grade: '49' },
-      { min: '1355001', max: '99999999', grade: '50' },
-    ];
-
-    for (const item of gradeTable) {
-      // SocialInsuranceCalculatorを使用したDecimal文字列比較
-      if (
-        SocialInsuranceCalculator.compare(amount, item.min) >= 0 &&
-        SocialInsuranceCalculator.compare(amount, item.max) <= 0
-      ) {
-        return `${item.grade}級`;
-      }
+    if (amount === '0') {
+      console.log('健康保険等級取得: 金額が0のため処理終了');
+      return '-';
     }
 
-    return '50級'; // 最高等級
+    if (!this.employeeInfo) {
+      console.log('健康保険等級取得: 従業員情報が未設定のため処理終了');
+      return '-';
+    }
+
+    try {
+      const normalizedPrefecture = this.normalizePrefectureName(
+        this.employeeInfo.addressPrefecture
+      );
+      const cacheKey = `${this.targetYear}_${normalizedPrefecture}`;
+      console.log('健康保険等級取得 - キャッシュキー:', cacheKey);
+
+      // キャッシュから取得を試行
+      let gradeTable = this.healthInsuranceGradeCache.get(cacheKey);
+
+      if (!gradeTable) {
+        // Firestoreから等級データを取得
+        const docPath = `insurance_rates/${this.targetYear.toString()}/prefectures/${normalizedPrefecture}/rate_table/main`;
+        console.log('健康保険等級データ取得パス:', docPath);
+
+        const docRef = doc(this.firestore, docPath);
+        const docSnap = await getDoc(docRef);
+
+        console.log('健康保険等級データ存在確認:', docSnap.exists());
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log('取得した健康保険等級データ:', data);
+
+          // 健康保険等級テーブルの取得（複数のフィールド名を試行）
+          gradeTable =
+            (data['healthInsuranceTable'] as GradeTableItem[]) ||
+            (data['insuranceTable'] as GradeTableItem[]) ||
+            [];
+
+          console.log('健康保険等級テーブル:', gradeTable.length, '件');
+          console.log('利用可能なフィールド:', Object.keys(data));
+
+          // キャッシュに保存
+          this.healthInsuranceGradeCache.set(cacheKey, gradeTable);
+        } else {
+          console.warn('等級データが見つかりません:', cacheKey, 'パス:', docPath);
+
+          // フォールバック: 2024年度のデータを試行
+          const fallbackDocPath = `insurance_rates/2024/prefectures/${normalizedPrefecture}/rate_table/main`;
+          console.log('フォールバック等級データ取得パス:', fallbackDocPath);
+
+          const fallbackDocRef = doc(this.firestore, fallbackDocPath);
+          const fallbackDocSnap = await getDoc(fallbackDocRef);
+
+          if (fallbackDocSnap.exists()) {
+            const fallbackData = fallbackDocSnap.data();
+            console.log('フォールバック等級データ取得成功:', fallbackData);
+            gradeTable =
+              (fallbackData['healthInsuranceTable'] as GradeTableItem[]) ||
+              (fallbackData['insuranceTable'] as GradeTableItem[]) ||
+              [];
+            this.healthInsuranceGradeCache.set(cacheKey, gradeTable);
+          } else {
+            console.error('フォールバック等級データも見つかりません');
+            return '-';
+          }
+        }
+      } else {
+        console.log('健康保険等級データをキャッシュから取得:', gradeTable.length, '件');
+      }
+
+      // 等級を検索
+      if (gradeTable) {
+        console.log('健康保険等級検索開始 - 対象金額:', amount);
+
+        for (const item of gradeTable) {
+          const salaryRange = item.salaryRange || '';
+          const standardSalary = item.standardSalary || '';
+          const grade = item.grade || '';
+
+          console.log(`等級${grade}をチェック - 範囲:${salaryRange}, 標準:${standardSalary}`);
+
+          // 標準報酬月額と一致するかチェック
+          if (standardSalary && SocialInsuranceCalculator.compare(amount, standardSalary) === 0) {
+            console.log(`健康保険等級決定（標準一致）: ${grade}級`);
+            return `${grade}級`;
+          }
+
+          // 範囲内かチェック（salaryRangeが "58000 ~ 63000" のような形式の場合）
+          if (salaryRange && salaryRange.includes('~')) {
+            const [minStr, maxStr] = salaryRange.split('~').map((s: string) => s.trim());
+            if (minStr && maxStr) {
+              console.log(`範囲チェック: ${amount} が ${minStr} ~ ${maxStr} の範囲内か`);
+              if (
+                SocialInsuranceCalculator.compare(amount, minStr) >= 0 &&
+                SocialInsuranceCalculator.compare(amount, maxStr) <= 0
+              ) {
+                console.log(`健康保険等級決定（範囲一致）: ${grade}級`);
+                return `${grade}級`;
+              }
+            }
+          }
+        }
+      }
+
+      console.log('健康保険等級: 該当する等級が見つかりませんでした');
+      return '-';
+    } catch (error) {
+      console.error('健康保険等級取得エラー:', error);
+      return '-';
+    }
   }
 
   /**
-   * 厚生年金等級の取得（正確な等級表対応）
+   * 厚生年金等級の取得（Firestoreから年度・都道府県別に取得）
    */
-  getPensionInsuranceGrade(amount: string): string {
-    if (amount === '0') return '-';
+  async getPensionInsuranceGradeFromFirestore(amount: string): Promise<string> {
+    console.log('厚生年金等級取得開始 - 入力金額:', amount);
 
-    // 厚生年金標準報酬等級表（令和5年度版）
-    const gradeTable = [
-      { min: '0', max: '63000', grade: '1' },
-      { min: '63001', max: '73000', grade: '2' },
-      { min: '73001', max: '83000', grade: '3' },
-      { min: '83001', max: '93000', grade: '4' },
-      { min: '93001', max: '101000', grade: '5' },
-      { min: '101001', max: '107000', grade: '6' },
-      { min: '107001', max: '114000', grade: '7' },
-      { min: '114001', max: '122000', grade: '8' },
-      { min: '122001', max: '130000', grade: '9' },
-      { min: '130001', max: '138000', grade: '10' },
-      { min: '138001', max: '146000', grade: '11' },
-      { min: '146001', max: '155000', grade: '12' },
-      { min: '155001', max: '165000', grade: '13' },
-      { min: '165001', max: '175000', grade: '14' },
-      { min: '175001', max: '185000', grade: '15' },
-      { min: '185001', max: '195000', grade: '16' },
-      { min: '195001', max: '210000', grade: '17' },
-      { min: '210001', max: '230000', grade: '18' },
-      { min: '230001', max: '250000', grade: '19' },
-      { min: '250001', max: '270000', grade: '20' },
-      { min: '270001', max: '290000', grade: '21' },
-      { min: '290001', max: '310000', grade: '22' },
-      { min: '310001', max: '330000', grade: '23' },
-      { min: '330001', max: '350000', grade: '24' },
-      { min: '350001', max: '370000', grade: '25' },
-      { min: '370001', max: '395000', grade: '26' },
-      { min: '395001', max: '425000', grade: '27' },
-      { min: '425001', max: '455000', grade: '28' },
-      { min: '455001', max: '485000', grade: '29' },
-      { min: '485001', max: '515000', grade: '30' },
-      { min: '515001', max: '545000', grade: '31' },
-    ];
+    if (amount === '0') {
+      console.log('厚生年金等級取得: 金額が0のため処理終了');
+      return '-';
+    }
 
-    // 厚生年金は31級が最高（標準報酬月額の上限は62万円、賞与は150万円が上限）
-    for (const item of gradeTable) {
-      // SocialInsuranceCalculatorを使用したDecimal文字列比較
-      if (
-        SocialInsuranceCalculator.compare(amount, item.min) >= 0 &&
-        SocialInsuranceCalculator.compare(amount, item.max) <= 0
-      ) {
-        return `${item.grade}級`;
+    if (!this.employeeInfo) {
+      console.log('厚生年金等級取得: 従業員情報が未設定のため処理終了');
+      return '-';
+    }
+
+    try {
+      const normalizedPrefecture = this.normalizePrefectureName(
+        this.employeeInfo.addressPrefecture
+      );
+      const cacheKey = `${this.targetYear}_${normalizedPrefecture}`;
+      console.log('厚生年金等級取得 - キャッシュキー:', cacheKey);
+
+      // キャッシュから取得を試行
+      let gradeTable = this.pensionInsuranceGradeCache.get(cacheKey);
+
+      if (!gradeTable) {
+        // Firestoreから等級データを取得
+        const docPath = `insurance_rates/${this.targetYear.toString()}/prefectures/${normalizedPrefecture}/rate_table/main`;
+        console.log('厚生年金等級データ取得パス:', docPath);
+
+        const docRef = doc(this.firestore, docPath);
+        const docSnap = await getDoc(docRef);
+
+        console.log('厚生年金等級データ存在確認:', docSnap.exists());
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log('取得した厚生年金等級データ:', data);
+          gradeTable = (data['pensionTable'] as GradeTableItem[]) || [];
+          console.log('厚生年金等級テーブル:', gradeTable.length, '件');
+
+          // キャッシュに保存
+          this.pensionInsuranceGradeCache.set(cacheKey, gradeTable);
+        } else {
+          console.warn('等級データが見つかりません:', cacheKey, 'パス:', docPath);
+
+          // フォールバック: 2024年度のデータを試行
+          const fallbackDocPath = `insurance_rates/2024/prefectures/${normalizedPrefecture}/rate_table/main`;
+          console.log('フォールバック等級データ取得パス:', fallbackDocPath);
+
+          const fallbackDocRef = doc(this.firestore, fallbackDocPath);
+          const fallbackDocSnap = await getDoc(fallbackDocRef);
+
+          if (fallbackDocSnap.exists()) {
+            const fallbackData = fallbackDocSnap.data();
+            console.log('フォールバック等級データ取得成功:', fallbackData);
+            gradeTable = (fallbackData['pensionTable'] as GradeTableItem[]) || [];
+            this.pensionInsuranceGradeCache.set(cacheKey, gradeTable);
+          } else {
+            console.error('フォールバック等級データも見つかりません');
+            return '-';
+          }
+        }
+      } else {
+        console.log('厚生年金等級データをキャッシュから取得:', gradeTable.length, '件');
       }
-    }
 
-    // 31級を超える場合（厚生年金の賞与上限150万円まで）
-    if (SocialInsuranceCalculator.compare(amount, '1500000') <= 0) {
-      return '31級';
-    }
+      // 等級を検索（厚生年金は上限なし、Firestoreのデータに従う）
+      if (gradeTable) {
+        console.log('厚生年金等級検索開始 - 対象金額:', amount);
 
-    return '31級'; // 最高等級
+        for (const item of gradeTable) {
+          const salaryRange = item.salaryRange || '';
+          const standardSalary = item.standardSalary || '';
+          const grade = item.grade || '';
+
+          console.log(`等級${grade}をチェック - 範囲:${salaryRange}, 標準:${standardSalary}`);
+
+          // 標準報酬月額と一致するかチェック
+          if (standardSalary && SocialInsuranceCalculator.compare(amount, standardSalary) === 0) {
+            console.log(`厚生年金等級決定（標準一致）: ${grade}級`);
+            return `${grade}級`;
+          }
+
+          // 範囲内かチェック
+          if (salaryRange && salaryRange.includes('~')) {
+            const [minStr, maxStr] = salaryRange.split('~').map((s: string) => s.trim());
+            if (minStr && maxStr) {
+              console.log(`範囲チェック: ${amount} が ${minStr} ~ ${maxStr} の範囲内か`);
+              if (
+                SocialInsuranceCalculator.compare(amount, minStr) >= 0 &&
+                SocialInsuranceCalculator.compare(amount, maxStr) <= 0
+              ) {
+                console.log(`厚生年金等級決定（範囲一致）: ${grade}級`);
+                return `${grade}級`;
+              }
+            }
+          }
+        }
+
+        // 最高等級を超える場合は最高等級を返す
+        if (gradeTable.length > 0) {
+          const highestGrade = gradeTable[gradeTable.length - 1];
+          console.log(`厚生年金等級: 最高等級として${highestGrade.grade}級を返す`);
+          return `${highestGrade.grade}級`;
+        }
+      }
+
+      console.log('厚生年金等級: 該当する等級が見つかりませんでした');
+      return '-';
+    } catch (error) {
+      console.error('厚生年金等級取得エラー:', error);
+      return '-';
+    }
+  }
+
+  /**
+   * 都道府県名の正規化（Firestore用）
+   */
+  private normalizePrefectureName(prefecture: string): string {
+    // 「東京都」→「東京」、「大阪府」→「大阪」、「京都府」→「京都」、「北海道」→「北海道」
+    return prefecture.replace('都', '').replace('府', '').replace('県', '');
   }
 
   /**
@@ -722,24 +846,113 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         return;
       }
 
-      // UI表示用にデータを変換
-      for (const bonus of bonusHistory) {
-        try {
-          // 支給年月日の推定
-          const paymentDate = bonus.paymentDate || this.estimatePaymentDate(bonus.month);
+      // データを変換してBonusDataItem形式に設定
+      this.bonusDataList = await Promise.all(
+        bonusHistory.map(async (item) => {
+          try {
+            // paymentDateのnullチェック
+            const paymentDateStr = item.paymentDate || this.estimatePaymentDate(item.month);
+            const paymentDate = new Date(paymentDateStr);
+            const month = BigInt(paymentDate.getMonth() + 1);
+            const year = BigInt(paymentDate.getFullYear());
 
-          this.bonusDataList.push({
-            paymentDate: paymentDate,
-            amount: bonus.amount,
-            type: bonus.type,
-            month: bonus.month,
-            year: bonus.year,
-            calculationResult: undefined, // 計算結果は別途実装が必要
-          });
-        } catch (itemError) {
-          console.error('個別データ変換エラー:', itemError, bonus);
-        }
-      }
+            // 各賞与データに対して保険料計算を実行
+            const calculationResult =
+              await this.bonusCalculationService.calculateAndSaveBonusInsurance(
+                this.employeeId,
+                item.amount,
+                paymentDateStr,
+                item.type,
+                this.employeeInfo!.age,
+                this.employeeInfo!.addressPrefecture,
+                this.employeeInfo!.companyId
+              );
+
+            // 計算結果をコンポーネント用の形式に変換
+            const componentResult: BonusCalculationResult = {
+              standardBonusAmountHealth:
+                calculationResult.calculationResult.standardBonusAmountHealth,
+              standardBonusAmountPension:
+                calculationResult.calculationResult.standardBonusAmountPension,
+              healthInsurance: {
+                employeeBurden: SocialInsuranceCalculator.divide(
+                  calculationResult.calculationResult.healthInsurancePremium,
+                  '2'
+                ),
+                companyBurden: SocialInsuranceCalculator.divide(
+                  calculationResult.calculationResult.healthInsurancePremium,
+                  '2'
+                ),
+              },
+              careInsurance: calculationResult.calculationResult.careInsurancePremium
+                ? {
+                    employeeBurden: SocialInsuranceCalculator.divide(
+                      calculationResult.calculationResult.careInsurancePremium,
+                      '2'
+                    ),
+                    companyBurden: SocialInsuranceCalculator.divide(
+                      calculationResult.calculationResult.careInsurancePremium,
+                      '2'
+                    ),
+                  }
+                : undefined,
+              pensionInsurance: {
+                employeeBurden: SocialInsuranceCalculator.divide(
+                  calculationResult.calculationResult.pensionInsurancePremium,
+                  '2'
+                ),
+                companyBurden: SocialInsuranceCalculator.divide(
+                  calculationResult.calculationResult.pensionInsurancePremium,
+                  '2'
+                ),
+              },
+              totalEmployeeBurden: calculationResult.calculationResult.employeeBurden,
+              totalCompanyBurden: calculationResult.calculationResult.companyBurden,
+              limitInfo: {
+                isHealthLimitApplied: calculationResult.limitResult.isHealthLimitApplied,
+                isPensionLimitApplied: calculationResult.limitResult.isPensionLimitApplied,
+              },
+            };
+
+            // 等級を計算（標準賞与額を使用）
+            const healthInsuranceGrade = await this.getHealthInsuranceGradeFromFirestore(
+              calculationResult.calculationResult.standardBonusAmountHealth
+            );
+            const pensionInsuranceGrade = await this.getPensionInsuranceGradeFromFirestore(
+              calculationResult.calculationResult.standardBonusAmountPension
+            );
+
+            return {
+              paymentDate: paymentDateStr,
+              amount: item.amount,
+              type: item.type,
+              month: month,
+              year: year,
+              calculationResult: componentResult,
+              healthInsuranceGrade: healthInsuranceGrade,
+              pensionInsuranceGrade: pensionInsuranceGrade,
+            };
+          } catch (error) {
+            console.error('個別賞与計算エラー:', error, item);
+            // エラーの場合は計算結果なしで返す
+            const paymentDateStr = item.paymentDate || this.estimatePaymentDate(item.month);
+            const paymentDate = new Date(paymentDateStr);
+            const month = BigInt(paymentDate.getMonth() + 1);
+            const year = BigInt(paymentDate.getFullYear());
+
+            return {
+              paymentDate: paymentDateStr,
+              amount: item.amount,
+              type: item.type,
+              month: month,
+              year: year,
+              calculationResult: undefined,
+              healthInsuranceGrade: '-',
+              pensionInsuranceGrade: '-',
+            };
+          }
+        })
+      );
 
       if (this.bonusDataList.length > 0) {
         console.log('賞与履歴データ表示完了:', this.bonusDataList);

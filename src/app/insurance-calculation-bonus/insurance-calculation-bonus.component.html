@@ -78,13 +78,7 @@
           <tr *ngFor="let bonus of bonusDataList; let i = index">
             <td>{{ bonus.paymentDate || '-' }}</td>
             <td>{{ bonus.amount ? formatAmount(bonus.amount) : '-' }}</td>
-            <td>
-              {{
-                bonus.calculationResult
-                  ? getHealthInsuranceGrade(bonus.calculationResult.standardBonusAmountHealth)
-                  : '-'
-              }}
-            </td>
+            <td>{{ bonus.healthInsuranceGrade || '-' }}</td>
             <td>
               {{
                 bonus.calculationResult
@@ -113,13 +107,7 @@
                   : '-'
               }}
             </td>
-            <td>
-              {{
-                bonus.calculationResult
-                  ? getPensionInsuranceGrade(bonus.calculationResult.standardBonusAmountPension)
-                  : '-'
-              }}
-            </td>
+            <td>{{ bonus.pensionInsuranceGrade || '-' }}</td>
             <td>
               {{
                 bonus.calculationResult

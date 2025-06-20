@@ -114,7 +114,15 @@ export interface CalculationSnapshot {
       healthInsuranceLimit: boolean;
       pensionInsuranceLimit: boolean;
     };
-    appliedRates: InsuranceRates;
+    appliedRates: {
+      year: number; // JSON シリアライゼーション用にnumber型
+      prefecture: string;
+      healthInsuranceRate: string;
+      careInsuranceRate: string;
+      pensionInsuranceRate: string;
+      childRearingContributionRate: string;
+      effectiveDate: string;
+    };
     fiscalYearTotalBefore: string; // Decimal文字列
     fiscalYearTotalAfter: string; // Decimal文字列
   };
@@ -245,15 +253,16 @@ export class BonusCalculationService {
       const currentTotal = await this.getFiscalYearTotal(employeeId, fiscalYear);
       const newTotal = SocialInsuranceCalculator.addAmounts(currentTotal, additionalAmount);
 
-      const totalData: FiscalYearBonusTotal = {
+      // Firestoreに保存するためにbigintをnumberに変換
+      const firestoreTotalData = {
         employeeId,
-        fiscalYear,
+        fiscalYear: Number(fiscalYear), // bigint → number
         totalStandardBonusAmount: newTotal,
         lastUpdated: new Date(),
       };
 
       const docRef = doc(this.firestore, 'fiscalYearBonusTotals', `${employeeId}_${fiscalYear}`);
-      await setDoc(docRef, totalData);
+      await setDoc(docRef, firestoreTotalData);
 
       console.log('年度累計更新完了:', newTotal);
     } catch (error) {
@@ -498,15 +507,17 @@ export class BonusCalculationService {
       // ユニークなIDを生成
       const paymentId = `${payment.employeeId}_${payment.paymentDate}_${Date.now()}`;
 
-      const bonusPayment: BonusPayment = {
+      // Firestoreに保存するためにbigintをnumberに変換
+      const firestorePayment = {
         ...payment,
+        fiscalYear: Number(payment.fiscalYear), // bigint → number
         paymentId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       const docRef = doc(this.firestore, 'bonusPayments', paymentId);
-      await setDoc(docRef, bonusPayment);
+      await setDoc(docRef, firestorePayment);
 
       console.log('賞与支払いデータ保存完了:', paymentId);
       return paymentId;
@@ -556,6 +567,7 @@ export class BonusCalculationService {
         const payment = {
           paymentId: doc.id,
           ...data,
+          fiscalYear: BigInt(data['fiscalYear']), // number → bigint
         } as BonusPayment;
 
         console.log('取得したドキュメント:', doc.id, payment);
@@ -579,6 +591,7 @@ export class BonusCalculationService {
           const payment = {
             paymentId: doc.id,
             ...data,
+            fiscalYear: BigInt(data['fiscalYear']), // number → bigint
           } as BonusPayment;
 
           console.log('全データ検索 - ドキュメント:', doc.id, {
@@ -620,6 +633,7 @@ export class BonusCalculationService {
           const payment = {
             paymentId: doc.id,
             ...data,
+            fiscalYear: BigInt(data['fiscalYear']), // number → bigint
           } as BonusPayment;
 
           // クライアントサイドで employeeId と fiscalYear をフィルタリング
@@ -793,7 +807,10 @@ export class BonusCalculationService {
             healthInsuranceLimit: limitResult.isHealthLimitApplied,
             pensionInsuranceLimit: limitResult.isPensionLimitApplied,
           },
-          appliedRates: rates,
+          appliedRates: {
+            ...rates,
+            year: Number(rates.year), // bigint → number
+          },
           fiscalYearTotalBefore: limitResult.fiscalYearTotalBefore,
           fiscalYearTotalAfter: limitResult.fiscalYearTotalAfter,
         },
@@ -1355,6 +1372,7 @@ export class BonusCalculationService {
     bonusType: string,
     employeeAge: bigint,
     prefecture: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     companyId?: string
   ): Promise<{
     paymentId: string;
