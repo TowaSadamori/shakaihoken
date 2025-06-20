@@ -85,6 +85,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'insurance-calculation-salary/:employeeId',
+        loadComponent: () =>
+          import('./insurance-calculation-salary/insurance-calculation-salary.component').then(
+            (m) => m.InsuranceCalculationSalaryComponent
+          ),
+      },
+      {
         path: 'insurance-calculation-bonus/:employeeId',
         loadComponent: () =>
           import('./insurance-calculation-bonus/insurance-calculation-bonus.component').then(

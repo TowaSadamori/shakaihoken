@@ -1,1 +1,30 @@
-<p>insurance-calculation-salary works!</p>
+<button class="home-button" (click)="goBack()">戻る</button>
+
+<h2 class="page-title">給与 社会保険料計算</h2>
+
+<div class="calculation-container">
+  <!-- 従業員情報表示エリア -->
+  <div class="employee-info-section" *ngIf="employeeInfo">
+    <h3>従業員情報</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">従業員番号:</span>
+        <span>{{ employeeInfo.employeeNumber }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">氏名:</span>
+        <span>{{ employeeInfo.name }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">年齢:</span>
+        <span>{{ employeeInfo.age }}歳</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">事業所所在地:</span>
+        <span>{{ employeeInfo.addressPrefecture }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- この下に給与計算のコンテンツが追加されます -->
+</div>
