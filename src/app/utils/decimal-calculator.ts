@@ -321,11 +321,26 @@ export class SocialInsuranceCalculator {
    * @returns 乗算結果
    */
   static multiply(amount1: string, amount2: string): Decimal {
-    const cleanAmount1 = amount1.replace(/,/g, '');
-    const cleanAmount2 = amount2.replace(/,/g, '');
+    const cleanAmount1 = String(amount1).replace(/,/g, '');
+    const cleanAmount2 = String(amount2).replace(/,/g, '');
+    return new Decimal(cleanAmount1).mul(new Decimal(cleanAmount2));
+  }
 
-    const decimal1 = new Decimal(cleanAmount1);
-    const decimal2 = new Decimal(cleanAmount2);
-    return decimal1.times(decimal2);
+  /**
+   * 被保険者負担分の端数処理（50銭以下切り捨て、50銭超切り上げ）
+   * @param amount 処理前の金額 (Decimal.jsオブジェクト)
+   * @returns 処理後の金額 (文字列)
+   */
+  static roundForEmployeeBurden(amount: Decimal): string {
+    const floorAmount = amount.floor();
+    const fraction = amount.sub(floorAmount);
+
+    if (fraction.comparedTo(new Decimal('0.5')) > 0) {
+      // 0.5より大きい場合 (e.g., 0.501) は切り上げ
+      return floorAmount.add(1).toString();
+    } else {
+      // 0.5以下の場合 (e.g., 0.5, 0.499) は切り捨て
+      return floorAmount.toString();
+    }
   }
 }

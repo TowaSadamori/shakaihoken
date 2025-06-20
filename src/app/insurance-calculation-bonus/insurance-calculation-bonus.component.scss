@@ -1472,6 +1472,8 @@
 
     tbody {
       tr.data-row {
+        background-color: #fff; // odd行の背景色を明示的に指定
+
         &:nth-child(even) {
           background-color: #fdfdfd;
         }
@@ -1484,7 +1486,7 @@
         td:first-child {
           position: sticky;
           left: 0;
-          background-color: inherit; // 行の背景色を継承
+          background-color: inherit; // 親の背景色を継承（これでodd/even/hover全てに対応）
           font-weight: 600;
           z-index: 1;
           text-align: left;

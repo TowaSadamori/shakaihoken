@@ -46,6 +46,13 @@ export type CalculatedBonusHistoryItem = BonusHistoryItem & {
   calculationResult: BonusPremiumResult;
 };
 
+// 休業期間データ型
+interface LeavePeriod {
+  type: 'maternity' | 'childcare';
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -62,7 +69,7 @@ export class BonusCalculationService {
   public async getCalculatedBonusHistory(
     employeeId: string,
     fiscalYear: bigint,
-    employeeInfo: { age: bigint; addressPrefecture: string; companyId?: string }
+    employeeInfo: { age: bigint; addressPrefecture: string; companyId?: string; birthDate: string }
   ): Promise<CalculatedBonusHistoryItem[]> {
     const history = await this.getFiscalYearBonusHistory(
       employeeId,
@@ -73,12 +80,62 @@ export class BonusCalculationService {
       return [];
     }
 
+    // 年4回以上支給の賞与は除外
+    const filteredHistory = history.filter(
+      (b: BonusHistoryItem & { paymentCountType?: string }) =>
+        !b.paymentCountType || b.paymentCountType === 'UNDER_3_TIMES'
+    );
+
+    // 同月内賞与の合算処理
+    const monthlyAggregates: Record<string, { totalAmount: Decimal; lastBonus: BonusHistoryItem }> =
+      {};
+
+    for (const bonus of filteredHistory) {
+      if (!bonus.paymentDate) continue;
+
+      const payDate = new Date(bonus.paymentDate);
+      const monthKey = `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!monthlyAggregates[monthKey]) {
+        monthlyAggregates[monthKey] = {
+          totalAmount: new Decimal(0),
+          lastBonus: bonus,
+        };
+      }
+
+      monthlyAggregates[monthKey].totalAmount = monthlyAggregates[monthKey].totalAmount.add(
+        new Decimal(bonus.amount)
+      );
+
+      const existingLastDate = new Date(monthlyAggregates[monthKey].lastBonus.paymentDate!);
+      if (payDate > existingLastDate) {
+        monthlyAggregates[monthKey].lastBonus = bonus;
+      }
+    }
+
+    const consolidatedBonuses: BonusHistoryItem[] = Object.values(monthlyAggregates).map((agg) => {
+      const representativeBonus = agg.lastBonus;
+      return {
+        ...representativeBonus,
+        amount: agg.totalAmount.toString(),
+        paymentDate: representativeBonus.paymentDate,
+      };
+    });
+
     const rates = await this.getInsuranceRates(fiscalYear, employeeInfo.addressPrefecture);
     if (!rates) {
       throw new Error('保険料率が取得できませんでした。');
     }
 
-    return this.calculateBonusPremiums(history, rates, employeeInfo.age);
+    // 休業期間データ取得
+    const leavePeriods = await this.getEmployeeLeavePeriods(employeeId);
+
+    return this.calculateBonusPremiums(
+      consolidatedBonuses,
+      rates,
+      employeeInfo.birthDate,
+      leavePeriods
+    );
   }
 
   /**
@@ -112,7 +169,8 @@ export class BonusCalculationService {
   private calculateBonusPremiums(
     bonusHistory: BonusHistoryItem[],
     rates: InsuranceRates,
-    employeeAge: bigint
+    birthDate: string,
+    leavePeriods: LeavePeriod[] = []
   ): CalculatedBonusHistoryItem[] {
     const sortedBonuses = [...bonusHistory].sort((a, b) => {
       const dateA = new Date(a.paymentDate || 0).getTime();
@@ -146,29 +204,60 @@ export class BonusCalculationService {
     );
 
     return sortedBonuses.map((item) => {
+      // 支払日時点の年齢を計算
+      const ageAtPayment = this._calculateAgeAtDate(birthDate, item.paymentDate!);
+
+      // 休業免除判定
+      if (this.isExemptedByLeave(item.paymentDate || '', leavePeriods)) {
+        const zeroResult: BonusPremiumResult = {
+          standardBonusAmount: '0',
+          cappedPensionStandardAmount: '0',
+          isPensionLimitApplied: false,
+          applicableHealthStandardAmount: '0',
+          isHealthLimitApplied: false,
+          pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+          healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+          careInsurance:
+            ageAtPayment >= 40 ? { employeeBurden: '0', companyBurden: '0' } : undefined,
+          healthInsuranceRate: rates.nonNursingRate,
+          pensionInsuranceRate: rates.pensionRate,
+          careInsuranceRate: ageAtPayment >= 40 ? rates.nursingRate : undefined,
+        };
+        return { ...item, calculationResult: zeroResult };
+      }
+
       const standardBonusAmount = SocialInsuranceCalculator.floorToThousand(item.amount);
 
       // --- 厚生年金保険料 ---
-      const isPensionLimitApplied =
-        SocialInsuranceCalculator.compare(standardBonusAmount, PENSION_INSURANCE_MONTHLY_CAP) > 0;
-      const cappedPensionStandardAmount = isPensionLimitApplied
-        ? PENSION_INSURANCE_MONTHLY_CAP
-        : standardBonusAmount;
+      let pensionEmployee = '0';
+      let pensionCompany = '0';
+      let isPensionLimitApplied = false;
+      let cappedPensionStandardAmount = standardBonusAmount;
 
-      // 新しい計算ロジック: 四捨五入ベース
-      const pensionTotalDecimal = SocialInsuranceCalculator.multiply(
-        cappedPensionStandardAmount,
-        pensionRateDecimal
-      );
-      const pensionEmployeeDecimal = pensionTotalDecimal
-        .div(2)
-        .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-      const pensionCompanyDecimal = pensionTotalDecimal
-        .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-        .sub(pensionEmployeeDecimal);
+      if (ageAtPayment < 70) {
+        isPensionLimitApplied =
+          SocialInsuranceCalculator.compare(standardBonusAmount, PENSION_INSURANCE_MONTHLY_CAP) > 0;
+        cappedPensionStandardAmount = isPensionLimitApplied
+          ? PENSION_INSURANCE_MONTHLY_CAP
+          : standardBonusAmount;
 
-      const pensionEmployee = pensionEmployeeDecimal.toString();
-      const pensionCompany = pensionCompanyDecimal.toString();
+        const pensionTotalDecimal = SocialInsuranceCalculator.multiply(
+          cappedPensionStandardAmount,
+          pensionRateDecimal
+        );
+        const pensionEmployeeDecimal = pensionTotalDecimal.div(2);
+        pensionEmployee = SocialInsuranceCalculator.roundForEmployeeBurden(pensionEmployeeDecimal);
+
+        const pensionTotalRounded = pensionTotalDecimal.toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
+        pensionCompany = SocialInsuranceCalculator.subtract(
+          pensionTotalRounded.toString(),
+          pensionEmployee
+        );
+      } else {
+        // 70歳以上は厚生年金の計算対象外
+        isPensionLimitApplied = false;
+        cappedPensionStandardAmount = '0'; // 計算基礎は0
+      }
 
       // --- 健康保険料 ---
       const remainingCap = SocialInsuranceCalculator.subtract(
@@ -189,37 +278,41 @@ export class BonusCalculationService {
         standardBonusAmount
       );
 
-      // 新しい計算ロジック: 四捨五入ベース
+      // 新しい計算ロジック: 50銭ルール
       const healthTotalDecimal = SocialInsuranceCalculator.multiply(
         applicableHealthStandardAmount,
         nonNursingRateDecimal
       );
-      const healthEmployeeDecimal = healthTotalDecimal
-        .div(2)
-        .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-      const healthCompanyDecimal = healthTotalDecimal
-        .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-        .sub(healthEmployeeDecimal);
-      const healthEmployee = healthEmployeeDecimal.toString();
-      const healthCompany = healthCompanyDecimal.toString();
+      const healthEmployeeDecimal = healthTotalDecimal.div(2);
+      const healthEmployee =
+        SocialInsuranceCalculator.roundForEmployeeBurden(healthEmployeeDecimal);
+
+      const healthTotalRounded = healthTotalDecimal.toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
+      const healthCompany = SocialInsuranceCalculator.subtract(
+        healthTotalRounded.toString(),
+        healthEmployee
+      );
 
       // --- 介護保険料 (40歳以上) ---
       let careResult: { employeeBurden: string; companyBurden: string } | undefined;
-      if (employeeAge >= 40n) {
-        // 新しい計算ロジック: 四捨五入ベース
+      if (ageAtPayment >= 40) {
+        // 新しい計算ロジック: 50銭ルール
         const careTotalDecimal = SocialInsuranceCalculator.multiply(
           applicableHealthStandardAmount,
           careInsuranceRateDecimal
         );
-        const careEmployeeDecimal = careTotalDecimal
-          .div(2)
-          .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
-        const careCompanyDecimal = careTotalDecimal
-          .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-          .sub(careEmployeeDecimal);
+        const careEmployeeDecimal = careTotalDecimal.div(2);
+        const careEmployee = SocialInsuranceCalculator.roundForEmployeeBurden(careEmployeeDecimal);
+
+        const careTotalRounded = careTotalDecimal.toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
+        const careCompany = SocialInsuranceCalculator.subtract(
+          careTotalRounded.toString(),
+          careEmployee
+        );
+
         careResult = {
-          employeeBurden: careEmployeeDecimal.toString(),
-          companyBurden: careCompanyDecimal.toString(),
+          employeeBurden: careEmployee,
+          companyBurden: careCompany,
         };
       }
 
@@ -239,7 +332,7 @@ export class BonusCalculationService {
           3
         )}%`,
         careInsuranceRate:
-          employeeAge >= 40n
+          ageAtPayment >= 40
             ? `${new Decimal(careInsuranceRateDecimal).times(100).toFixed(3)}%`
             : undefined,
       };
@@ -405,5 +498,77 @@ export class BonusCalculationService {
       console.error('給与賞与データ取得エラー:', error);
       return null;
     }
+  }
+
+  /**
+   * Firestoreから従業員の産休・育休期間データを取得
+   */
+  private async getEmployeeLeavePeriods(employeeId: string): Promise<LeavePeriod[]> {
+    // maternity-leaves, childcare-leaves などのコレクション構造を想定
+    const periods: LeavePeriod[] = [];
+    // 産休
+    const maternityRef = doc(this.firestore, 'employee-leaves', employeeId, 'maternity', 'current');
+    const maternitySnap = await getDoc(maternityRef);
+    if (maternitySnap.exists()) {
+      const data = maternitySnap.data();
+      periods.push({
+        type: 'maternity',
+        startDate: data['startDate'],
+        endDate: data['endDate'],
+      });
+    }
+    // 育休
+    const childcareRef = doc(this.firestore, 'employee-leaves', employeeId, 'childcare', 'current');
+    const childcareSnap = await getDoc(childcareRef);
+    if (childcareSnap.exists()) {
+      const data = childcareSnap.data();
+      periods.push({
+        type: 'childcare',
+        startDate: data['startDate'],
+        endDate: data['endDate'],
+      });
+    }
+    return periods;
+  }
+
+  /**
+   * 指定日が休業期間内かどうか判定（産休・育休）
+   * 育休は1ヶ月超の期間のみ免除対象
+   */
+  private isExemptedByLeave(paymentDate: string, leavePeriods: LeavePeriod[]): boolean {
+    if (!paymentDate) return false;
+    const payDate = new Date(paymentDate);
+    // 支払月の末日を取得
+    const endOfMonth = new Date(payDate.getFullYear(), payDate.getMonth() + 1, 0);
+    for (const period of leavePeriods) {
+      const start = new Date(period.startDate);
+      const end = new Date(period.endDate);
+      if (endOfMonth >= start && endOfMonth <= end) {
+        if (period.type === 'maternity') {
+          return true;
+        } else if (period.type === 'childcare') {
+          // 育休期間が1ヶ月超か判定
+          const diff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+          if (diff > 30) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * 支払日時点の満年齢を計算
+   */
+  private _calculateAgeAtDate(birthDateStr: string, targetDateStr: string): number {
+    const birthDate = new Date(birthDateStr);
+    const targetDate = new Date(targetDateStr);
+    let age = targetDate.getFullYear() - birthDate.getFullYear();
+    const m = targetDate.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && targetDate.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
   }
 }
