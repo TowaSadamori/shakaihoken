@@ -1115,8 +1115,8 @@ export class BonusCalculationService {
         return allBonuses;
       }
 
-      console.log('取得したデータの全キー:', Object.keys(salaryData));
-      console.log('salaryTableの全キー:', Object.keys(salaryData.salaryTable));
+      // console.log('取得したデータの全キー:', Object.keys(salaryData));
+      // console.log('salaryTableの全キー:', Object.keys(salaryData.salaryTable));
 
       // 賞与データと支給年月日データを抽出
       const bonusAmounts: Record<string, string> = {};

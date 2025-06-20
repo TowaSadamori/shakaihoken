@@ -75,14 +75,14 @@ export class PrefectureDetailComponent {
     standardSalary: string;
     salaryRange: string;
     nonNursingRate: string;
-    nonNursingTotal: number;
-    nonNursingHalf: number;
+    nonNursingTotal: string;
+    nonNursingHalf: string;
     nursingRate: string;
-    nursingTotal: number;
-    nursingHalf: number;
+    nursingTotal: string;
+    nursingHalf: string;
     pensionRate: string;
-    pensionTotal: number;
-    pensionHalf: number;
+    pensionTotal: string;
+    pensionHalf: string;
   }[] = [];
 
   // 厚生年金保険料（等級が異なる場合）のダミーデータ
@@ -91,8 +91,8 @@ export class PrefectureDetailComponent {
     standardSalary: string;
     salaryRange: string;
     pensionRate: string;
-    pensionTotal: number;
-    pensionHalf: number;
+    pensionTotal: string;
+    pensionHalf: string;
   }[] = [];
 
   rates: {
@@ -156,33 +156,52 @@ export class PrefectureDetailComponent {
     // データ行の抽出（等級が数字または数字＋（数字）で始まる行のみ）
     const dataRows = rows.filter((r) => r[0] && r[0].match(/^\d+(（\d+）)?/));
 
+    // デバッグ用：CSVの構造を確認
+    console.log('🔍 CSV構造デバッグ:');
+    dataRows.slice(0, 5).forEach((r, i) => {
+      console.log(`行${i + 1}:`, r);
+    });
+
     // 健康保険・介護保険用
-    this.insuranceTable = dataRows.map((r) => ({
-      grade: r[0],
-      standardSalary: r[1],
-      salaryRange: `${r[1]} ～ ${r[4]}`,
-      nonNursingRate: nonNursingRate,
-      nonNursingTotal: parseFloat(r[5]?.replace(/,/g, '')),
-      nonNursingHalf: parseFloat(r[6]?.replace(/,/g, '')),
-      nursingRate: nursingRate,
-      nursingTotal: parseFloat(r[7]?.replace(/,/g, '')),
-      nursingHalf: parseFloat(r[8]?.replace(/,/g, '')),
-      pensionRate: '',
-      pensionTotal: 0,
-      pensionHalf: 0,
-    }));
+    this.insuranceTable = dataRows.map((r, index) => {
+      // 前の等級の上限を下限とする（1級は例外）
+      const prevUpperLimit = index > 0 ? dataRows[index - 1][4] : r[2];
+
+      // デバッグ用：範囲設定の詳細をログ
+      console.log(`等級${r[0]}: prevUpperLimit=${prevUpperLimit}, r[4]=${r[4]}`);
+
+      return {
+        grade: r[0],
+        standardSalary: r[1],
+        salaryRange: `${prevUpperLimit} ～ ${r[4]}`,
+        nonNursingRate: nonNursingRate,
+        nonNursingTotal: r[5]?.replace(/,/g, '') || '0',
+        nonNursingHalf: r[6]?.replace(/,/g, '') || '0',
+        nursingRate: nursingRate,
+        nursingTotal: r[7]?.replace(/,/g, '') || '0',
+        nursingHalf: r[8]?.replace(/,/g, '') || '0',
+        pensionRate: '',
+        pensionTotal: '0',
+        pensionHalf: '0',
+      };
+    });
 
     // 厚生年金用
-    this.pensionTable = dataRows
-      .filter((r) => r[0].includes('（'))
-      .map((r) => ({
-        grade: Number(r[0].match(/（(\d+)）/)?.[1] || '0'),
+    const pensionRows = dataRows.filter((r) => r[0].includes('（'));
+    this.pensionTable = pensionRows.map((r, index) => {
+      // 厚生年金1等級は下限なし、その他は前の等級の上限を下限とする
+      const gradeNumber = Number(r[0].match(/（(\d+)）/)?.[1] || '0');
+      const prevUpperLimit = gradeNumber === 1 ? '' : index > 0 ? pensionRows[index - 1][4] : r[2];
+
+      return {
+        grade: gradeNumber,
         standardSalary: r[1],
-        salaryRange: `${r[1]} ～ ${r[4]}`,
+        salaryRange: `${prevUpperLimit} ～ ${r[4]}`,
         pensionRate: pensionRate,
-        pensionTotal: parseFloat(r[9]?.replace(/,/g, '')),
-        pensionHalf: parseFloat(r[10]?.replace(/,/g, '')),
-      }));
+        pensionTotal: r[9]?.replace(/,/g, '') || '0',
+        pensionHalf: r[10]?.replace(/,/g, '') || '0',
+      };
+    });
 
     this.showCsvImport = false;
 
