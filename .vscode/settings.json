@@ -5,6 +5,19 @@
     "**/.git/subtree-cache/**": true,
     "**/node_modules/*/**": true,
     "**/.angular/cache/**": true,
+    "**/dist/**": true,
+    "**/.angular/**": true,
+    "**/npm-cache/**": true,
+    "**/.npm/**": true
+  },
+  "search.exclude": {
+    "**/.angular/cache/**": true,
+    "**/node_modules/**": true,
     "**/dist/**": true
-  }
+  },
+  "files.exclude": {
+    "**/.angular/cache": true
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.disableAutomaticTypeAcquisition": false
 }

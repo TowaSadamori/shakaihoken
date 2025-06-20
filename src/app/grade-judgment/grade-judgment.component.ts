@@ -21,16 +21,16 @@ interface EmployeeInfo {
   name: string;
   employeeNumber: string;
   birthDate: string;
-  age: number;
+  age: bigint;
   companyId: string;
   branchNumber: string;
   addressPrefecture: string;
 }
 
 interface SalaryData {
-  averageMonthly: number;
-  totalBonus: number;
-  annualTotal: number;
+  averageMonthly: string;
+  totalBonus: string;
+  annualTotal: string;
 }
 
 interface GradeJudgmentRecord {
@@ -40,16 +40,16 @@ interface GradeJudgmentRecord {
   judgmentDate: Date;
   effectiveDate: Date;
   endDate?: Date;
-  healthInsuranceGrade: number;
-  pensionInsuranceGrade: number;
-  careInsuranceGrade?: number;
-  standardMonthlyAmount: number;
+  healthInsuranceGrade: bigint;
+  pensionInsuranceGrade: bigint;
+  careInsuranceGrade?: bigint;
+  standardMonthlyAmount: string;
   reason: string;
   inputData: {
-    averageMonthly?: number;
-    totalBonus?: number;
-    annualTotal?: number;
-    manualAmount?: number;
+    averageMonthly?: string;
+    totalBonus?: string;
+    annualTotal?: string;
+    manualAmount?: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -59,16 +59,16 @@ interface JudgmentDialogData {
   judgmentType: 'manual' | 'regular' | 'irregular';
   effectiveDate: string;
   endDate: string;
-  standardMonthlyAmount: number;
-  healthInsuranceGrade: number;
-  pensionInsuranceGrade: number;
-  careInsuranceGrade?: number;
+  standardMonthlyAmount: string;
+  healthInsuranceGrade: bigint;
+  pensionInsuranceGrade: bigint;
+  careInsuranceGrade?: bigint;
   reason: string;
   inputData: {
-    averageMonthly?: number;
-    totalBonus?: number;
-    annualTotal?: number;
-    manualAmount?: number;
+    averageMonthly?: string;
+    totalBonus?: string;
+    annualTotal?: string;
+    manualAmount?: string;
   };
 }
 
@@ -207,9 +207,9 @@ export class GradeJudgmentComponent implements OnInit {
     // 実際の実装では給与データのコレクションから取得
     // 仮のデータを設定
     this.salaryData = {
-      averageMonthly: 280000,
-      totalBonus: 840000,
-      annualTotal: 4200000,
+      averageMonthly: '280000',
+      totalBonus: '840000',
+      annualTotal: '4200000',
     };
   }
 
@@ -326,13 +326,13 @@ export class GradeJudgmentComponent implements OnInit {
           judgmentDate: new Date('2024-01-15'),
           effectiveDate: new Date('2024-02-01'),
           endDate: new Date('2024-12-31'),
-          healthInsuranceGrade: 18,
-          pensionInsuranceGrade: 18,
-          careInsuranceGrade: 18,
-          standardMonthlyAmount: 280000,
+          healthInsuranceGrade: 18n,
+          pensionInsuranceGrade: 18n,
+          careInsuranceGrade: 18n,
+          standardMonthlyAmount: '280000',
           reason: '手入力による等級決定',
           inputData: {
-            manualAmount: 280000,
+            manualAmount: '280000',
           },
           createdAt: new Date('2024-01-15'),
           updatedAt: new Date('2024-01-15'),
@@ -344,15 +344,15 @@ export class GradeJudgmentComponent implements OnInit {
           judgmentDate: new Date('2024-04-01'),
           effectiveDate: new Date('2024-04-01'),
           endDate: new Date('2025-03-31'),
-          healthInsuranceGrade: 19,
-          pensionInsuranceGrade: 19,
-          careInsuranceGrade: 19,
-          standardMonthlyAmount: 300000,
+          healthInsuranceGrade: 19n,
+          pensionInsuranceGrade: 19n,
+          careInsuranceGrade: 19n,
+          standardMonthlyAmount: '300000',
           reason: '定時決定による等級改定',
           inputData: {
-            averageMonthly: 300000,
-            totalBonus: 900000,
-            annualTotal: 4500000,
+            averageMonthly: '300000',
+            totalBonus: '900000',
+            annualTotal: '4500000',
           },
           createdAt: new Date('2024-04-01'),
           updatedAt: new Date('2024-04-01'),
@@ -397,54 +397,55 @@ export class GradeJudgmentComponent implements OnInit {
 
   calculateGradesFromAmount(): void {
     const amount = this.dialogData.standardMonthlyAmount;
-    if (amount > 0) {
+    if (SocialInsuranceCalculator.compare(amount, '0') > 0) {
       const grade = this.getGradeFromAmount(amount);
       this.dialogData.healthInsuranceGrade = grade;
       this.dialogData.pensionInsuranceGrade = grade;
 
       // 40歳以上の場合のみ介護保険料等級を設定
-      if (this.employeeInfo && this.employeeInfo.age >= 40) {
+      if (this.employeeInfo && this.employeeInfo.age >= 40n) {
         this.dialogData.careInsuranceGrade = grade;
       }
     }
   }
 
-  private getGradeFromAmount(amount: number): number {
+  private getGradeFromAmount(amount: string): bigint {
     // 簡易的な等級計算（実際は詳細な等級表を使用）
-    if (amount <= 88000) return 1;
-    if (amount <= 98000) return 2;
-    if (amount <= 104000) return 3;
-    if (amount <= 110000) return 4;
-    if (amount <= 118000) return 5;
-    if (amount <= 126000) return 6;
-    if (amount <= 134000) return 7;
-    if (amount <= 142000) return 8;
-    if (amount <= 150000) return 9;
-    if (amount <= 160000) return 10;
-    if (amount <= 170000) return 11;
-    if (amount <= 180000) return 12;
-    if (amount <= 190000) return 13;
-    if (amount <= 200000) return 14;
-    if (amount <= 220000) return 15;
-    if (amount <= 240000) return 16;
-    if (amount <= 260000) return 17;
-    if (amount <= 280000) return 18;
-    if (amount <= 300000) return 19;
-    if (amount <= 320000) return 20;
-    if (amount <= 340000) return 21;
-    if (amount <= 360000) return 22;
-    if (amount <= 380000) return 23;
-    if (amount <= 410000) return 24;
-    if (amount <= 440000) return 25;
-    if (amount <= 470000) return 26;
-    if (amount <= 500000) return 27;
-    if (amount <= 530000) return 28;
-    if (amount <= 560000) return 29;
-    if (amount <= 590000) return 30;
-    return 31; // 590000円超
+    const amountNum = BigInt(amount);
+    if (amountNum <= 88000n) return 1n;
+    if (amountNum <= 98000n) return 2n;
+    if (amountNum <= 104000n) return 3n;
+    if (amountNum <= 110000n) return 4n;
+    if (amountNum <= 118000n) return 5n;
+    if (amountNum <= 126000n) return 6n;
+    if (amountNum <= 134000n) return 7n;
+    if (amountNum <= 142000n) return 8n;
+    if (amountNum <= 150000n) return 9n;
+    if (amountNum <= 160000n) return 10n;
+    if (amountNum <= 170000n) return 11n;
+    if (amountNum <= 180000n) return 12n;
+    if (amountNum <= 190000n) return 13n;
+    if (amountNum <= 200000n) return 14n;
+    if (amountNum <= 220000n) return 15n;
+    if (amountNum <= 240000n) return 16n;
+    if (amountNum <= 260000n) return 17n;
+    if (amountNum <= 280000n) return 18n;
+    if (amountNum <= 300000n) return 19n;
+    if (amountNum <= 320000n) return 20n;
+    if (amountNum <= 340000n) return 21n;
+    if (amountNum <= 360000n) return 22n;
+    if (amountNum <= 380000n) return 23n;
+    if (amountNum <= 410000n) return 24n;
+    if (amountNum <= 440000n) return 25n;
+    if (amountNum <= 470000n) return 26n;
+    if (amountNum <= 500000n) return 27n;
+    if (amountNum <= 530000n) return 28n;
+    if (amountNum <= 560000n) return 29n;
+    if (amountNum <= 590000n) return 30n;
+    return 31n; // 590000円超
   }
 
-  private calculateStandardMonthlyAmount(averageMonthly: number): number {
+  private calculateStandardMonthlyAmount(averageMonthly: string): string {
     // 標準報酬月額の計算ロジック（Decimal.jsを使用した正確な計算）
     return SocialInsuranceCalculator.roundToThousand(averageMonthly);
   }
@@ -495,9 +496,9 @@ export class GradeJudgmentComponent implements OnInit {
   isDialogValid(): boolean {
     return !!(
       this.dialogData.effectiveDate &&
-      this.dialogData.standardMonthlyAmount > 0 &&
-      this.dialogData.healthInsuranceGrade > 0 &&
-      this.dialogData.pensionInsuranceGrade > 0 &&
+      SocialInsuranceCalculator.compare(this.dialogData.standardMonthlyAmount, '0') > 0 &&
+      this.dialogData.healthInsuranceGrade > 0n &&
+      this.dialogData.pensionInsuranceGrade > 0n &&
       this.dialogData.reason.trim()
     );
   }
@@ -507,22 +508,25 @@ export class GradeJudgmentComponent implements OnInit {
       judgmentType: 'manual',
       effectiveDate: '',
       endDate: '',
-      standardMonthlyAmount: 0,
-      healthInsuranceGrade: 0,
-      pensionInsuranceGrade: 0,
+      standardMonthlyAmount: '0',
+      healthInsuranceGrade: 0n,
+      pensionInsuranceGrade: 0n,
       careInsuranceGrade: undefined,
       reason: '',
       inputData: {},
     };
   }
 
-  private calculateAge(birthDate: Date): number {
+  private calculateAge(birthDate: Date): bigint {
     // 年齢計算は整数の年月日計算なので通常計算で問題なし
     const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
+    let age = BigInt(today.getFullYear()) - BigInt(birthDate.getFullYear());
+    const monthDiff = BigInt(today.getMonth()) - BigInt(birthDate.getMonth());
 
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0n ||
+      (monthDiff === 0n && BigInt(today.getDate()) < BigInt(birthDate.getDate()))
+    ) {
       age--;
     }
 
@@ -546,8 +550,8 @@ export class GradeJudgmentComponent implements OnInit {
     return date.toLocaleDateString('ja-JP');
   }
 
-  formatCurrency(amount: number): string {
-    return amount.toLocaleString('ja-JP') + '円';
+  formatCurrency(amount: string): string {
+    return amount + '円';
   }
 
   goBack(): void {

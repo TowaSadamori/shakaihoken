@@ -25,22 +25,22 @@ interface EmployeeInfo {
   name: string;
   employeeNumber: string;
   birthDate: string;
-  age: number;
+  age: bigint;
   companyId: string;
   branchNumber: string;
   addressPrefecture: string;
   employeeType: EmployeeType; // 従業員区分を追加
-  previousStandardRemuneration?: number; // 従前の標準報酬月額
+  previousStandardRemuneration?: string; // number → string (Decimal文字列)
 }
 
 interface MonthlyPayment {
-  month: number;
-  amount: number | null;
-  workingDays: number | null; // これが支払基礎日数に相当
-  totalRemuneration?: number; // 報酬総額（通貨によるもの）
-  retroactivePay?: number; // 遡及支払額
-  isPartialMonth?: boolean; // 途中入社等で満額でない月かどうか
-  isLowPayment?: boolean; // 休職給等の低額支給月かどうか
+  month: bigint;
+  amount: string | null;
+  workingDays: bigint | null;
+  totalRemuneration?: string;
+  retroactivePay?: string;
+  isPartialMonth?: boolean;
+  isLowPayment?: boolean;
 }
 
 // 賞与情報の追加（将来使用予定）
@@ -50,24 +50,24 @@ interface MonthlyPayment {
 // }
 
 interface GradeJudgmentResult {
-  healthInsuranceGrade: number;
-  healthInsuranceStandardSalary: number;
-  pensionInsuranceGrade: number;
-  pensionInsuranceStandardSalary: number;
-  careInsuranceGrade?: number;
-  careInsuranceStandardSalary?: number;
+  healthInsuranceGrade: bigint;
+  healthInsuranceStandardSalary: string;
+  pensionInsuranceGrade: bigint;
+  pensionInsuranceStandardSalary: string;
+  careInsuranceGrade?: bigint;
+  careInsuranceStandardSalary?: string;
 }
 
 interface SavedGradeData {
   id?: string;
   employeeId: string;
-  targetYear: number;
+  targetYear: bigint;
   monthlyPayments: MonthlyPayment[];
-  averageAmount: number;
-  applicableYear: number;
-  applicableMonth: number;
-  endYear?: number;
-  endMonth?: number;
+  averageAmount: string;
+  applicableYear: bigint;
+  applicableMonth: bigint;
+  endYear?: bigint;
+  endMonth?: bigint;
   judgmentResult: GradeJudgmentResult;
   createdAt: Date;
   updatedAt: Date;
@@ -76,13 +76,13 @@ interface SavedGradeData {
 
 interface FirestoreGradeData {
   employeeId: string;
-  targetYear: number;
+  targetYear: bigint;
   monthlyPayments: MonthlyPayment[];
-  averageAmount: number;
-  applicableYear: number;
-  applicableMonth: number;
-  endYear?: number;
-  endMonth?: number;
+  averageAmount: string;
+  applicableYear: bigint;
+  applicableMonth: bigint;
+  endYear?: bigint;
+  endMonth?: bigint;
   judgmentResult: GradeJudgmentResult;
   createdAt: Date;
   updatedAt: Date;
@@ -102,17 +102,17 @@ export class RegularDeterminationAddComponent implements OnInit {
   errorMessage = '';
 
   // フォーム用プロパティ
-  targetYear: number = new Date().getFullYear();
+  targetYear = BigInt(new Date().getFullYear());
   monthlyPayments: MonthlyPayment[] = [
-    { month: 4, amount: null, workingDays: null },
-    { month: 5, amount: null, workingDays: null },
-    { month: 6, amount: null, workingDays: null },
+    { month: BigInt(4), amount: null, workingDays: null },
+    { month: BigInt(5), amount: null, workingDays: null },
+    { month: BigInt(6), amount: null, workingDays: null },
   ];
-  averageAmount = 0;
-  applicableYear: number = new Date().getFullYear();
-  applicableMonth = 9; // 定時決定は通常9月から適用
-  endYear: number | null = null;
-  endMonth: number | null = null;
+  averageAmount = '0';
+  applicableYear = BigInt(new Date().getFullYear());
+  applicableMonth = BigInt(9); // 定時決定は通常9月から適用
+  endYear: bigint | null = null;
+  endMonth: bigint | null = null;
 
   // 判定結果
   judgmentResult: GradeJudgmentResult | null = null;
@@ -121,20 +121,20 @@ export class RegularDeterminationAddComponent implements OnInit {
   savedGradeData: SavedGradeData | null = null;
 
   // 選択肢用データ
-  availableYears: number[] = [];
+  availableYears: bigint[] = [];
   availableMonths = [
-    { value: 1, label: '1月' },
-    { value: 2, label: '2月' },
-    { value: 3, label: '3月' },
-    { value: 4, label: '4月' },
-    { value: 5, label: '5月' },
-    { value: 6, label: '6月' },
-    { value: 7, label: '7月' },
-    { value: 8, label: '8月' },
-    { value: 9, label: '9月' },
-    { value: 10, label: '10月' },
-    { value: 11, label: '11月' },
-    { value: 12, label: '12月' },
+    { value: BigInt(1), label: '1月' },
+    { value: BigInt(2), label: '2月' },
+    { value: BigInt(3), label: '3月' },
+    { value: BigInt(4), label: '4月' },
+    { value: BigInt(5), label: '5月' },
+    { value: BigInt(6), label: '6月' },
+    { value: BigInt(7), label: '7月' },
+    { value: BigInt(8), label: '8月' },
+    { value: BigInt(9), label: '9月' },
+    { value: BigInt(10), label: '10月' },
+    { value: BigInt(11), label: '11月' },
+    { value: BigInt(12), label: '12月' },
   ];
 
   private employeeId: string | null = null;
@@ -163,8 +163,8 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   private initializeYears(): void {
-    const currentYear = new Date().getFullYear();
-    for (let year = currentYear - 5; year <= currentYear + 10; year++) {
+    const currentYear = BigInt(new Date().getFullYear());
+    for (let year = currentYear - BigInt(5); year <= currentYear + BigInt(10); year++) {
       this.availableYears.push(year);
     }
   }
@@ -225,7 +225,7 @@ export class RegularDeterminationAddComponent implements OnInit {
           branchNumber: userData['branchNumber'] || '',
           addressPrefecture: addressPrefecture,
           employeeType: userData['employeeType'] || 'general', // デフォルトは一般
-          previousStandardRemuneration: userData['previousStandardRemuneration'],
+          previousStandardRemuneration: userData['previousStandardRemuneration']?.toString(),
         };
 
         console.log('設定された従業員情報:', this.employeeInfo);
@@ -270,12 +270,15 @@ export class RegularDeterminationAddComponent implements OnInit {
     }
   }
 
-  private calculateAge(birthDate: Date): number {
+  private calculateAge(birthDate: Date): bigint {
     const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    let age = BigInt(today.getFullYear()) - BigInt(birthDate.getFullYear());
+    const monthDiff = BigInt(today.getMonth()) - BigInt(birthDate.getMonth());
+    if (
+      monthDiff < BigInt(0) ||
+      (monthDiff === BigInt(0) && BigInt(today.getDate()) < BigInt(birthDate.getDate()))
+    ) {
+      age = age - BigInt(1);
     }
     return age;
   }
@@ -287,9 +290,13 @@ export class RegularDeterminationAddComponent implements OnInit {
   isFormValid(): boolean {
     const validPayments = this.monthlyPayments.filter(
       (payment) =>
-        payment.amount !== null && SocialInsuranceCalculator.compare(payment.amount, 0) > 0
+        payment.amount !== null && SocialInsuranceCalculator.compare(payment.amount, '0') > 0
     );
-    return validPayments.length >= 2 && this.applicableYear > 0 && this.applicableMonth > 0;
+    return (
+      validPayments.length >= 2 &&
+      this.applicableYear > BigInt(0) &&
+      this.applicableMonth > BigInt(0)
+    );
   }
 
   isSaveValid(): boolean {
@@ -593,9 +600,9 @@ export class RegularDeterminationAddComponent implements OnInit {
 
           // フォームに設定
           this.monthlyPayments[index] = {
-            month: index + 4, // 4, 5, 6月
-            amount: totalAmount > 0 ? totalAmount : null,
-            workingDays: workingDays,
+            month: BigInt(index + 4), // 4, 5, 6月
+            amount: totalAmount > 0 ? totalAmount.toString() : null,
+            workingDays: workingDays ? BigInt(workingDays) : null,
           };
         });
 
@@ -623,7 +630,7 @@ export class RegularDeterminationAddComponent implements OnInit {
 
   private calculateAverage(): void {
     if (!this.employeeInfo) {
-      this.averageAmount = 0;
+      this.averageAmount = '0';
       this.judgmentResult = null;
       return;
     }
@@ -637,19 +644,22 @@ export class RegularDeterminationAddComponent implements OnInit {
     if (targetMonths.length === 0) {
       console.log('算定対象月が0ヶ月のため、従前の標準報酬月額を使用');
       // 従前の標準報酬月額がある場合はそれを使用、なければ0
-      this.averageAmount = this.employeeInfo.previousStandardRemuneration || 0;
+      this.averageAmount = this.employeeInfo.previousStandardRemuneration || '0';
       this.judgmentResult = null;
       return;
     }
 
     // Step 2: 各月の報酬額を調整
-    let totalRemuneration = 0;
+    let totalRemuneration = '0';
 
     for (const month of targetMonths) {
-      let adjustedAmount = month.amount || 0;
+      let adjustedAmount = month.amount || '0';
 
       // 遡及払いがある場合は減算（Decimal.js使用）
-      if (month.retroactivePay && SocialInsuranceCalculator.compare(month.retroactivePay, 0) > 0) {
+      if (
+        month.retroactivePay &&
+        SocialInsuranceCalculator.compare(month.retroactivePay, '0') > 0
+      ) {
         adjustedAmount = SocialInsuranceCalculator.adjustForRetroactivePay(
           adjustedAmount,
           month.retroactivePay
@@ -667,11 +677,11 @@ export class RegularDeterminationAddComponent implements OnInit {
     }
 
     // Step 3: 平均報酬月額の計算（1円未満切り捨て）
-    const amounts = targetMonths.map((month) => month.amount || 0);
+    const amounts = targetMonths.map((month) => month.amount || '0');
     this.averageAmount = SocialInsuranceCalculator.calculateAverageRemuneration(amounts);
 
     console.log('算定結果:', {
-      targetMonths: targetMonths.map((m) => `${m.month}月`),
+      targetMonths: targetMonths.map((m) => `${m.month}`),
       totalRemuneration,
       monthCount: targetMonths.length,
       averageAmount: this.averageAmount,
@@ -688,7 +698,7 @@ export class RegularDeterminationAddComponent implements OnInit {
     const validPayments = monthlyPayments.filter(
       (payment) =>
         payment.amount !== null &&
-        SocialInsuranceCalculator.compare(payment.amount, 0) > 0 &&
+        SocialInsuranceCalculator.compare(payment.amount, '0') > 0 &&
         payment.workingDays !== null &&
         !payment.isPartialMonth && // 途中入社等の月は除外
         !payment.isLowPayment // 休職給等の月は除外
@@ -725,7 +735,7 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   async calculateGrade(): Promise<void> {
-    if (!this.isFormValid() || this.averageAmount <= 0) {
+    if (!this.isFormValid() || this.averageAmount === '0') {
       return;
     }
 
@@ -740,7 +750,7 @@ export class RegularDeterminationAddComponent implements OnInit {
     }
   }
 
-  private findGradeByAmountFromStandardTable(amount: number): GradeJudgmentResult {
+  private findGradeByAmountFromStandardTable(amount: string): GradeJudgmentResult {
     // 健康保険の等級を決定
     const healthGrade = this.findGradeFromHealthInsuranceTable(amount);
 
@@ -766,61 +776,61 @@ export class RegularDeterminationAddComponent implements OnInit {
   /**
    * 健康保険の等級表（令和6年度 - 全50等級）
    */
-  private findGradeFromHealthInsuranceTable(amount: number): {
-    grade: number;
-    standardSalary: number;
+  private findGradeFromHealthInsuranceTable(amount: string): {
+    grade: bigint;
+    standardSalary: string;
   } {
     const healthInsuranceTable = [
-      { grade: 1, standardSalary: 58000, min: 0, max: 63000 },
-      { grade: 2, standardSalary: 68000, min: 63000, max: 73000 },
-      { grade: 3, standardSalary: 78000, min: 73000, max: 83000 },
-      { grade: 4, standardSalary: 88000, min: 83000, max: 93000 },
-      { grade: 5, standardSalary: 98000, min: 93000, max: 101000 },
-      { grade: 6, standardSalary: 104000, min: 101000, max: 107000 },
-      { grade: 7, standardSalary: 110000, min: 107000, max: 114000 },
-      { grade: 8, standardSalary: 118000, min: 114000, max: 122000 },
-      { grade: 9, standardSalary: 126000, min: 122000, max: 130000 },
-      { grade: 10, standardSalary: 134000, min: 130000, max: 138000 },
-      { grade: 11, standardSalary: 142000, min: 138000, max: 146000 },
-      { grade: 12, standardSalary: 150000, min: 146000, max: 155000 },
-      { grade: 13, standardSalary: 160000, min: 155000, max: 165000 },
-      { grade: 14, standardSalary: 170000, min: 165000, max: 175000 },
-      { grade: 15, standardSalary: 180000, min: 175000, max: 185000 },
-      { grade: 16, standardSalary: 190000, min: 185000, max: 195000 },
-      { grade: 17, standardSalary: 200000, min: 195000, max: 210000 },
-      { grade: 18, standardSalary: 220000, min: 210000, max: 230000 },
-      { grade: 19, standardSalary: 240000, min: 230000, max: 250000 },
-      { grade: 20, standardSalary: 260000, min: 250000, max: 270000 },
-      { grade: 21, standardSalary: 280000, min: 270000, max: 290000 },
-      { grade: 22, standardSalary: 300000, min: 290000, max: 310000 },
-      { grade: 23, standardSalary: 320000, min: 310000, max: 330000 },
-      { grade: 24, standardSalary: 340000, min: 330000, max: 350000 },
-      { grade: 25, standardSalary: 360000, min: 350000, max: 370000 },
-      { grade: 26, standardSalary: 380000, min: 370000, max: 395000 },
-      { grade: 27, standardSalary: 410000, min: 395000, max: 425000 },
-      { grade: 28, standardSalary: 440000, min: 425000, max: 455000 },
-      { grade: 29, standardSalary: 470000, min: 455000, max: 485000 },
-      { grade: 30, standardSalary: 500000, min: 485000, max: 515000 },
-      { grade: 31, standardSalary: 530000, min: 515000, max: 545000 },
-      { grade: 32, standardSalary: 560000, min: 545000, max: 575000 },
-      { grade: 33, standardSalary: 590000, min: 575000, max: 605000 },
-      { grade: 34, standardSalary: 620000, min: 605000, max: 635000 },
-      { grade: 35, standardSalary: 650000, min: 635000, max: 665000 },
-      { grade: 36, standardSalary: 680000, min: 665000, max: 695000 },
-      { grade: 37, standardSalary: 710000, min: 695000, max: 730000 },
-      { grade: 38, standardSalary: 750000, min: 730000, max: 770000 },
-      { grade: 39, standardSalary: 790000, min: 770000, max: 810000 },
-      { grade: 40, standardSalary: 830000, min: 810000, max: 855000 },
-      { grade: 41, standardSalary: 880000, min: 855000, max: 905000 },
-      { grade: 42, standardSalary: 930000, min: 905000, max: 955000 },
-      { grade: 43, standardSalary: 980000, min: 955000, max: 1005000 },
-      { grade: 44, standardSalary: 1030000, min: 1005000, max: 1055000 },
-      { grade: 45, standardSalary: 1090000, min: 1055000, max: 1115000 },
-      { grade: 46, standardSalary: 1150000, min: 1115000, max: 1175000 },
-      { grade: 47, standardSalary: 1210000, min: 1175000, max: 1235000 },
-      { grade: 48, standardSalary: 1270000, min: 1235000, max: 1295000 },
-      { grade: 49, standardSalary: 1330000, min: 1295000, max: 1355000 },
-      { grade: 50, standardSalary: 1390000, min: 1355000, max: Number.MAX_SAFE_INTEGER },
+      { grade: BigInt(1), standardSalary: '58000', min: '0', max: '63000' },
+      { grade: BigInt(2), standardSalary: '68000', min: '63000', max: '73000' },
+      { grade: BigInt(3), standardSalary: '78000', min: '73000', max: '83000' },
+      { grade: BigInt(4), standardSalary: '88000', min: '83000', max: '93000' },
+      { grade: BigInt(5), standardSalary: '98000', min: '93000', max: '101000' },
+      { grade: BigInt(6), standardSalary: '104000', min: '101000', max: '107000' },
+      { grade: BigInt(7), standardSalary: '110000', min: '107000', max: '114000' },
+      { grade: BigInt(8), standardSalary: '118000', min: '114000', max: '122000' },
+      { grade: BigInt(9), standardSalary: '126000', min: '122000', max: '130000' },
+      { grade: BigInt(10), standardSalary: '134000', min: '130000', max: '138000' },
+      { grade: BigInt(11), standardSalary: '142000', min: '138000', max: '146000' },
+      { grade: BigInt(12), standardSalary: '150000', min: '146000', max: '155000' },
+      { grade: BigInt(13), standardSalary: '160000', min: '155000', max: '165000' },
+      { grade: BigInt(14), standardSalary: '170000', min: '165000', max: '175000' },
+      { grade: BigInt(15), standardSalary: '180000', min: '175000', max: '185000' },
+      { grade: BigInt(16), standardSalary: '190000', min: '185000', max: '195000' },
+      { grade: BigInt(17), standardSalary: '200000', min: '195000', max: '210000' },
+      { grade: BigInt(18), standardSalary: '220000', min: '210000', max: '230000' },
+      { grade: BigInt(19), standardSalary: '240000', min: '230000', max: '250000' },
+      { grade: BigInt(20), standardSalary: '260000', min: '250000', max: '270000' },
+      { grade: BigInt(21), standardSalary: '280000', min: '270000', max: '290000' },
+      { grade: BigInt(22), standardSalary: '300000', min: '290000', max: '310000' },
+      { grade: BigInt(23), standardSalary: '320000', min: '310000', max: '330000' },
+      { grade: BigInt(24), standardSalary: '340000', min: '330000', max: '350000' },
+      { grade: BigInt(25), standardSalary: '360000', min: '350000', max: '370000' },
+      { grade: BigInt(26), standardSalary: '380000', min: '370000', max: '395000' },
+      { grade: BigInt(27), standardSalary: '410000', min: '395000', max: '425000' },
+      { grade: BigInt(28), standardSalary: '440000', min: '425000', max: '455000' },
+      { grade: BigInt(29), standardSalary: '470000', min: '455000', max: '485000' },
+      { grade: BigInt(30), standardSalary: '500000', min: '485000', max: '515000' },
+      { grade: BigInt(31), standardSalary: '530000', min: '515000', max: '545000' },
+      { grade: BigInt(32), standardSalary: '560000', min: '545000', max: '575000' },
+      { grade: BigInt(33), standardSalary: '590000', min: '575000', max: '605000' },
+      { grade: BigInt(34), standardSalary: '620000', min: '605000', max: '635000' },
+      { grade: BigInt(35), standardSalary: '650000', min: '635000', max: '665000' },
+      { grade: BigInt(36), standardSalary: '680000', min: '665000', max: '695000' },
+      { grade: BigInt(37), standardSalary: '710000', min: '695000', max: '730000' },
+      { grade: BigInt(38), standardSalary: '750000', min: '730000', max: '770000' },
+      { grade: BigInt(39), standardSalary: '790000', min: '770000', max: '810000' },
+      { grade: BigInt(40), standardSalary: '830000', min: '810000', max: '855000' },
+      { grade: BigInt(41), standardSalary: '880000', min: '855000', max: '905000' },
+      { grade: BigInt(42), standardSalary: '930000', min: '905000', max: '955000' },
+      { grade: BigInt(43), standardSalary: '980000', min: '955000', max: '1005000' },
+      { grade: BigInt(44), standardSalary: '1030000', min: '1005000', max: '1055000' },
+      { grade: BigInt(45), standardSalary: '1090000', min: '1055000', max: '1115000' },
+      { grade: BigInt(46), standardSalary: '1150000', min: '1115000', max: '1175000' },
+      { grade: BigInt(47), standardSalary: '1210000', min: '1175000', max: '1235000' },
+      { grade: BigInt(48), standardSalary: '1270000', min: '1235000', max: '1295000' },
+      { grade: BigInt(49), standardSalary: '1330000', min: '1295000', max: '1355000' },
+      { grade: BigInt(50), standardSalary: '1390000', min: '1355000', max: 'Infinity' },
     ];
 
     // Decimal.jsを使用した正確な範囲判定
@@ -833,43 +843,43 @@ export class RegularDeterminationAddComponent implements OnInit {
   /**
    * 厚生年金保険の等級表（令和6年度 - 全32等級）
    */
-  private findGradeFromPensionInsuranceTable(amount: number): {
-    grade: number;
-    standardSalary: number;
+  private findGradeFromPensionInsuranceTable(amount: string): {
+    grade: bigint;
+    standardSalary: string;
   } {
     const pensionInsuranceTable = [
-      { grade: 1, standardSalary: 88000, min: 0, max: 93000 },
-      { grade: 2, standardSalary: 98000, min: 93000, max: 101000 },
-      { grade: 3, standardSalary: 104000, min: 101000, max: 107000 },
-      { grade: 4, standardSalary: 110000, min: 107000, max: 114000 },
-      { grade: 5, standardSalary: 118000, min: 114000, max: 122000 },
-      { grade: 6, standardSalary: 126000, min: 122000, max: 130000 },
-      { grade: 7, standardSalary: 134000, min: 130000, max: 138000 },
-      { grade: 8, standardSalary: 142000, min: 138000, max: 146000 },
-      { grade: 9, standardSalary: 150000, min: 146000, max: 155000 },
-      { grade: 10, standardSalary: 160000, min: 155000, max: 165000 },
-      { grade: 11, standardSalary: 170000, min: 165000, max: 175000 },
-      { grade: 12, standardSalary: 180000, min: 175000, max: 185000 },
-      { grade: 13, standardSalary: 190000, min: 185000, max: 195000 },
-      { grade: 14, standardSalary: 200000, min: 195000, max: 210000 },
-      { grade: 15, standardSalary: 220000, min: 210000, max: 230000 },
-      { grade: 16, standardSalary: 240000, min: 230000, max: 250000 },
-      { grade: 17, standardSalary: 260000, min: 250000, max: 270000 },
-      { grade: 18, standardSalary: 280000, min: 270000, max: 290000 },
-      { grade: 19, standardSalary: 300000, min: 290000, max: 310000 },
-      { grade: 20, standardSalary: 320000, min: 310000, max: 330000 },
-      { grade: 21, standardSalary: 340000, min: 330000, max: 350000 },
-      { grade: 22, standardSalary: 360000, min: 350000, max: 370000 },
-      { grade: 23, standardSalary: 380000, min: 370000, max: 395000 },
-      { grade: 24, standardSalary: 410000, min: 395000, max: 425000 },
-      { grade: 25, standardSalary: 440000, min: 425000, max: 455000 },
-      { grade: 26, standardSalary: 470000, min: 455000, max: 485000 },
-      { grade: 27, standardSalary: 500000, min: 485000, max: 515000 },
-      { grade: 28, standardSalary: 530000, min: 515000, max: 545000 },
-      { grade: 29, standardSalary: 560000, min: 545000, max: 575000 },
-      { grade: 30, standardSalary: 590000, min: 575000, max: 605000 },
-      { grade: 31, standardSalary: 620000, min: 605000, max: 635000 },
-      { grade: 32, standardSalary: 650000, min: 635000, max: Number.MAX_SAFE_INTEGER },
+      { grade: BigInt(1), standardSalary: '88000', min: '0', max: '93000' },
+      { grade: BigInt(2), standardSalary: '98000', min: '93000', max: '101000' },
+      { grade: BigInt(3), standardSalary: '104000', min: '101000', max: '107000' },
+      { grade: BigInt(4), standardSalary: '110000', min: '107000', max: '114000' },
+      { grade: BigInt(5), standardSalary: '118000', min: '114000', max: '122000' },
+      { grade: BigInt(6), standardSalary: '126000', min: '122000', max: '130000' },
+      { grade: BigInt(7), standardSalary: '134000', min: '130000', max: '138000' },
+      { grade: BigInt(8), standardSalary: '142000', min: '138000', max: '146000' },
+      { grade: BigInt(9), standardSalary: '150000', min: '146000', max: '155000' },
+      { grade: BigInt(10), standardSalary: '160000', min: '155000', max: '165000' },
+      { grade: BigInt(11), standardSalary: '170000', min: '165000', max: '175000' },
+      { grade: BigInt(12), standardSalary: '180000', min: '175000', max: '185000' },
+      { grade: BigInt(13), standardSalary: '190000', min: '185000', max: '195000' },
+      { grade: BigInt(14), standardSalary: '200000', min: '195000', max: '210000' },
+      { grade: BigInt(15), standardSalary: '220000', min: '210000', max: '230000' },
+      { grade: BigInt(16), standardSalary: '240000', min: '230000', max: '250000' },
+      { grade: BigInt(17), standardSalary: '260000', min: '250000', max: '270000' },
+      { grade: BigInt(18), standardSalary: '280000', min: '270000', max: '290000' },
+      { grade: BigInt(19), standardSalary: '300000', min: '290000', max: '310000' },
+      { grade: BigInt(20), standardSalary: '320000', min: '310000', max: '330000' },
+      { grade: BigInt(21), standardSalary: '340000', min: '330000', max: '350000' },
+      { grade: BigInt(22), standardSalary: '360000', min: '350000', max: '370000' },
+      { grade: BigInt(23), standardSalary: '380000', min: '370000', max: '395000' },
+      { grade: BigInt(24), standardSalary: '410000', min: '395000', max: '425000' },
+      { grade: BigInt(25), standardSalary: '440000', min: '425000', max: '455000' },
+      { grade: BigInt(26), standardSalary: '470000', min: '455000', max: '485000' },
+      { grade: BigInt(27), standardSalary: '500000', min: '485000', max: '515000' },
+      { grade: BigInt(28), standardSalary: '530000', min: '515000', max: '545000' },
+      { grade: BigInt(29), standardSalary: '560000', min: '545000', max: '575000' },
+      { grade: BigInt(30), standardSalary: '590000', min: '575000', max: '605000' },
+      { grade: BigInt(31), standardSalary: '620000', min: '605000', max: '635000' },
+      { grade: BigInt(32), standardSalary: '650000', min: '635000', max: 'Infinity' },
     ];
 
     // Decimal.jsを使用した正確な範囲判定
@@ -963,7 +973,11 @@ export class RegularDeterminationAddComponent implements OnInit {
     }
 
     try {
-      const effectiveDate = new Date(this.applicableYear, this.applicableMonth - 1, 1);
+      const effectiveDate = new Date(
+        Number(this.applicableYear),
+        Number(this.applicableMonth) - 1,
+        1
+      );
 
       const gradeJudgmentRecord: Record<string, unknown> = {
         employeeId: this.employeeId,
@@ -986,7 +1000,11 @@ export class RegularDeterminationAddComponent implements OnInit {
 
       // endDateは値がある場合のみ設定
       if (this.endYear && this.endMonth) {
-        gradeJudgmentRecord['endDate'] = new Date(this.endYear, this.endMonth - 1, 1);
+        gradeJudgmentRecord['endDate'] = new Date(
+          Number(this.endYear),
+          Number(this.endMonth) - 1,
+          1
+        );
       }
 
       const historyCollectionRef = collection(
@@ -1031,14 +1049,14 @@ export class RegularDeterminationAddComponent implements OnInit {
 
   private clearForm(): void {
     this.monthlyPayments = [
-      { month: 4, amount: null, workingDays: null },
-      { month: 5, amount: null, workingDays: null },
-      { month: 6, amount: null, workingDays: null },
+      { month: BigInt(4), amount: null, workingDays: null },
+      { month: BigInt(5), amount: null, workingDays: null },
+      { month: BigInt(6), amount: null, workingDays: null },
     ];
-    this.averageAmount = 0;
+    this.averageAmount = '0';
     this.judgmentResult = null;
-    this.applicableYear = new Date().getFullYear();
-    this.applicableMonth = 9;
+    this.applicableYear = BigInt(new Date().getFullYear());
+    this.applicableMonth = BigInt(9);
     this.endYear = null;
     this.endMonth = null;
   }
@@ -1073,7 +1091,7 @@ export class RegularDeterminationAddComponent implements OnInit {
     return '';
   }
 
-  getMonthName(month: number): string {
+  getMonthName(month: bigint): string {
     const monthNames = [
       '',
       '1月',
@@ -1089,6 +1107,14 @@ export class RegularDeterminationAddComponent implements OnInit {
       '11月',
       '12月',
     ];
-    return monthNames[month] || '';
+    return monthNames[Number(month)] || '';
+  }
+
+  hasAverageAmount(): boolean {
+    return SocialInsuranceCalculator.compare(this.averageAmount, '0') > 0;
+  }
+
+  formatAmount(amount: string): string {
+    return SocialInsuranceCalculator.formatAmount(amount);
   }
 }

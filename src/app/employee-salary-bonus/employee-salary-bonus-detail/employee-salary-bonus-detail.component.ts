@@ -144,18 +144,26 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
     }
   }
 
-  getTotal(col: string): number {
-    let sum = 0;
+  getTotal(col: string): string {
+    let sum = '0';
     for (const row of this.rows) {
       if (row === '合計' || row === '出勤日数' || row === '欠勤日数' || row === '支給年月日')
         continue;
       if (row === '欠勤控除額') continue;
       const val = this.salaryTable[row]?.[col];
-      if (typeof val === 'number') sum = SocialInsuranceCalculator.addAmounts(sum, val);
+      if (typeof val === 'string' && !isNaN(Number(val))) {
+        sum = SocialInsuranceCalculator.addAmounts(sum, val);
+      } else if (typeof val === 'number') {
+        sum = SocialInsuranceCalculator.addAmounts(sum, val.toString());
+      }
     }
     // 欠勤控除額を引く
     const minus = this.salaryTable['欠勤控除額']?.[col];
-    if (typeof minus === 'number') sum = SocialInsuranceCalculator.subtractAmounts(sum, minus);
+    if (typeof minus === 'string' && !isNaN(Number(minus))) {
+      sum = SocialInsuranceCalculator.subtractAmounts(sum, minus);
+    } else if (typeof minus === 'number') {
+      sum = SocialInsuranceCalculator.subtractAmounts(sum, minus.toString());
+    }
     return sum;
   }
 

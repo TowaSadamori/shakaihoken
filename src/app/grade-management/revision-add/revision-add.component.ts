@@ -21,7 +21,7 @@ interface EmployeeInfo {
   name: string;
   employeeNumber: string;
   birthDate: string;
-  age: number;
+  age: bigint;
   companyId: string;
   branchNumber: string;
   addressPrefecture: string;
@@ -30,35 +30,35 @@ interface EmployeeInfo {
 
 interface RevisionData {
   revisionReason: string;
-  beforeAmount: number | null;
-  afterAmount: number | null;
+  beforeAmount: string | null;
+  afterAmount: string | null;
   revisionDate: string;
-  continuousMonths: number;
+  continuousMonths: bigint;
   isSignificantChange: boolean;
   isFixedSalaryChange: boolean;
 }
 
 interface GradeJudgmentResult {
   beforeGrades: {
-    healthInsuranceGrade: number;
-    healthInsuranceStandardSalary: number;
-    pensionInsuranceGrade: number;
-    pensionInsuranceStandardSalary: number;
-    careInsuranceGrade?: number;
-    careInsuranceStandardSalary?: number;
+    healthInsuranceGrade: bigint;
+    healthInsuranceStandardSalary: string;
+    pensionInsuranceGrade: bigint;
+    pensionInsuranceStandardSalary: string;
+    careInsuranceGrade?: bigint;
+    careInsuranceStandardSalary?: string;
   };
   afterGrades: {
-    healthInsuranceGrade: number;
-    healthInsuranceStandardSalary: number;
-    pensionInsuranceGrade: number;
-    pensionInsuranceStandardSalary: number;
-    careInsuranceGrade?: number;
-    careInsuranceStandardSalary?: number;
+    healthInsuranceGrade: bigint;
+    healthInsuranceStandardSalary: string;
+    pensionInsuranceGrade: bigint;
+    pensionInsuranceStandardSalary: string;
+    careInsuranceGrade?: bigint;
+    careInsuranceStandardSalary?: string;
   };
   gradeDifference: {
-    healthInsurance: number;
-    pensionInsurance: number;
-    careInsurance?: number;
+    healthInsurance: string;
+    pensionInsurance: string;
+    careInsurance?: string;
   };
 }
 
@@ -67,8 +67,8 @@ interface RevisionSaveData {
   employeeId: string;
   revisionData: RevisionData;
   judgmentResult: GradeJudgmentResult;
-  applicableYear: number;
-  applicableMonth: number;
+  applicableYear: bigint;
+  applicableMonth: bigint;
   calculationSnapshot: CalculationSnapshot;
   createdAt: Date;
   updatedAt: Date;
@@ -81,31 +81,31 @@ interface CalculationSnapshot {
   revisionTrigger: {
     reason: string;
     revisionDate: string;
-    continuousMonths: number;
+    continuousMonths: bigint;
   };
   beforeAfterComparison: {
-    beforeAmount: number;
-    afterAmount: number;
+    beforeAmount: string;
+    afterAmount: string;
     beforeGrades: {
-      healthInsuranceGrade: number;
-      healthInsuranceStandardSalary: number;
-      pensionInsuranceGrade: number;
-      pensionInsuranceStandardSalary: number;
-      careInsuranceGrade?: number;
-      careInsuranceStandardSalary?: number;
+      healthInsuranceGrade: bigint;
+      healthInsuranceStandardSalary: string;
+      pensionInsuranceGrade: bigint;
+      pensionInsuranceStandardSalary: string;
+      careInsuranceGrade?: bigint;
+      careInsuranceStandardSalary?: string;
     };
     afterGrades: {
-      healthInsuranceGrade: number;
-      healthInsuranceStandardSalary: number;
-      pensionInsuranceGrade: number;
-      pensionInsuranceStandardSalary: number;
-      careInsuranceGrade?: number;
-      careInsuranceStandardSalary?: number;
+      healthInsuranceGrade: bigint;
+      healthInsuranceStandardSalary: string;
+      pensionInsuranceGrade: bigint;
+      pensionInsuranceStandardSalary: string;
+      careInsuranceGrade?: bigint;
+      careInsuranceStandardSalary?: string;
     };
     gradeDifference: {
-      healthInsurance: number;
-      pensionInsurance: number;
-      careInsurance?: number;
+      healthInsurance: string;
+      pensionInsurance: string;
+      careInsurance?: string;
     };
   };
   validationResults: {
@@ -134,14 +134,14 @@ export class RevisionAddComponent implements OnInit {
     beforeAmount: null,
     afterAmount: null,
     revisionDate: '',
-    continuousMonths: 3,
+    continuousMonths: BigInt(3),
     isSignificantChange: false,
-    isFixedSalaryChange: true,
+    isFixedSalaryChange: false,
   };
 
   judgmentResult: GradeJudgmentResult | null = null;
-  applicableYear: number | null = null;
-  applicableMonth: number | null = null;
+  applicableYear: bigint | null = null;
+  applicableMonth: bigint | null = null;
 
   revisionReasons = [
     { value: 'salary_increase', label: '昇給' },
@@ -182,8 +182,8 @@ export class RevisionAddComponent implements OnInit {
     applicableDate.setMonth(applicableDate.getMonth() + 4);
     applicableDate.setDate(1);
 
-    this.applicableYear = applicableDate.getFullYear();
-    this.applicableMonth = applicableDate.getMonth() + 1;
+    this.applicableYear = BigInt(applicableDate.getFullYear());
+    this.applicableMonth = BigInt(applicableDate.getMonth() + 1);
   }
 
   private async loadEmployeeInfo(): Promise<void> {
@@ -259,13 +259,16 @@ export class RevisionAddComponent implements OnInit {
     }
   }
 
-  private calculateAge(birthDate: Date): number {
+  private calculateAge(birthDate: Date): bigint {
     // 年齢計算は整数の年月日計算なので通常計算で問題なし
     const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    let age = BigInt(today.getFullYear()) - BigInt(birthDate.getFullYear());
+    const monthDiff = BigInt(today.getMonth()) - BigInt(birthDate.getMonth());
+    if (
+      monthDiff < BigInt(0) ||
+      (monthDiff === BigInt(0) && BigInt(today.getDate()) < BigInt(birthDate.getDate()))
+    ) {
+      age = age - BigInt(1);
     }
     return age;
   }
@@ -301,10 +304,14 @@ export class RevisionAddComponent implements OnInit {
     const afterGrade = this.findGradeFromHealthInsuranceTable(this.revisionData.afterAmount);
 
     // Decimal.jsを使用した正確な等級差計算
-    const gradeDifference = Math.abs(
-      SocialInsuranceCalculator.calculateGradeDifference(beforeGrade.grade, afterGrade.grade)
+    const gradeDifference = SocialInsuranceCalculator.abs(
+      SocialInsuranceCalculator.calculateGradeDifference(
+        beforeGrade.grade.toString(),
+        afterGrade.grade.toString()
+      )
     );
-    this.revisionData.isSignificantChange = gradeDifference >= 2;
+    this.revisionData.isSignificantChange =
+      SocialInsuranceCalculator.compare(gradeDifference, '2') >= 0;
   }
 
   async calculateGrade(): Promise<void> {
@@ -321,25 +328,25 @@ export class RevisionAddComponent implements OnInit {
       afterGrades,
       gradeDifference: {
         healthInsurance: SocialInsuranceCalculator.calculateGradeDifference(
-          beforeGrades.healthInsuranceGrade,
-          afterGrades.healthInsuranceGrade
+          beforeGrades.healthInsuranceGrade.toString(),
+          afterGrades.healthInsuranceGrade.toString()
         ),
         pensionInsurance: SocialInsuranceCalculator.calculateGradeDifference(
-          beforeGrades.pensionInsuranceGrade,
-          afterGrades.pensionInsuranceGrade
+          beforeGrades.pensionInsuranceGrade.toString(),
+          afterGrades.pensionInsuranceGrade.toString()
         ),
         careInsurance:
           'careInsuranceGrade' in afterGrades && 'careInsuranceGrade' in beforeGrades
             ? SocialInsuranceCalculator.calculateGradeDifference(
-                beforeGrades.careInsuranceGrade!,
-                afterGrades.careInsuranceGrade!
+                beforeGrades.careInsuranceGrade!.toString(),
+                afterGrades.careInsuranceGrade!.toString()
               )
             : undefined,
       },
     };
   }
 
-  private calculateGradesFromAmount(amount: number) {
+  private calculateGradesFromAmount(amount: string) {
     const healthGrade = this.findGradeFromHealthInsuranceTable(amount);
     const pensionGrade = this.findGradeFromPensionInsuranceTable(amount);
 
@@ -350,7 +357,7 @@ export class RevisionAddComponent implements OnInit {
       pensionInsuranceStandardSalary: pensionGrade.standardSalary,
     };
 
-    if (this.employeeInfo && this.employeeInfo.age >= 40) {
+    if (this.employeeInfo && this.employeeInfo.age >= BigInt(40)) {
       return {
         ...grades,
         careInsuranceGrade: healthGrade.grade,
@@ -361,112 +368,116 @@ export class RevisionAddComponent implements OnInit {
     return grades;
   }
 
-  private findGradeFromHealthInsuranceTable(amount: number): {
-    grade: number;
-    standardSalary: number;
+  private findGradeFromHealthInsuranceTable(amount: string): {
+    grade: bigint;
+    standardSalary: string;
   } {
     const healthInsuranceTable = [
-      { grade: 1, standardSalary: 58000, min: 0, max: 63000 },
-      { grade: 2, standardSalary: 68000, min: 63000, max: 73000 },
-      { grade: 3, standardSalary: 78000, min: 73000, max: 83000 },
-      { grade: 4, standardSalary: 88000, min: 83000, max: 93000 },
-      { grade: 5, standardSalary: 98000, min: 93000, max: 101000 },
-      { grade: 6, standardSalary: 104000, min: 101000, max: 107000 },
-      { grade: 7, standardSalary: 110000, min: 107000, max: 114000 },
-      { grade: 8, standardSalary: 118000, min: 114000, max: 122000 },
-      { grade: 9, standardSalary: 126000, min: 122000, max: 130000 },
-      { grade: 10, standardSalary: 134000, min: 130000, max: 138000 },
-      { grade: 11, standardSalary: 142000, min: 138000, max: 146000 },
-      { grade: 12, standardSalary: 150000, min: 146000, max: 155000 },
-      { grade: 13, standardSalary: 160000, min: 155000, max: 165000 },
-      { grade: 14, standardSalary: 170000, min: 165000, max: 175000 },
-      { grade: 15, standardSalary: 180000, min: 175000, max: 185000 },
-      { grade: 16, standardSalary: 190000, min: 185000, max: 195000 },
-      { grade: 17, standardSalary: 200000, min: 195000, max: 210000 },
-      { grade: 18, standardSalary: 220000, min: 210000, max: 230000 },
-      { grade: 19, standardSalary: 240000, min: 230000, max: 250000 },
-      { grade: 20, standardSalary: 260000, min: 250000, max: 270000 },
-      { grade: 21, standardSalary: 280000, min: 270000, max: 290000 },
-      { grade: 22, standardSalary: 300000, min: 290000, max: 310000 },
-      { grade: 23, standardSalary: 320000, min: 310000, max: 330000 },
-      { grade: 24, standardSalary: 340000, min: 330000, max: 350000 },
-      { grade: 25, standardSalary: 360000, min: 350000, max: 370000 },
-      { grade: 26, standardSalary: 380000, min: 370000, max: 395000 },
-      { grade: 27, standardSalary: 410000, min: 395000, max: 425000 },
-      { grade: 28, standardSalary: 440000, min: 425000, max: 455000 },
-      { grade: 29, standardSalary: 470000, min: 455000, max: 485000 },
-      { grade: 30, standardSalary: 500000, min: 485000, max: 515000 },
-      { grade: 31, standardSalary: 530000, min: 515000, max: 545000 },
-      { grade: 32, standardSalary: 560000, min: 545000, max: 575000 },
-      { grade: 33, standardSalary: 590000, min: 575000, max: 605000 },
-      { grade: 34, standardSalary: 620000, min: 605000, max: 635000 },
-      { grade: 35, standardSalary: 650000, min: 635000, max: 665000 },
-      { grade: 36, standardSalary: 680000, min: 665000, max: 695000 },
-      { grade: 37, standardSalary: 710000, min: 695000, max: 730000 },
-      { grade: 38, standardSalary: 750000, min: 730000, max: 770000 },
-      { grade: 39, standardSalary: 790000, min: 770000, max: 810000 },
-      { grade: 40, standardSalary: 830000, min: 810000, max: 855000 },
-      { grade: 41, standardSalary: 880000, min: 855000, max: 905000 },
-      { grade: 42, standardSalary: 930000, min: 905000, max: 955000 },
-      { grade: 43, standardSalary: 980000, min: 955000, max: 1005000 },
-      { grade: 44, standardSalary: 1030000, min: 1005000, max: 1055000 },
-      { grade: 45, standardSalary: 1090000, min: 1055000, max: 1115000 },
-      { grade: 46, standardSalary: 1150000, min: 1115000, max: 1175000 },
-      { grade: 47, standardSalary: 1210000, min: 1175000, max: 1235000 },
-      { grade: 48, standardSalary: 1270000, min: 1235000, max: 1295000 },
-      { grade: 49, standardSalary: 1330000, min: 1295000, max: 1355000 },
-      { grade: 50, standardSalary: 1390000, min: 1355000, max: Number.MAX_SAFE_INTEGER },
+      { grade: BigInt(1), standardSalary: '58000', min: '0', max: '63000' },
+      { grade: BigInt(2), standardSalary: '68000', min: '63000', max: '73000' },
+      { grade: BigInt(3), standardSalary: '78000', min: '73000', max: '83000' },
+      { grade: BigInt(4), standardSalary: '88000', min: '83000', max: '93000' },
+      { grade: BigInt(5), standardSalary: '98000', min: '93000', max: '101000' },
+      { grade: BigInt(6), standardSalary: '104000', min: '101000', max: '107000' },
+      { grade: BigInt(7), standardSalary: '110000', min: '107000', max: '114000' },
+      { grade: BigInt(8), standardSalary: '118000', min: '114000', max: '122000' },
+      { grade: BigInt(9), standardSalary: '126000', min: '122000', max: '130000' },
+      { grade: BigInt(10), standardSalary: '134000', min: '130000', max: '138000' },
+      { grade: BigInt(11), standardSalary: '142000', min: '138000', max: '146000' },
+      { grade: BigInt(12), standardSalary: '150000', min: '146000', max: '155000' },
+      { grade: BigInt(13), standardSalary: '160000', min: '155000', max: '165000' },
+      { grade: BigInt(14), standardSalary: '170000', min: '165000', max: '175000' },
+      { grade: BigInt(15), standardSalary: '180000', min: '175000', max: '185000' },
+      { grade: BigInt(16), standardSalary: '190000', min: '185000', max: '195000' },
+      { grade: BigInt(17), standardSalary: '200000', min: '195000', max: '210000' },
+      { grade: BigInt(18), standardSalary: '220000', min: '210000', max: '230000' },
+      { grade: BigInt(19), standardSalary: '240000', min: '230000', max: '250000' },
+      { grade: BigInt(20), standardSalary: '260000', min: '250000', max: '270000' },
+      { grade: BigInt(21), standardSalary: '280000', min: '270000', max: '290000' },
+      { grade: BigInt(22), standardSalary: '300000', min: '290000', max: '310000' },
+      { grade: BigInt(23), standardSalary: '320000', min: '310000', max: '330000' },
+      { grade: BigInt(24), standardSalary: '340000', min: '330000', max: '350000' },
+      { grade: BigInt(25), standardSalary: '360000', min: '350000', max: '370000' },
+      { grade: BigInt(26), standardSalary: '380000', min: '370000', max: '395000' },
+      { grade: BigInt(27), standardSalary: '410000', min: '395000', max: '425000' },
+      { grade: BigInt(28), standardSalary: '440000', min: '425000', max: '455000' },
+      { grade: BigInt(29), standardSalary: '470000', min: '455000', max: '485000' },
+      { grade: BigInt(30), standardSalary: '500000', min: '485000', max: '515000' },
+      { grade: BigInt(31), standardSalary: '530000', min: '515000', max: '545000' },
+      { grade: BigInt(32), standardSalary: '560000', min: '545000', max: '575000' },
+      { grade: BigInt(33), standardSalary: '590000', min: '575000', max: '605000' },
+      { grade: BigInt(34), standardSalary: '620000', min: '605000', max: '635000' },
+      { grade: BigInt(35), standardSalary: '650000', min: '635000', max: '665000' },
+      { grade: BigInt(36), standardSalary: '680000', min: '665000', max: '695000' },
+      { grade: BigInt(37), standardSalary: '710000', min: '695000', max: '730000' },
+      { grade: BigInt(38), standardSalary: '750000', min: '730000', max: '770000' },
+      { grade: BigInt(39), standardSalary: '790000', min: '770000', max: '810000' },
+      { grade: BigInt(40), standardSalary: '830000', min: '810000', max: '855000' },
+      { grade: BigInt(41), standardSalary: '880000', min: '855000', max: '905000' },
+      { grade: BigInt(42), standardSalary: '930000', min: '905000', max: '955000' },
+      { grade: BigInt(43), standardSalary: '980000', min: '955000', max: '1005000' },
+      { grade: BigInt(44), standardSalary: '1030000', min: '1005000', max: '1055000' },
+      { grade: BigInt(45), standardSalary: '1090000', min: '1055000', max: '1115000' },
+      { grade: BigInt(46), standardSalary: '1150000', min: '1115000', max: '1175000' },
+      { grade: BigInt(47), standardSalary: '1210000', min: '1175000', max: '1235000' },
+      { grade: BigInt(48), standardSalary: '1270000', min: '1235000', max: '1295000' },
+      { grade: BigInt(49), standardSalary: '1330000', min: '1295000', max: '1355000' },
+      { grade: BigInt(50), standardSalary: '1390000', min: '1355000', max: '99999999999' },
     ];
 
     // Decimal.jsを使用した正確な範囲判定
-    const targetGrade = healthInsuranceTable.find((grade) =>
-      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
+    const targetGrade = healthInsuranceTable.find(
+      (grade) =>
+        SocialInsuranceCalculator.compare(amount, grade.min) >= 0 &&
+        SocialInsuranceCalculator.compare(amount, grade.max) < 0
     );
     return targetGrade || healthInsuranceTable[healthInsuranceTable.length - 1];
   }
 
-  private findGradeFromPensionInsuranceTable(amount: number): {
-    grade: number;
-    standardSalary: number;
+  private findGradeFromPensionInsuranceTable(amount: string): {
+    grade: bigint;
+    standardSalary: string;
   } {
     const pensionInsuranceTable = [
-      { grade: 1, standardSalary: 88000, min: 0, max: 93000 },
-      { grade: 2, standardSalary: 98000, min: 93000, max: 101000 },
-      { grade: 3, standardSalary: 104000, min: 101000, max: 107000 },
-      { grade: 4, standardSalary: 110000, min: 107000, max: 114000 },
-      { grade: 5, standardSalary: 118000, min: 114000, max: 122000 },
-      { grade: 6, standardSalary: 126000, min: 122000, max: 130000 },
-      { grade: 7, standardSalary: 134000, min: 130000, max: 138000 },
-      { grade: 8, standardSalary: 142000, min: 138000, max: 146000 },
-      { grade: 9, standardSalary: 150000, min: 146000, max: 155000 },
-      { grade: 10, standardSalary: 160000, min: 155000, max: 165000 },
-      { grade: 11, standardSalary: 170000, min: 165000, max: 175000 },
-      { grade: 12, standardSalary: 180000, min: 175000, max: 185000 },
-      { grade: 13, standardSalary: 190000, min: 185000, max: 195000 },
-      { grade: 14, standardSalary: 200000, min: 195000, max: 210000 },
-      { grade: 15, standardSalary: 220000, min: 210000, max: 230000 },
-      { grade: 16, standardSalary: 240000, min: 230000, max: 250000 },
-      { grade: 17, standardSalary: 260000, min: 250000, max: 270000 },
-      { grade: 18, standardSalary: 280000, min: 270000, max: 290000 },
-      { grade: 19, standardSalary: 300000, min: 290000, max: 310000 },
-      { grade: 20, standardSalary: 320000, min: 310000, max: 330000 },
-      { grade: 21, standardSalary: 340000, min: 330000, max: 350000 },
-      { grade: 22, standardSalary: 360000, min: 350000, max: 370000 },
-      { grade: 23, standardSalary: 380000, min: 370000, max: 395000 },
-      { grade: 24, standardSalary: 410000, min: 395000, max: 425000 },
-      { grade: 25, standardSalary: 440000, min: 425000, max: 455000 },
-      { grade: 26, standardSalary: 470000, min: 455000, max: 485000 },
-      { grade: 27, standardSalary: 500000, min: 485000, max: 515000 },
-      { grade: 28, standardSalary: 530000, min: 515000, max: 545000 },
-      { grade: 29, standardSalary: 560000, min: 545000, max: 575000 },
-      { grade: 30, standardSalary: 590000, min: 575000, max: 605000 },
-      { grade: 31, standardSalary: 620000, min: 605000, max: 635000 },
-      { grade: 32, standardSalary: 650000, min: 635000, max: Number.MAX_SAFE_INTEGER },
+      { grade: BigInt(1), standardSalary: '88000', min: '0', max: '93000' },
+      { grade: BigInt(2), standardSalary: '98000', min: '93000', max: '101000' },
+      { grade: BigInt(3), standardSalary: '104000', min: '101000', max: '107000' },
+      { grade: BigInt(4), standardSalary: '110000', min: '107000', max: '114000' },
+      { grade: BigInt(5), standardSalary: '118000', min: '114000', max: '122000' },
+      { grade: BigInt(6), standardSalary: '126000', min: '122000', max: '130000' },
+      { grade: BigInt(7), standardSalary: '134000', min: '130000', max: '138000' },
+      { grade: BigInt(8), standardSalary: '142000', min: '138000', max: '146000' },
+      { grade: BigInt(9), standardSalary: '150000', min: '146000', max: '155000' },
+      { grade: BigInt(10), standardSalary: '160000', min: '155000', max: '165000' },
+      { grade: BigInt(11), standardSalary: '170000', min: '165000', max: '175000' },
+      { grade: BigInt(12), standardSalary: '180000', min: '175000', max: '185000' },
+      { grade: BigInt(13), standardSalary: '190000', min: '185000', max: '195000' },
+      { grade: BigInt(14), standardSalary: '200000', min: '195000', max: '210000' },
+      { grade: BigInt(15), standardSalary: '220000', min: '210000', max: '230000' },
+      { grade: BigInt(16), standardSalary: '240000', min: '230000', max: '250000' },
+      { grade: BigInt(17), standardSalary: '260000', min: '250000', max: '270000' },
+      { grade: BigInt(18), standardSalary: '280000', min: '270000', max: '290000' },
+      { grade: BigInt(19), standardSalary: '300000', min: '290000', max: '310000' },
+      { grade: BigInt(20), standardSalary: '320000', min: '310000', max: '330000' },
+      { grade: BigInt(21), standardSalary: '340000', min: '330000', max: '350000' },
+      { grade: BigInt(22), standardSalary: '360000', min: '350000', max: '370000' },
+      { grade: BigInt(23), standardSalary: '380000', min: '370000', max: '395000' },
+      { grade: BigInt(24), standardSalary: '410000', min: '395000', max: '425000' },
+      { grade: BigInt(25), standardSalary: '440000', min: '425000', max: '455000' },
+      { grade: BigInt(26), standardSalary: '470000', min: '455000', max: '485000' },
+      { grade: BigInt(27), standardSalary: '500000', min: '485000', max: '515000' },
+      { grade: BigInt(28), standardSalary: '530000', min: '515000', max: '545000' },
+      { grade: BigInt(29), standardSalary: '560000', min: '545000', max: '575000' },
+      { grade: BigInt(30), standardSalary: '590000', min: '575000', max: '605000' },
+      { grade: BigInt(31), standardSalary: '620000', min: '605000', max: '635000' },
+      { grade: BigInt(32), standardSalary: '650000', min: '635000', max: '99999999999' },
     ];
 
     // Decimal.jsを使用した正確な範囲判定
-    const targetGrade = pensionInsuranceTable.find((grade) =>
-      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
+    const targetGrade = pensionInsuranceTable.find(
+      (grade) =>
+        SocialInsuranceCalculator.compare(amount, grade.min) >= 0 &&
+        SocialInsuranceCalculator.compare(amount, grade.max) < 0
     );
     return targetGrade || pensionInsuranceTable[pensionInsuranceTable.length - 1];
   }
@@ -476,13 +487,25 @@ export class RevisionAddComponent implements OnInit {
     return reasonOption ? reasonOption.label : reason;
   }
 
-  getGradeDifferenceText(difference: number): string {
-    if (difference > 0) {
-      return `+${difference}等級`;
-    } else if (difference < 0) {
-      return `${difference}等級`;
+  getGradeDifferenceText(difference: string): string {
+    const compareResult = SocialInsuranceCalculator.compare(difference, '0');
+    if (compareResult > 0) {
+      return `+${SocialInsuranceCalculator.formatAmount(difference)}等級`;
+    } else if (compareResult < 0) {
+      return `${SocialInsuranceCalculator.formatAmount(difference)}等級`;
     } else {
       return '変更なし';
+    }
+  }
+
+  getGradeDifferenceClass(difference: string): string {
+    const compareResult = SocialInsuranceCalculator.compare(difference, '0');
+    if (compareResult > 0) {
+      return 'increase';
+    } else if (compareResult < 0) {
+      return 'decrease';
+    } else {
+      return 'same';
     }
   }
 
@@ -608,7 +631,7 @@ export class RevisionAddComponent implements OnInit {
     if (this.revisionData.isFixedSalaryChange) {
       appliedRules.push('固定的賃金変動');
     }
-    if (this.revisionData.continuousMonths >= 3) {
+    if (this.revisionData.continuousMonths >= BigInt(3)) {
       appliedRules.push('3ヶ月継続性確認');
     }
 
@@ -724,7 +747,11 @@ export class RevisionAddComponent implements OnInit {
     }
 
     try {
-      const effectiveDate = new Date(this.applicableYear!, this.applicableMonth! - 1, 1);
+      const effectiveDate = new Date(
+        Number(this.applicableYear!),
+        Number(this.applicableMonth!) - 1,
+        1
+      );
 
       const gradeJudgmentRecord: Record<string, unknown> = {
         employeeId: this.employeeId,
@@ -777,9 +804,9 @@ export class RevisionAddComponent implements OnInit {
       beforeAmount: null,
       afterAmount: null,
       revisionDate: '',
-      continuousMonths: 3,
+      continuousMonths: BigInt(3),
       isSignificantChange: false,
-      isFixedSalaryChange: true,
+      isFixedSalaryChange: false,
     };
     this.judgmentResult = null;
     this.initializeDefaultDates();

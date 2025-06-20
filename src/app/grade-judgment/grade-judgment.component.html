@@ -185,15 +185,15 @@
               <div class="salary-info">
                 <div class="salary-item">
                   <span>月平均給与:</span>
-                  <span>{{ formatCurrency(dialogData.inputData.averageMonthly || 0) }}</span>
+                  <span>{{ formatCurrency(dialogData.inputData.averageMonthly || '0') }}</span>
                 </div>
                 <div class="salary-item" *ngIf="dialogData.judgmentType === 'regular'">
                   <span>年間賞与:</span>
-                  <span>{{ formatCurrency(dialogData.inputData.totalBonus || 0) }}</span>
+                  <span>{{ formatCurrency(dialogData.inputData.totalBonus || '0') }}</span>
                 </div>
                 <div class="salary-item">
                   <span>年間総額:</span>
-                  <span>{{ formatCurrency(dialogData.inputData.annualTotal || 0) }}</span>
+                  <span>{{ formatCurrency(dialogData.inputData.annualTotal || '0') }}</span>
                 </div>
               </div>
             </div>

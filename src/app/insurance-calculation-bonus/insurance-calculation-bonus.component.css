@@ -347,31 +347,31 @@
 
 .form-select:focus {
   outline: none;
-  border-color: #80bdff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
 }
 
 .import-button-area {
-  margin-left: auto;
+  text-align: center;
+  margin-top: 20px;
 }
 
 .import-btn {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+  transition: all 0.3s;
+  box-shadow: 0 3px 12px rgba(0, 123, 255, 0.3);
 }
 
 .import-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0056b3, #004085);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
 }
 
 .import-btn:disabled {
@@ -541,10 +541,6 @@
     gap: 15px;
   }
 
-  .import-button-area {
-    margin-left: 0;
-  }
-
   .excel-table {
     overflow-x: auto;
   }
@@ -558,4 +554,50 @@
     padding: 8px 4px;
     font-size: 0.75rem;
   }
+}
+
+/* 年度ナビゲーションコントロール */
+.year-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.year-nav-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.year-nav-btn:hover {
+  background-color: #0056b3;
+}
+
+.current-year {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 120px;
+  text-align: center;
+}
+
+.current-year-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.current-year-btn:hover {
+  background-color: #1e7e34;
 }

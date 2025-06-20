@@ -196,17 +196,17 @@ export class MaternityLeaveEndSalaryNotificationComponent implements OnInit {
 
   // 計算機能
   calculateTotal(monthIndex: number) {
-    const currency = this.form.get(`通貨によるものの額${monthIndex}`)?.value || 0;
-    const goods = this.form.get(`現物によるものの額${monthIndex}`)?.value || 0;
-    const total = SocialInsuranceCalculator.addAmounts(Number(currency), Number(goods));
-    this.form.patchValue({ [`合計${monthIndex}`]: total.toString() });
+    const currency = this.form.get(`通貨によるものの額${monthIndex}`)?.value || '0';
+    const goods = this.form.get(`現物によるものの額${monthIndex}`)?.value || '0';
+    const total = SocialInsuranceCalculator.addAmounts(currency, goods);
+    this.form.patchValue({ [`合計${monthIndex}`]: total });
     this.calculateGrandTotal();
   }
 
   calculateGrandTotal() {
-    const total1 = Number(this.form.get('合計1')?.value || 0);
-    const total2 = Number(this.form.get('合計2')?.value || 0);
-    const total3 = Number(this.form.get('合計3')?.value || 0);
+    const total1 = this.form.get('合計1')?.value || '0';
+    const total2 = this.form.get('合計2')?.value || '0';
+    const total3 = this.form.get('合計3')?.value || '0';
     const grandTotal = SocialInsuranceCalculator.addAmounts(
       SocialInsuranceCalculator.addAmounts(total1, total2),
       total3
@@ -218,9 +218,9 @@ export class MaternityLeaveEndSalaryNotificationComponent implements OnInit {
     ]);
 
     this.form.patchValue({
-      総計: grandTotal.toString(),
-      平均額: average.toString(),
-      修正平均額: average.toString(),
+      総計: grandTotal,
+      平均額: average,
+      修正平均額: average,
     });
   }
 }

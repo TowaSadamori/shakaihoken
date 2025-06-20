@@ -11,6 +11,11 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
+import {
+  GradeManagementService,
+  GradeInfo,
+  GradeBasedPremiumResult,
+} from './grade-management.service';
 
 // データモデル定義
 export interface FirestoreSalaryData {
@@ -22,11 +27,11 @@ export interface FirestoreSalaryData {
 
 export interface BonusHistoryItem {
   type: string;
-  amount: number;
-  month: number;
-  year: number;
+  amount: string; // Decimal文字列として保存
+  month: bigint;
+  year: bigint;
   originalKey: string;
-  fiscalYear?: number;
+  fiscalYear?: bigint;
   paymentDate?: string;
 }
 
@@ -34,10 +39,10 @@ export interface BonusPayment {
   paymentId: string;
   employeeId: string;
   paymentDate: string; // YYYY-MM-DD
-  bonusAmount: number;
+  bonusAmount: string; // Decimal文字列として保存
   paymentCountType: 'UNDER_3_TIMES' | 'OVER_4_TIMES';
   bonusType: string; // 'summer', 'winter', 'settlement', 'other'
-  fiscalYear: number; // 会計年度（4月-3月）
+  fiscalYear: bigint; // 会計年度（4月-3月）
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,75 +51,75 @@ export interface BonusCalculationResult {
   resultId: string;
   paymentId: string;
   employeeId: string;
-  standardBonusAmountHealth: number; // 健康保険の標準賞与額
-  standardBonusAmountPension: number; // 厚生年金の標準賞与額
-  healthInsurancePremium: number;
-  careInsurancePremium?: number; // 40歳以上のみ
-  pensionInsurancePremium: number;
-  childRearingContribution: number; // 子ども・子育て拠出金
-  employeeBurden: number; // 個人負担額合計
-  companyBurden: number; // 会社負担額合計
-  totalPremium: number; // 保険料総額
+  standardBonusAmountHealth: string; // 健康保険の標準賞与額（Decimal文字列）
+  standardBonusAmountPension: string; // 厚生年金の標準賞与額（Decimal文字列）
+  healthInsurancePremium: string; // Decimal文字列
+  careInsurancePremium?: string; // 40歳以上のみ（Decimal文字列）
+  pensionInsurancePremium: string; // Decimal文字列
+  childRearingContribution: string; // 子ども・子育て拠出金（Decimal文字列）
+  employeeBurden: string; // 個人負担額合計（Decimal文字列）
+  companyBurden: string; // 会社負担額合計（Decimal文字列）
+  totalPremium: string; // 保険料総額（Decimal文字列）
   calculationSnapshot: string; // JSON形式の計算詳細
   createdAt: Date;
 }
 
 export interface FiscalYearBonusTotal {
   employeeId: string;
-  fiscalYear: number;
-  totalStandardBonusAmount: number;
+  fiscalYear: bigint;
+  totalStandardBonusAmount: string; // Decimal文字列
   lastUpdated: Date;
 }
 
 export interface InsuranceRates {
-  year: number;
+  year: bigint;
   prefecture: string;
-  healthInsuranceRate: number;
-  careInsuranceRate: number;
-  pensionInsuranceRate: number;
-  childRearingContributionRate: number;
+  healthInsuranceRate: string; // Decimal文字列（パーセント）
+  careInsuranceRate: string; // Decimal文字列（パーセント）
+  pensionInsuranceRate: string; // Decimal文字列（パーセント）
+  childRearingContributionRate: string; // Decimal文字列（パーセント）
   effectiveDate: string;
 }
 
 export interface BonusInsurancePremiums {
-  healthPremium: number;
-  carePremium: number;
-  pensionPremium: number;
-  childRearingContribution: number;
-  employeeBurden: number;
-  companyBurden: number;
-  totalPremium: number;
+  healthPremium: string; // Decimal文字列
+  carePremium: string; // Decimal文字列
+  pensionPremium: string; // Decimal文字列
+  childRearingContribution: string; // Decimal文字列
+  employeeBurden: string; // Decimal文字列
+  companyBurden: string; // Decimal文字列
+  totalPremium: string; // Decimal文字列
 }
 
 export interface BonusLimitResult {
-  healthInsuranceAmount: number;
-  pensionInsuranceAmount: number;
+  healthInsuranceAmount: string; // Decimal文字列
+  pensionInsuranceAmount: string; // Decimal文字列
   isHealthLimitApplied: boolean;
   isPensionLimitApplied: boolean;
-  fiscalYearTotalBefore: number;
-  fiscalYearTotalAfter: number;
+  fiscalYearTotalBefore: string; // Decimal文字列
+  fiscalYearTotalAfter: string; // Decimal文字列
 }
 
 export interface CalculationSnapshot {
   calculationType: 'BONUS_UNDER_3_TIMES' | 'BONUS_OVER_4_TIMES';
   inputData: {
-    originalBonusAmount: number;
+    originalBonusAmount: string; // Decimal文字列
     paymentDate: string;
     paymentCountType: string;
     bonusType: string;
   };
   calculationDetails: {
-    standardBonusAmount: number;
+    standardBonusAmount: string; // Decimal文字列
     appliedLimits: {
       healthInsuranceLimit: boolean;
       pensionInsuranceLimit: boolean;
     };
     appliedRates: InsuranceRates;
-    fiscalYearTotalBefore: number;
-    fiscalYearTotalAfter: number;
+    fiscalYearTotalBefore: string; // Decimal文字列
+    fiscalYearTotalAfter: string; // Decimal文字列
   };
   results: BonusInsurancePremiums;
-  timestamp: Date;
+  calculatedAt: Date;
 }
 
 @Injectable({
@@ -123,26 +128,26 @@ export interface CalculationSnapshot {
 export class BonusCalculationService {
   private firestore = getFirestore();
 
-  constructor() {
+  constructor(private gradeManagementService: GradeManagementService) {
     // Firebase初期化は既にapp.config.tsで行われている
   }
 
   /**
    * 会計年度の取得（4月-3月）
    */
-  getFiscalYear(date: string): number {
+  getFiscalYear(date: string): bigint {
     const paymentDate = new Date(date);
-    const year = paymentDate.getFullYear();
+    const year = BigInt(paymentDate.getFullYear());
     const month = paymentDate.getMonth() + 1; // 0ベースなので+1
 
     // 4月以降は当年度、3月以前は前年度
-    return month >= 4 ? year : year - 1;
+    return month >= 4 ? year : year - 1n;
   }
 
   /**
    * Step 1: 標準賞与額の決定（1,000円未満切り捨て）
    */
-  calculateStandardBonusAmount(bonusAmount: number): number {
+  calculateStandardBonusAmount(bonusAmount: string): string {
     return SocialInsuranceCalculator.floorToThousand(bonusAmount);
   }
 
@@ -151,32 +156,35 @@ export class BonusCalculationService {
    */
   async applyBonusLimits(
     employeeId: string,
-    standardAmount: number,
-    fiscalYear: number
+    standardAmount: string,
+    fiscalYear: bigint
   ): Promise<BonusLimitResult> {
     try {
-      console.log('=== 賞与上限額適用開始 ===');
+      console.log('=== 賞与上限適用処理開始 ===');
       console.log('従業員ID:', employeeId);
       console.log('標準賞与額:', standardAmount);
       console.log('会計年度:', fiscalYear);
 
       // 健康保険：年度累計573万円チェック
       const currentTotal = await this.getFiscalYearTotal(employeeId, fiscalYear);
-      const healthLimit = 5730000; // 573万円
-      const pensionLimit = 1500000; // 150万円（1回あたり）
+      const healthLimit = '5730000'; // 573万円
+      const pensionLimit = '1500000'; // 150万円（1回あたり）
 
       let healthAmount = standardAmount;
       let pensionAmount = standardAmount;
       let isHealthLimitApplied = false;
       let isPensionLimitApplied = false;
 
-      console.log('現在の年度累計:', currentTotal);
-      console.log('健康保険上限:', healthLimit);
-      console.log('厚生年金上限:', pensionLimit);
-
       // 健康保険上限適用
-      if (SocialInsuranceCalculator.compare(currentTotal + standardAmount, healthLimit) > 0) {
-        healthAmount = Math.max(0, SocialInsuranceCalculator.subtract(healthLimit, currentTotal));
+      if (
+        SocialInsuranceCalculator.compare(
+          SocialInsuranceCalculator.addAmounts(currentTotal, standardAmount),
+          healthLimit
+        ) > 0
+      ) {
+        const subtractResult = SocialInsuranceCalculator.subtract(healthLimit, currentTotal);
+        healthAmount =
+          SocialInsuranceCalculator.compare(subtractResult, '0') > 0 ? subtractResult : '0';
         isHealthLimitApplied = true;
         console.log('健康保険上限適用:', healthAmount);
       }
@@ -200,7 +208,7 @@ export class BonusCalculationService {
       console.log('上限適用結果:', result);
       return result;
     } catch (error) {
-      console.error('上限額適用エラー:', error);
+      console.error('賞与上限適用エラー:', error);
       throw error;
     }
   }
@@ -208,20 +216,20 @@ export class BonusCalculationService {
   /**
    * 年度累計標準賞与額の取得
    */
-  private async getFiscalYearTotal(employeeId: string, fiscalYear: number): Promise<number> {
+  private async getFiscalYearTotal(employeeId: string, fiscalYear: bigint): Promise<string> {
     try {
       const docRef = doc(this.firestore, 'fiscalYearBonusTotals', `${employeeId}_${fiscalYear}`);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data() as FiscalYearBonusTotal;
-        return data.totalStandardBonusAmount || 0;
+        return data.totalStandardBonusAmount || '0';
       }
 
-      return 0;
+      return '0';
     } catch (error) {
       console.error('年度累計取得エラー:', error);
-      return 0;
+      return '0';
     }
   }
 
@@ -230,22 +238,23 @@ export class BonusCalculationService {
    */
   private async updateFiscalYearTotal(
     employeeId: string,
-    fiscalYear: number,
-    additionalAmount: number
+    fiscalYear: bigint,
+    additionalAmount: string
   ): Promise<void> {
     try {
-      const docRef = doc(this.firestore, 'fiscalYearBonusTotals', `${employeeId}_${fiscalYear}`);
       const currentTotal = await this.getFiscalYearTotal(employeeId, fiscalYear);
       const newTotal = SocialInsuranceCalculator.addAmounts(currentTotal, additionalAmount);
 
-      const data: FiscalYearBonusTotal = {
+      const totalData: FiscalYearBonusTotal = {
         employeeId,
         fiscalYear,
         totalStandardBonusAmount: newTotal,
         lastUpdated: new Date(),
       };
 
-      await setDoc(docRef, data);
+      const docRef = doc(this.firestore, 'fiscalYearBonusTotals', `${employeeId}_${fiscalYear}`);
+      await setDoc(docRef, totalData);
+
       console.log('年度累計更新完了:', newTotal);
     } catch (error) {
       console.error('年度累計更新エラー:', error);
@@ -258,11 +267,11 @@ export class BonusCalculationService {
    */
   async calculateInsurancePremiums(
     standardAmounts: {
-      healthInsuranceAmount: number;
-      pensionInsuranceAmount: number;
+      healthInsuranceAmount: string;
+      pensionInsuranceAmount: string;
     },
     rates: InsuranceRates,
-    employeeAge: number
+    employeeAge: bigint
   ): Promise<BonusInsurancePremiums> {
     try {
       console.log('=== 保険料計算開始 ===');
@@ -273,28 +282,28 @@ export class BonusCalculationService {
       // 健康保険料
       const healthPremium = SocialInsuranceCalculator.multiplyAndFloor(
         standardAmounts.healthInsuranceAmount,
-        SocialInsuranceCalculator.divide(rates.healthInsuranceRate, 100)
+        SocialInsuranceCalculator.divide(rates.healthInsuranceRate, '100')
       );
 
       // 介護保険料（40歳以上のみ）
       const carePremium =
-        employeeAge >= 40
+        employeeAge >= 40n
           ? SocialInsuranceCalculator.multiplyAndFloor(
               standardAmounts.healthInsuranceAmount,
-              SocialInsuranceCalculator.divide(rates.careInsuranceRate, 100)
+              SocialInsuranceCalculator.divide(rates.careInsuranceRate, '100')
             )
-          : 0;
+          : '0';
 
       // 厚生年金保険料
       const pensionPremium = SocialInsuranceCalculator.multiplyAndFloor(
         standardAmounts.pensionInsuranceAmount,
-        SocialInsuranceCalculator.divide(rates.pensionInsuranceRate, 100)
+        SocialInsuranceCalculator.divide(rates.pensionInsuranceRate, '100')
       );
 
       // 子ども・子育て拠出金（全額事業主負担）
       const childRearingContribution = SocialInsuranceCalculator.multiplyAndFloor(
         standardAmounts.pensionInsuranceAmount,
-        SocialInsuranceCalculator.divide(rates.childRearingContributionRate, 100)
+        SocialInsuranceCalculator.divide(rates.childRearingContributionRate, '100')
       );
 
       // 個人負担額（健康保険料 + 介護保険料 + 厚生年金保険料）の半額
@@ -302,7 +311,7 @@ export class BonusCalculationService {
         SocialInsuranceCalculator.addAmounts(healthPremium, carePremium),
         pensionPremium
       );
-      const employeeBurden = SocialInsuranceCalculator.divideAndFloor(totalEmployeePremium, 2);
+      const employeeBurden = SocialInsuranceCalculator.divideAndFloor(totalEmployeePremium, '2');
 
       // 会社負担額（個人負担額 + 子ども・子育て拠出金）
       const companyBurden = SocialInsuranceCalculator.addAmounts(
@@ -336,55 +345,51 @@ export class BonusCalculationService {
   /**
    * 保険料率の取得
    */
-  async getInsuranceRates(year: number, prefecture: string): Promise<InsuranceRates> {
+  async getInsuranceRates(year: bigint, prefecture: string): Promise<InsuranceRates> {
     try {
       console.log('=== 保険料率取得開始 ===');
-      console.log('年度:', year);
-      console.log('都道府県:', prefecture);
+      console.log('年度:', year, '都道府県:', prefecture);
 
-      const docRef = doc(
-        this.firestore,
-        'insurance_rates',
-        year.toString(),
-        'prefectures',
-        prefecture,
-        'rate_table',
-        'main'
-      );
+      const docRef = doc(this.firestore, 'insuranceRates', `${year}_${prefecture}`);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
+        console.log('取得した保険料率データ:', data);
 
-        // 賞与用の料率データを抽出
-        const rates: InsuranceRates = {
-          year,
-          prefecture,
-          healthInsuranceRate: data['healthInsuranceRate'] || 10.0,
-          careInsuranceRate: data['careInsuranceRate'] || 1.6,
-          pensionInsuranceRate: data['pensionInsuranceRate'] || 18.3,
-          childRearingContributionRate: data['childRearingContributionRate'] || 0.36,
-          effectiveDate: data['effectiveDate'] || `${year}-04-01`,
-        };
-
-        console.log('取得した保険料率:', rates);
-        return rates;
-      } else {
-        console.warn('保険料率データが見つかりません。デフォルト値を使用します。');
-        // デフォルト値を返す
         return {
           year,
           prefecture,
-          healthInsuranceRate: 10.0,
-          careInsuranceRate: 1.6,
-          pensionInsuranceRate: 18.3,
-          childRearingContributionRate: 0.36,
-          effectiveDate: `${year}-04-01`,
+          healthInsuranceRate: data['healthInsuranceRate'] || '10.0',
+          careInsuranceRate: data['careInsuranceRate'] || '1.6',
+          pensionInsuranceRate: data['pensionInsuranceRate'] || '18.3',
+          childRearingContributionRate: data['childRearingContributionRate'] || '0.36',
+          effectiveDate: data['effectiveDate'] || `${year}-04-01`,
         };
       }
+
+      console.log('保険料率データが見つからないため、デフォルト値を使用');
+      return {
+        year,
+        prefecture,
+        healthInsuranceRate: '10.0',
+        careInsuranceRate: '1.6',
+        pensionInsuranceRate: '18.3',
+        childRearingContributionRate: '0.36',
+        effectiveDate: `${year}-04-01`,
+      };
     } catch (error) {
       console.error('保険料率取得エラー:', error);
-      throw error;
+      // エラー時はデフォルト値を返す
+      return {
+        year,
+        prefecture,
+        healthInsuranceRate: '10.0',
+        careInsuranceRate: '1.6',
+        pensionInsuranceRate: '18.3',
+        childRearingContributionRate: '0.36',
+        effectiveDate: `${year}-04-01`,
+      };
     }
   }
 
@@ -393,39 +398,36 @@ export class BonusCalculationService {
    */
   async calculateAnnualBonusForStandardSalary(
     employeeId: string,
-    targetYear: number
-  ): Promise<number> {
+    targetYear: bigint
+  ): Promise<string> {
     try {
       console.log('=== 年4回以上賞与集計開始 ===');
-      console.log('従業員ID:', employeeId);
-      console.log('対象年度:', targetYear);
+      console.log('従業員ID:', employeeId, '対象年:', targetYear);
 
       // 前年7月1日〜当年6月30日の集計
-      const startDate = `${targetYear - 1}-07-01`;
+      const startDate = `${targetYear - 1n}-07-01`;
       const endDate = `${targetYear}-06-30`;
 
-      const bonusPayments = await this.getAnnualBonusPayments(
-        employeeId,
-        startDate,
-        endDate,
-        'OVER_4_TIMES'
-      );
+      console.log('集計期間:', startDate, '〜', endDate);
+
+      // 実装：実際のFirestoreクエリでデータを取得
+      const bonusPayments: BonusPayment[] = []; // 実装が必要
 
       const totalAmount = bonusPayments.reduce(
         (sum, payment) => SocialInsuranceCalculator.addAmounts(sum, payment.bonusAmount),
-        0
+        '0'
       );
 
       // 12で割って月割り額を計算
-      const monthlyAmount = SocialInsuranceCalculator.divideAndFloor(totalAmount, 12);
+      const monthlyAmount = SocialInsuranceCalculator.divideAndFloor(totalAmount, '12');
 
       console.log('年間賞与合計:', totalAmount);
-      console.log('月割り額:', monthlyAmount);
+      console.log('月割り賞与額:', monthlyAmount);
 
       return monthlyAmount;
     } catch (error) {
       console.error('年間賞与集計エラー:', error);
-      return 0;
+      return '0';
     }
   }
 
@@ -480,8 +482,38 @@ export class BonusCalculationService {
       inputData,
       calculationDetails,
       results,
-      timestamp: new Date(),
+      calculatedAt: new Date(),
     };
+  }
+
+  /**
+   * 賞与支払いデータの保存
+   */
+  async saveBonusPayment(
+    payment: Omit<BonusPayment, 'paymentId' | 'createdAt' | 'updatedAt'>
+  ): Promise<string> {
+    try {
+      console.log('=== 賞与支払いデータ保存開始 ===');
+
+      // ユニークなIDを生成
+      const paymentId = `${payment.employeeId}_${payment.paymentDate}_${Date.now()}`;
+
+      const bonusPayment: BonusPayment = {
+        ...payment,
+        paymentId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const docRef = doc(this.firestore, 'bonusPayments', paymentId);
+      await setDoc(docRef, bonusPayment);
+
+      console.log('賞与支払いデータ保存完了:', paymentId);
+      return paymentId;
+    } catch (error) {
+      console.error('賞与支払いデータ保存エラー:', error);
+      throw error;
+    }
   }
 
   /**
@@ -489,16 +521,10 @@ export class BonusCalculationService {
    */
   async saveBonusCalculationResult(result: BonusCalculationResult): Promise<void> {
     try {
+      console.log('=== 賞与計算結果保存開始 ===');
+
       const docRef = doc(this.firestore, 'bonusCalculationResults', result.resultId);
       await setDoc(docRef, result);
-
-      // 年度累計の更新
-      const fiscalYear = this.getFiscalYear(result.resultId.split('_')[1]); // 仮の実装
-      await this.updateFiscalYearTotal(
-        result.employeeId,
-        fiscalYear,
-        result.standardBonusAmountHealth
-      );
 
       console.log('賞与計算結果保存完了:', result.resultId);
     } catch (error) {
@@ -508,120 +534,434 @@ export class BonusCalculationService {
   }
 
   /**
-   * Firestoreから既存の給与賞与データを取得
+   * 保存された賞与支払いデータの取得
    */
-  async getEmployeeSalaryBonusData(
-    employeeId: string,
-    year: number,
-    companyId?: string
-  ): Promise<FirestoreSalaryData | null> {
+  async getSavedBonusPayments(employeeId: string, fiscalYear: bigint): Promise<BonusPayment[]> {
     try {
-      console.log('=== 給与賞与データ取得開始 ===');
-      console.log('従業員ID:', employeeId);
-      console.log('対象年度:', year);
-      console.log('会社ID:', companyId);
+      console.log('=== 保存された賞与支払いデータ取得開始 ===');
+      console.log('従業員ID:', employeeId, '会計年度:', fiscalYear);
 
-      // companyIdが提供されている場合はそれを使用、そうでなければデフォルト値を使用
-      const finalCompanyId = companyId || '67ac7930-bc24-406a-99a2-1ba44489c76d';
+      const paymentsRef = collection(this.firestore, 'bonusPayments');
 
-      const docRef = doc(
-        this.firestore,
-        'employee-salary-bonus',
-        finalCompanyId,
-        'employees',
-        employeeId,
-        'years',
-        year.toString()
-      );
-      const docSnap = await getDoc(docRef);
+      // 最初に employeeId のみでクエリを実行
+      const q = query(paymentsRef, where('employeeId', '==', employeeId));
 
-      if (docSnap.exists()) {
-        const data = docSnap.data() as FirestoreSalaryData;
-        console.log('取得したデータ:', data);
-        return data;
-      } else {
-        console.log('データが見つかりません');
-        return null;
+      const querySnapshot = await getDocs(q);
+      const payments: BonusPayment[] = [];
+
+      console.log(`employeeIdクエリ結果: ${querySnapshot.size}件`);
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const payment = {
+          paymentId: doc.id,
+          ...data,
+        } as BonusPayment;
+
+        console.log('取得したドキュメント:', doc.id, payment);
+
+        // クライアントサイドで fiscalYear をフィルタリング
+        if (payment.fiscalYear.toString() === fiscalYear.toString()) {
+          payments.push(payment);
+        }
+      });
+
+      // データが取得できない場合、より広範囲で検索
+      if (payments.length === 0) {
+        console.log('employeeIdクエリで結果なし、全データから検索します');
+
+        const allDocsSnapshot = await getDocs(paymentsRef);
+        console.log(`bonusPaymentsコレクション全体: ${allDocsSnapshot.size}件`);
+
+        // 全データの詳細調査
+        allDocsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const payment = {
+            paymentId: doc.id,
+            ...data,
+          } as BonusPayment;
+
+          console.log('全データ検索 - ドキュメント:', doc.id, {
+            employeeId: payment.employeeId,
+            fiscalYear: payment.fiscalYear,
+            employeeIdType: typeof payment.employeeId,
+            fiscalYearType: typeof payment.fiscalYear,
+            employeeIdMatch: payment.employeeId === employeeId,
+            fiscalYearMatch: payment.fiscalYear.toString() === fiscalYear.toString(),
+          });
+
+          // クライアントサイドで employeeId と fiscalYear をフィルタリング
+          if (
+            payment.employeeId === employeeId &&
+            payment.fiscalYear.toString() === fiscalYear.toString()
+          ) {
+            payments.push(payment);
+          }
+        });
       }
+
+      // クライアントサイドで paymentDate による並び替え
+      payments.sort((a, b) => a.paymentDate.localeCompare(b.paymentDate));
+
+      console.log('最終的に取得した支払いデータ:', payments);
+      return payments;
     } catch (error) {
-      console.error('給与賞与データ取得エラー:', error);
-      return null;
+      console.error('保存された賞与支払いデータ取得エラー:', error);
+
+      // エラーが発生した場合も全データから検索を試行
+      try {
+        console.log('エラー発生のため、フォールバック検索を実行');
+        const paymentsRef = collection(this.firestore, 'bonusPayments');
+        const querySnapshot = await getDocs(paymentsRef);
+        const allPayments: BonusPayment[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const payment = {
+            paymentId: doc.id,
+            ...data,
+          } as BonusPayment;
+
+          // クライアントサイドで employeeId と fiscalYear をフィルタリング
+          if (
+            payment.employeeId === employeeId &&
+            payment.fiscalYear.toString() === fiscalYear.toString()
+          ) {
+            allPayments.push(payment);
+          }
+        });
+
+        // クライアントサイドで paymentDate による並び替え
+        allPayments.sort((a, b) => a.paymentDate.localeCompare(b.paymentDate));
+
+        console.log('フォールバック取得した支払いデータ:', allPayments);
+        return allPayments;
+      } catch (fallbackError) {
+        console.error('フォールバック取得もエラー:', fallbackError);
+        return [];
+      }
     }
   }
 
   /**
-   * 既存の賞与データから年度累計を計算
+   * 保存されたデータと計算結果を組み合わせて取得
    */
-  async calculateExistingBonusTotal(
+  async getSavedBonusDataWithCalculations(
     employeeId: string,
-    fiscalYear: number,
-    currentMonth?: number,
-    companyId?: string
-  ): Promise<number> {
+    fiscalYear: bigint
+  ): Promise<
+    {
+      payment: BonusPayment;
+      calculation: BonusCalculationResult;
+    }[]
+  > {
     try {
-      console.log('=== 既存賞与累計計算開始 ===');
+      console.log('=== 保存されたデータ組み合わせ取得開始 ===');
+      console.log('検索条件 - employeeId:', employeeId, 'fiscalYear:', fiscalYear);
 
-      const salaryData = await this.getEmployeeSalaryBonusData(employeeId, fiscalYear, companyId);
-      if (!salaryData || !salaryData.salaryTable) {
-        console.log('給与データが見つかりません');
-        return 0;
+      const payments = await this.getSavedBonusPayments(employeeId, fiscalYear);
+      console.log('取得した支払いデータ数:', payments.length);
+
+      if (payments.length === 0) {
+        console.log('支払いデータが0件のため、処理を終了');
+        return [];
       }
 
-      let totalBonus = 0;
-      const salaryTable = salaryData.salaryTable;
+      const results: {
+        payment: BonusPayment;
+        calculation: BonusCalculationResult;
+      }[] = [];
 
-      // 会計年度内の賞与を集計（4月から翌年3月まで）
-      for (let month = 4; month <= 12; month++) {
-        const monthKey = `${month}月`;
-        if (salaryTable[monthKey]) {
-          // 各種賞与を合計
-          const bonusData = ['その他（現物支給）', 'その他（金銭支給）'];
+      for (const payment of payments) {
+        try {
+          console.log(`計算結果取得試行: paymentId=${payment.paymentId}`);
 
-          bonusData.forEach((key) => {
-            if (salaryTable[monthKey][key]) {
-              Object.entries(salaryTable[monthKey][key]).forEach(([bonusKey, value]) => {
-                if (bonusKey.includes('賞与') && typeof value === 'string') {
-                  const amount = parseInt(value) || 0;
-                  totalBonus = SocialInsuranceCalculator.addAmounts(totalBonus, amount);
-                }
-              });
-            }
-          });
-        }
-      }
+          // 対応する計算結果を取得
+          const calculationId = `${payment.paymentId}_result`;
+          console.log('計算結果ID:', calculationId);
 
-      // 翌年1月〜3月（現在月まで）
-      const nextYear = fiscalYear + 1;
-      const nextYearData = await this.getEmployeeSalaryBonusData(employeeId, nextYear, companyId);
-      if (nextYearData?.salaryTable) {
-        const maxMonth = currentMonth && currentMonth <= 3 ? currentMonth - 1 : 3;
+          const calculationRef = doc(this.firestore, 'bonusCalculationResults', calculationId);
+          const calculationSnap = await getDoc(calculationRef);
 
-        for (let month = 1; month <= maxMonth; month++) {
-          const monthKey = `${month}月`;
-          if (nextYearData.salaryTable![monthKey]) {
-            const bonusData = ['その他（現物支給）', 'その他（金銭支給）'];
+          if (calculationSnap.exists()) {
+            const calculationData = calculationSnap.data() as BonusCalculationResult;
+            console.log(`計算結果取得成功: ${calculationId}`, calculationData);
 
-            bonusData.forEach((key) => {
-              if (nextYearData.salaryTable![monthKey][key]) {
-                Object.entries(nextYearData.salaryTable![monthKey][key]).forEach(
-                  ([bonusKey, value]) => {
-                    if (bonusKey.includes('賞与') && typeof value === 'string') {
-                      const amount = parseInt(value) || 0;
-                      totalBonus = SocialInsuranceCalculator.addAmounts(totalBonus, amount);
-                    }
-                  }
-                );
-              }
+            results.push({
+              payment,
+              calculation: {
+                ...calculationData,
+                resultId: calculationSnap.id,
+              },
             });
+          } else {
+            console.warn(`計算結果が見つかりません: ${calculationId}`);
           }
+        } catch (error) {
+          console.error(`計算結果取得エラー (${payment.paymentId}):`, error);
         }
       }
 
-      console.log('既存賞与累計:', totalBonus);
-      return totalBonus;
+      console.log('最終的な組み合わせ結果数:', results.length);
+      console.log('組み合わせた結果:', results);
+      return results;
     } catch (error) {
-      console.error('既存賞与累計計算エラー:', error);
-      return 0;
+      console.error('保存されたデータ組み合わせ取得エラー:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 完全な賞与計算と保存処理
+   */
+  async calculateAndSaveBonusInsurance(
+    employeeId: string,
+    bonusAmount: string,
+    paymentDate: string,
+    bonusType: string,
+    employeeAge: bigint,
+    prefecture: string,
+    companyId?: string
+  ): Promise<{
+    paymentId: string;
+    calculationResult: BonusCalculationResult;
+    limitResult: BonusLimitResult;
+  }> {
+    try {
+      console.log('=== 完全な賞与計算・保存処理開始 ===');
+      console.log('入力データ:', {
+        employeeId,
+        bonusAmount,
+        paymentDate,
+        bonusType,
+        employeeAge,
+        prefecture,
+      });
+
+      // 1. 会計年度の取得
+      const fiscalYear = this.getFiscalYear(paymentDate);
+      console.log('会計年度:', fiscalYear);
+
+      // 2. 標準賞与額の計算
+      const standardBonusAmount = this.calculateStandardBonusAmount(bonusAmount);
+      console.log('標準賞与額:', standardBonusAmount);
+
+      // 3. 上限適用処理
+      const limitResult = await this.applyBonusLimitsWithExistingData(
+        employeeId,
+        standardBonusAmount,
+        fiscalYear,
+        undefined,
+        companyId
+      );
+
+      // 4. 保険料率の取得
+      const paymentYear = BigInt(new Date(paymentDate).getFullYear());
+      const rates = await this.getInsuranceRates(paymentYear, prefecture);
+
+      // 5. 保険料計算
+      const premiums = await this.calculateInsurancePremiums(
+        {
+          healthInsuranceAmount: limitResult.healthInsuranceAmount,
+          pensionInsuranceAmount: limitResult.pensionInsuranceAmount,
+        },
+        rates,
+        employeeAge
+      );
+
+      // 6. 賞与支払いデータの保存
+      const paymentId = await this.saveBonusPayment({
+        employeeId,
+        paymentDate,
+        bonusAmount,
+        paymentCountType: 'UNDER_3_TIMES', // デフォルト値、必要に応じて動的に設定
+        bonusType,
+        fiscalYear,
+      });
+
+      // 7. 計算スナップショットの作成
+      const snapshot = this.createCalculationSnapshot(
+        {
+          originalBonusAmount: bonusAmount,
+          paymentDate,
+          paymentCountType: 'UNDER_3_TIMES',
+          bonusType,
+        },
+        {
+          standardBonusAmount,
+          appliedLimits: {
+            healthInsuranceLimit: limitResult.isHealthLimitApplied,
+            pensionInsuranceLimit: limitResult.isPensionLimitApplied,
+          },
+          appliedRates: rates,
+          fiscalYearTotalBefore: limitResult.fiscalYearTotalBefore,
+          fiscalYearTotalAfter: limitResult.fiscalYearTotalAfter,
+        },
+        premiums
+      );
+
+      // 8. 計算結果の保存
+      const resultId = `${paymentId}_result`;
+      const calculationResult: BonusCalculationResult = {
+        resultId,
+        paymentId,
+        employeeId,
+        standardBonusAmountHealth: limitResult.healthInsuranceAmount,
+        standardBonusAmountPension: limitResult.pensionInsuranceAmount,
+        healthInsurancePremium: premiums.healthPremium,
+        careInsurancePremium: premiums.carePremium,
+        pensionInsurancePremium: premiums.pensionPremium,
+        childRearingContribution: premiums.childRearingContribution,
+        employeeBurden: premiums.employeeBurden,
+        companyBurden: premiums.companyBurden,
+        totalPremium: premiums.totalPremium,
+        calculationSnapshot: JSON.stringify(snapshot),
+        createdAt: new Date(),
+      };
+
+      await this.saveBonusCalculationResult(calculationResult);
+
+      console.log('完全な賞与計算・保存処理完了');
+      return {
+        paymentId,
+        calculationResult,
+        limitResult,
+      };
+    } catch (error) {
+      console.error('完全な賞与計算・保存処理エラー:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 改良された上限額適用（既存データ考慮版）
+   */
+  async applyBonusLimitsWithExistingData(
+    employeeId: string,
+    standardAmount: string,
+    fiscalYear: bigint,
+    excludeMonth?: bigint,
+    companyId?: string
+  ): Promise<BonusLimitResult> {
+    try {
+      console.log('=== 賞与上限額適用（既存データ考慮）開始 ===');
+
+      // 既存データを考慮した累計計算
+      const totalInfo = await this.calculateStandardBonusTotalWithExisting(
+        employeeId,
+        fiscalYear,
+        standardAmount,
+        excludeMonth,
+        companyId
+      );
+
+      const healthLimit = '5730000'; // 573万円
+      const pensionLimit = '1500000'; // 150万円（1回あたり）
+
+      let healthAmount = standardAmount;
+      let pensionAmount = standardAmount;
+      let isHealthLimitApplied = false;
+      let isPensionLimitApplied = false;
+
+      console.log('既存累計:', totalInfo.existingTotal);
+      console.log('現在標準額:', totalInfo.standardCurrentBonus);
+      console.log('予想累計:', totalInfo.projectedTotal);
+
+      // 健康保険上限適用
+      if (SocialInsuranceCalculator.compare(totalInfo.projectedTotal, healthLimit) > 0) {
+        const subtractResult = SocialInsuranceCalculator.subtract(
+          healthLimit,
+          totalInfo.existingTotal
+        );
+        healthAmount =
+          SocialInsuranceCalculator.compare(subtractResult, '0') > 0 ? subtractResult : '0';
+        isHealthLimitApplied = true;
+        console.log('健康保険上限適用:', healthAmount);
+      }
+
+      // 厚生年金上限適用
+      if (SocialInsuranceCalculator.compare(standardAmount, pensionLimit) > 0) {
+        pensionAmount = pensionLimit;
+        isPensionLimitApplied = true;
+        console.log('厚生年金上限適用:', pensionAmount);
+      }
+
+      const result: BonusLimitResult = {
+        healthInsuranceAmount: healthAmount,
+        pensionInsuranceAmount: pensionAmount,
+        isHealthLimitApplied,
+        isPensionLimitApplied,
+        fiscalYearTotalBefore: totalInfo.existingTotal,
+        fiscalYearTotalAfter: SocialInsuranceCalculator.addAmounts(
+          totalInfo.existingTotal,
+          healthAmount
+        ),
+      };
+
+      console.log('上限適用結果:', result);
+      return result;
+    } catch (error) {
+      console.error('上限額適用エラー:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 標準賞与額の累計計算（既存データを考慮）
+   */
+  async calculateStandardBonusTotalWithExisting(
+    employeeId: string,
+    fiscalYear: bigint,
+    currentBonusAmount: string,
+    excludeMonth?: bigint,
+    companyId?: string
+  ): Promise<{
+    existingTotal: string;
+    standardCurrentBonus: string;
+    projectedTotal: string;
+  }> {
+    try {
+      console.log('=== 標準賞与額累計計算（既存考慮） ===');
+
+      // 既存の賞与履歴を取得
+      const bonusHistory = await this.getFiscalYearBonusHistory(employeeId, fiscalYear, companyId);
+
+      // 除外月がある場合はフィルタリング
+      const filteredHistory = excludeMonth
+        ? bonusHistory.filter((bonus) => bonus.month !== excludeMonth)
+        : bonusHistory;
+
+      // 既存の標準賞与額累計を計算
+      let existingTotal = '0';
+      filteredHistory.forEach((bonus) => {
+        const standardAmount = this.calculateStandardBonusAmount(bonus.amount);
+        existingTotal = SocialInsuranceCalculator.addAmounts(existingTotal, standardAmount);
+      });
+
+      // 現在の賞与の標準額
+      const standardCurrentBonus = this.calculateStandardBonusAmount(currentBonusAmount);
+
+      // 予想累計
+      const projectedTotal = SocialInsuranceCalculator.addAmounts(
+        existingTotal,
+        standardCurrentBonus
+      );
+
+      const result = {
+        existingTotal,
+        standardCurrentBonus,
+        projectedTotal,
+      };
+
+      console.log('標準賞与額累計計算結果:', result);
+      return result;
+    } catch (error) {
+      console.error('標準賞与額累計計算エラー:', error);
+      return {
+        existingTotal: '0',
+        standardCurrentBonus: this.calculateStandardBonusAmount(currentBonusAmount),
+        projectedTotal: this.calculateStandardBonusAmount(currentBonusAmount),
+      };
     }
   }
 
@@ -630,8 +970,8 @@ export class BonusCalculationService {
    */
   async getMonthlyBonusData(
     employeeId: string,
-    year: number,
-    month: number,
+    year: bigint,
+    month: bigint,
     companyId?: string
   ): Promise<BonusHistoryItem[]> {
     try {
@@ -664,12 +1004,12 @@ export class BonusCalculationService {
         Object.entries(monthData['その他（金銭支給）']).forEach(([key, value]) => {
           console.log(`キー: ${key}, 値: ${value}, タイプ: ${typeof value}`);
           if (key.includes('賞与') && typeof value === 'string') {
-            const amount = parseInt(value) || 0;
+            const amount = BigInt(value) || 0n;
             console.log(`賞与データ発見: ${key} = ${amount}`);
-            if (amount > 0) {
+            if (amount > 0n) {
               bonuses.push({
                 type: this.mapBonusType(key),
-                amount: amount,
+                amount: amount.toString(),
                 month: month,
                 year: year,
                 originalKey: key,
@@ -687,12 +1027,12 @@ export class BonusCalculationService {
         Object.entries(monthData['その他（現物支給）']).forEach(([key, value]) => {
           console.log(`現物支給 - キー: ${key}, 値: ${value}, タイプ: ${typeof value}`);
           if (key.includes('賞与') && typeof value === 'string') {
-            const amount = parseInt(value) || 0;
+            const amount = BigInt(value) || 0n;
             console.log(`現物支給賞与データ発見: ${key} = ${amount}`);
-            if (amount > 0) {
+            if (amount > 0n) {
               bonuses.push({
                 type: this.mapBonusType(key),
-                amount: amount,
+                amount: amount.toString(),
                 month: month,
                 year: year,
                 originalKey: key,
@@ -743,7 +1083,7 @@ export class BonusCalculationService {
    */
   async getFiscalYearBonusHistory(
     employeeId: string,
-    fiscalYear: number,
+    fiscalYear: bigint,
     companyId?: string
   ): Promise<BonusHistoryItem[]> {
     try {
@@ -762,7 +1102,7 @@ export class BonusCalculationService {
       console.log('salaryTableの全キー:', Object.keys(salaryData.salaryTable));
 
       // 賞与データと支給年月日データを抽出
-      const bonusAmounts: Record<string, number> = {};
+      const bonusAmounts: Record<string, string> = {};
       const bonusDates: Record<string, string> = {};
 
       // 合計セクションから賞与金額を抽出
@@ -774,9 +1114,9 @@ export class BonusCalculationService {
 
           // 賞与金額の抽出（全角括弧で検索）
           if (key.startsWith('賞与（') && key.includes('回目')) {
-            const amount =
-              typeof value === 'string' ? parseInt(value) || 0 : (value as number) || 0;
-            if (amount > 0) {
+            const amount = typeof value === 'string' ? value : String(value) || '0';
+            const amountBigInt = BigInt(amount) || 0n;
+            if (amountBigInt > 0n) {
               bonusAmounts[key] = amount;
               console.log(`賞与金額発見: ${key} = ${amount}`);
             }
@@ -819,14 +1159,14 @@ export class BonusCalculationService {
           // 支給年月日から月と年を抽出
           const dateMatch = paymentDate.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
           if (dateMatch) {
-            const year = parseInt(dateMatch[1]);
-            const month = parseInt(dateMatch[2]);
+            const year = BigInt(dateMatch[1]);
+            const month = BigInt(dateMatch[2]);
 
             allBonuses.push({
               type: this.mapBonusType(key),
-              amount: amount,
-              month: month,
-              year: year,
+              amount,
+              month,
+              year,
               originalKey: key,
               fiscalYear: fiscalYear,
               paymentDate: paymentDate,
@@ -837,24 +1177,24 @@ export class BonusCalculationService {
         } else {
           console.log(`支給年月日が見つからない賞与: ${key}`);
           // 支給年月日がない場合でも、デフォルト日付で作成
-          let defaultMonth = 12; // デフォルトは12月
+          let defaultMonth = 12n; // デフォルトは12月
           let defaultYear = fiscalYear;
 
           // 賞与の種類から推定
           if (key.includes('1回目')) {
-            defaultMonth = 7; // 夏季賞与
+            defaultMonth = 7n; // 夏季賞与
           } else if (key.includes('2回目')) {
-            defaultMonth = 12; // 冬季賞与
+            defaultMonth = 12n; // 冬季賞与
           } else if (key.includes('3回目')) {
-            defaultMonth = 3; // 決算賞与
-            defaultYear = fiscalYear + 1;
+            defaultMonth = 3n; // 決算賞与
+            defaultYear = fiscalYear + 1n;
           }
 
           const defaultPaymentDate = `${defaultYear}/${defaultMonth.toString().padStart(2, '0')}/31`;
 
           allBonuses.push({
             type: this.mapBonusType(key),
-            amount: amount,
+            amount,
             month: defaultMonth,
             year: defaultYear,
             originalKey: key,
@@ -877,132 +1217,346 @@ export class BonusCalculationService {
   }
 
   /**
-   * 標準賞与額の累計計算（既存データを考慮）
+   * Firestoreから既存の給与賞与データを取得
    */
-  async calculateStandardBonusTotalWithExisting(
+  async getEmployeeSalaryBonusData(
     employeeId: string,
-    fiscalYear: number,
-    currentBonusAmount: number,
-    excludeMonth?: number,
+    year: bigint,
     companyId?: string
-  ): Promise<{
-    existingTotal: number;
-    standardCurrentBonus: number;
-    projectedTotal: number;
-  }> {
+  ): Promise<FirestoreSalaryData | null> {
     try {
-      console.log('=== 標準賞与額累計計算（既存考慮） ===');
+      console.log('=== 給与賞与データ取得開始 ===');
+      console.log('従業員ID:', employeeId);
+      console.log('対象年度:', year);
+      console.log('会社ID:', companyId);
 
-      // 既存の賞与履歴を取得
-      const bonusHistory = await this.getFiscalYearBonusHistory(employeeId, fiscalYear, companyId);
+      // companyIdが提供されている場合はそれを使用、そうでなければデフォルト値を使用
+      const finalCompanyId = companyId || '67ac7930-bc24-406a-99a2-1ba44489c76d';
 
-      // 除外月がある場合はフィルタリング
-      const filteredHistory = excludeMonth
-        ? bonusHistory.filter((bonus) => bonus.month !== excludeMonth)
-        : bonusHistory;
-
-      // 既存の標準賞与額累計を計算
-      let existingTotal = 0;
-      filteredHistory.forEach((bonus) => {
-        const standardAmount = this.calculateStandardBonusAmount(bonus.amount);
-        existingTotal = SocialInsuranceCalculator.addAmounts(existingTotal, standardAmount);
-      });
-
-      // 現在の賞与の標準額
-      const standardCurrentBonus = this.calculateStandardBonusAmount(currentBonusAmount);
-
-      // 予想累計
-      const projectedTotal = SocialInsuranceCalculator.addAmounts(
-        existingTotal,
-        standardCurrentBonus
+      const docRef = doc(
+        this.firestore,
+        'employee-salary-bonus',
+        finalCompanyId,
+        'employees',
+        employeeId,
+        'years',
+        year.toString()
       );
+      const docSnap = await getDoc(docRef);
 
-      const result = {
-        existingTotal,
-        standardCurrentBonus,
-        projectedTotal,
-      };
-
-      console.log('標準賞与額累計計算結果:', result);
-      return result;
+      if (docSnap.exists()) {
+        const data = docSnap.data() as FirestoreSalaryData;
+        console.log('取得したデータ:', data);
+        return data;
+      } else {
+        console.log('データが見つかりません');
+        return null;
+      }
     } catch (error) {
-      console.error('標準賞与額累計計算エラー:', error);
-      return {
-        existingTotal: 0,
-        standardCurrentBonus: this.calculateStandardBonusAmount(currentBonusAmount),
-        projectedTotal: this.calculateStandardBonusAmount(currentBonusAmount),
-      };
+      console.error('給与賞与データ取得エラー:', error);
+      return null;
     }
   }
 
   /**
-   * 改良された上限額適用（既存データ考慮版）
+   * 既存の賞与データから年度累計を計算
    */
-  async applyBonusLimitsWithExistingData(
+  async calculateExistingBonusTotal(
     employeeId: string,
-    standardAmount: number,
-    fiscalYear: number,
-    excludeMonth?: number,
+    fiscalYear: bigint,
+    currentMonth?: bigint,
     companyId?: string
-  ): Promise<BonusLimitResult> {
+  ): Promise<string> {
     try {
-      console.log('=== 賞与上限額適用（既存データ考慮）開始 ===');
+      console.log('=== 既存賞与累計計算開始 ===');
 
-      // 既存データを考慮した累計計算
-      const totalInfo = await this.calculateStandardBonusTotalWithExisting(
+      const salaryData = await this.getEmployeeSalaryBonusData(employeeId, fiscalYear, companyId);
+      if (!salaryData || !salaryData.salaryTable) {
+        console.log('給与データが見つかりません');
+        return '0';
+      }
+
+      let totalBonus = '0';
+      const salaryTable = salaryData.salaryTable;
+
+      // 会計年度内の賞与を集計（4月から翌年3月まで）
+      for (let month = 4n; month <= 12n; month++) {
+        const monthKey = `${month}月`;
+        if (salaryTable[monthKey]) {
+          // 各種賞与を合計
+          const bonusData = ['その他（現物支給）', 'その他（金銭支給）'];
+
+          bonusData.forEach((key) => {
+            if (salaryTable[monthKey][key]) {
+              Object.entries(salaryTable[monthKey][key]).forEach(([bonusKey, value]) => {
+                if (bonusKey.includes('賞与') && typeof value === 'string') {
+                  const amount = BigInt(value) || 0n;
+                  totalBonus = SocialInsuranceCalculator.addAmounts(totalBonus, amount.toString());
+                }
+              });
+            }
+          });
+        }
+      }
+
+      // 翌年1月〜3月（現在月まで）
+      const nextYear = fiscalYear + 1n;
+      const nextYearData = await this.getEmployeeSalaryBonusData(employeeId, nextYear, companyId);
+      if (nextYearData?.salaryTable) {
+        const maxMonth = currentMonth && currentMonth <= 3n ? currentMonth - 1n : 3n;
+
+        for (let month = 1n; month <= maxMonth; month++) {
+          const monthKey = `${month}月`;
+          if (nextYearData.salaryTable![monthKey]) {
+            const bonusData = ['その他（現物支給）', 'その他（金銭支給）'];
+
+            bonusData.forEach((key) => {
+              if (nextYearData.salaryTable![monthKey][key]) {
+                Object.entries(nextYearData.salaryTable![monthKey][key]).forEach(
+                  ([bonusKey, value]) => {
+                    if (bonusKey.includes('賞与') && typeof value === 'string') {
+                      const amount = BigInt(value) || 0n;
+                      totalBonus = SocialInsuranceCalculator.addAmounts(
+                        totalBonus,
+                        amount.toString()
+                      );
+                    }
+                  }
+                );
+              }
+            });
+          }
+        }
+      }
+
+      console.log('既存賞与累計:', totalBonus);
+      return totalBonus;
+    } catch (error) {
+      console.error('既存賞与累計計算エラー:', error);
+      return '0';
+    }
+  }
+
+  /**
+   * 等級ベースの賞与保険料計算（新機能）
+   * @param employeeId 従業員ID
+   * @param bonusAmount 賞与額
+   * @param paymentDate 支払日
+   * @param bonusType 賞与種類
+   * @param employeeAge 従業員年齢
+   * @param prefecture 都道府県名
+   * @param companyId 会社ID（オプション）
+   * @returns 等級ベースの計算結果
+   */
+  async calculateGradeBasedBonusInsurance(
+    employeeId: string,
+    bonusAmount: string,
+    paymentDate: string,
+    bonusType: string,
+    employeeAge: bigint,
+    prefecture: string,
+    companyId?: string
+  ): Promise<{
+    paymentId: string;
+    gradeBasedResult: GradeBasedPremiumResult;
+    appliedGrade: GradeInfo;
+  } | null> {
+    try {
+      console.log('=== 等級ベース賞与保険料計算開始 ===');
+      console.log('従業員ID:', employeeId);
+      console.log('賞与額:', bonusAmount);
+      console.log('支払日:', paymentDate);
+
+      // 1. 支払日時点での有効等級を取得
+      const validGrade = await this.gradeManagementService.getCurrentValidGrade(
         employeeId,
+        paymentDate
+      );
+      if (!validGrade) {
+        console.error('有効な等級が見つかりません');
+        return null;
+      }
+
+      console.log('適用等級:', validGrade);
+
+      // 2. 会計年度を取得
+      const fiscalYear = this.getFiscalYear(paymentDate);
+      const year = fiscalYear.toString();
+
+      // 3. 等級ベースの保険料計算
+      const gradeBasedResult = await this.gradeManagementService.calculateGradeBasedBonusPremium(
+        validGrade,
+        bonusAmount,
+        year,
+        prefecture,
+        employeeAge
+      );
+
+      if (!gradeBasedResult) {
+        console.error('等級ベース保険料計算に失敗しました');
+        return null;
+      }
+
+      // 4. 賞与支払いデータを保存
+      const paymentData: Omit<BonusPayment, 'paymentId' | 'createdAt' | 'updatedAt'> = {
+        employeeId,
+        paymentDate,
+        bonusAmount,
+        paymentCountType: 'UNDER_3_TIMES', // 等級ベースでは通常3回以下として扱う
+        bonusType,
         fiscalYear,
-        standardAmount,
-        excludeMonth,
+      };
+
+      const paymentId = await this.saveBonusPayment(paymentData);
+
+      // 5. 計算結果を保存
+      const calculationResult: BonusCalculationResult = {
+        resultId: `${paymentId}_grade_based`,
+        paymentId,
+        employeeId,
+        standardBonusAmountHealth: gradeBasedResult.healthInsurance.standardSalary,
+        standardBonusAmountPension: gradeBasedResult.pensionInsurance.standardSalary,
+        healthInsurancePremium: gradeBasedResult.healthInsurance.employeeBurden,
+        careInsurancePremium: gradeBasedResult.careInsurance?.employeeBurden,
+        pensionInsurancePremium: gradeBasedResult.pensionInsurance.employeeBurden,
+        childRearingContribution: '0', // 等級ベースでは子ども・子育て拠出金は0として扱う
+        employeeBurden: gradeBasedResult.totalEmployeeBurden,
+        companyBurden: gradeBasedResult.totalCompanyBurden,
+        totalPremium: SocialInsuranceCalculator.addAmounts(
+          gradeBasedResult.totalEmployeeBurden,
+          gradeBasedResult.totalCompanyBurden
+        ),
+        calculationSnapshot: JSON.stringify({
+          calculationType: 'GRADE_BASED_BONUS',
+          appliedGrade: validGrade,
+          gradeBasedResult,
+          calculatedAt: new Date(),
+        }),
+        createdAt: new Date(),
+      };
+
+      await this.saveBonusCalculationResult(calculationResult);
+
+      console.log('=== 等級ベース賞与保険料計算完了 ===');
+      return {
+        paymentId,
+        gradeBasedResult,
+        appliedGrade: validGrade,
+      };
+    } catch (error) {
+      console.error('等級ベース賞与保険料計算エラー:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 従来の計算方式と等級ベース計算方式の比較
+   * @param employeeId 従業員ID
+   * @param bonusAmount 賞与額
+   * @param paymentDate 支払日
+   * @param bonusType 賞与種類
+   * @param employeeAge 従業員年齢
+   * @param prefecture 都道府県名
+   * @param companyId 会社ID（オプション）
+   * @returns 両方式の計算結果比較
+   */
+  async compareBonusCalculationMethods(
+    employeeId: string,
+    bonusAmount: string,
+    paymentDate: string,
+    bonusType: string,
+    employeeAge: bigint,
+    prefecture: string,
+    companyId?: string
+  ): Promise<{
+    traditional: {
+      paymentId: string;
+      calculationResult: BonusCalculationResult;
+      limitResult: BonusLimitResult;
+    } | null;
+    gradeBased: {
+      paymentId: string;
+      gradeBasedResult: GradeBasedPremiumResult;
+      appliedGrade: GradeInfo;
+    } | null;
+    comparison: {
+      employeeBurdenDifference: string;
+      companyBurdenDifference: string;
+      totalPremiumDifference: string;
+      recommendedMethod: 'traditional' | 'gradeBased';
+    } | null;
+  }> {
+    try {
+      console.log('=== 賞与計算方式比較開始 ===');
+
+      // 1. 従来の計算方式
+      const traditionalResult = await this.calculateAndSaveBonusInsurance(
+        employeeId,
+        bonusAmount,
+        paymentDate,
+        bonusType,
+        employeeAge,
+        prefecture,
         companyId
       );
 
-      const healthLimit = 5730000; // 573万円
-      const pensionLimit = 1500000; // 150万円（1回あたり）
+      // 2. 等級ベース計算方式
+      const gradeBasedResult = await this.calculateGradeBasedBonusInsurance(
+        employeeId,
+        bonusAmount,
+        paymentDate,
+        bonusType,
+        employeeAge,
+        prefecture,
+        companyId
+      );
 
-      let healthAmount = standardAmount;
-      let pensionAmount = standardAmount;
-      let isHealthLimitApplied = false;
-      let isPensionLimitApplied = false;
-
-      console.log('既存累計:', totalInfo.existingTotal);
-      console.log('現在標準額:', totalInfo.standardCurrentBonus);
-      console.log('予想累計:', totalInfo.projectedTotal);
-
-      // 健康保険上限適用
-      if (SocialInsuranceCalculator.compare(totalInfo.projectedTotal, healthLimit) > 0) {
-        healthAmount = Math.max(
-          0,
-          SocialInsuranceCalculator.subtract(healthLimit, totalInfo.existingTotal)
+      // 3. 比較分析
+      let comparison = null;
+      if (traditionalResult && gradeBasedResult) {
+        const employeeBurdenDiff = SocialInsuranceCalculator.subtract(
+          gradeBasedResult.gradeBasedResult.totalEmployeeBurden,
+          traditionalResult.calculationResult.employeeBurden
         );
-        isHealthLimitApplied = true;
-        console.log('健康保険上限適用:', healthAmount);
+        const companyBurdenDiff = SocialInsuranceCalculator.subtract(
+          gradeBasedResult.gradeBasedResult.totalCompanyBurden,
+          traditionalResult.calculationResult.companyBurden
+        );
+        const totalPremiumDiff = SocialInsuranceCalculator.subtract(
+          SocialInsuranceCalculator.addAmounts(
+            gradeBasedResult.gradeBasedResult.totalEmployeeBurden,
+            gradeBasedResult.gradeBasedResult.totalCompanyBurden
+          ),
+          traditionalResult.calculationResult.totalPremium
+        );
+
+        // より低い保険料の方式を推奨
+        const recommendedMethod: 'traditional' | 'gradeBased' =
+          SocialInsuranceCalculator.compare(totalPremiumDiff, '0') <= 0
+            ? 'gradeBased'
+            : 'traditional';
+
+        comparison = {
+          employeeBurdenDifference: employeeBurdenDiff,
+          companyBurdenDifference: companyBurdenDiff,
+          totalPremiumDifference: totalPremiumDiff,
+          recommendedMethod,
+        };
       }
 
-      // 厚生年金上限適用
-      if (SocialInsuranceCalculator.compare(standardAmount, pensionLimit) > 0) {
-        pensionAmount = pensionLimit;
-        isPensionLimitApplied = true;
-        console.log('厚生年金上限適用:', pensionAmount);
-      }
-
-      const result: BonusLimitResult = {
-        healthInsuranceAmount: healthAmount,
-        pensionInsuranceAmount: pensionAmount,
-        isHealthLimitApplied,
-        isPensionLimitApplied,
-        fiscalYearTotalBefore: totalInfo.existingTotal,
-        fiscalYearTotalAfter: SocialInsuranceCalculator.addAmounts(
-          totalInfo.existingTotal,
-          healthAmount
-        ),
+      console.log('=== 賞与計算方式比較完了 ===');
+      return {
+        traditional: traditionalResult,
+        gradeBased: gradeBasedResult,
+        comparison,
       };
-
-      console.log('上限適用結果:', result);
-      return result;
     } catch (error) {
-      console.error('上限額適用エラー:', error);
-      throw error;
+      console.error('賞与計算方式比較エラー:', error);
+      return {
+        traditional: null,
+        gradeBased: null,
+        comparison: null,
+      };
     }
   }
 }

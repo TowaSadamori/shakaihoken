@@ -33,12 +33,12 @@
     <div class="control-form">
       <div class="form-row">
         <label for="target-year" class="form-label">対象年度:</label>
-        <select id="target-year" class="form-select" [(ngModel)]="targetYear">
-          <option value="2023">2023年度</option>
-          <option value="2024">2024年度</option>
-          <option value="2025">2025年度</option>
-          <option value="2026">2026年度</option>
-        </select>
+        <div class="year-controls">
+          <button class="year-nav-btn" (click)="previousYear()">&lt;</button>
+          <span class="current-year">{{ formatFiscalYear(targetYear) }}</span>
+          <button class="year-nav-btn" (click)="nextYear()">&gt;</button>
+          <button class="current-year-btn" (click)="currentYear()">現在年度</button>
+        </div>
       </div>
 
       <div class="import-button-area">
@@ -77,7 +77,7 @@
         <tbody>
           <tr *ngFor="let bonus of bonusDataList; let i = index">
             <td>{{ bonus.paymentDate || '-' }}</td>
-            <td>{{ bonus.amount ? (bonus.amount | number: '1.0-0') : '-' }}</td>
+            <td>{{ bonus.amount ? formatAmount(bonus.amount) : '-' }}</td>
             <td>
               {{
                 bonus.calculationResult
@@ -88,28 +88,28 @@
             <td>
               {{
                 bonus.calculationResult
-                  ? (bonus.calculationResult.healthInsurance.employeeBurden | number: '1.0-0')
+                  ? formatAmount(bonus.calculationResult.healthInsurance.employeeBurden)
                   : '-'
               }}
             </td>
             <td>
               {{
                 bonus.calculationResult
-                  ? (bonus.calculationResult.healthInsurance.companyBurden | number: '1.0-0')
+                  ? formatAmount(bonus.calculationResult.healthInsurance.companyBurden)
                   : '-'
               }}
             </td>
             <td>
               {{
                 bonus.calculationResult
-                  ? (bonus.calculationResult.careInsurance?.employeeBurden || 0 | number: '1.0-0')
+                  ? formatAmount(bonus.calculationResult.careInsurance?.employeeBurden || '0')
                   : '-'
               }}
             </td>
             <td>
               {{
                 bonus.calculationResult
-                  ? (bonus.calculationResult.careInsurance?.companyBurden || 0 | number: '1.0-0')
+                  ? formatAmount(bonus.calculationResult.careInsurance?.companyBurden || '0')
                   : '-'
               }}
             </td>
@@ -123,14 +123,14 @@
             <td>
               {{
                 bonus.calculationResult
-                  ? (bonus.calculationResult.pensionInsurance.employeeBurden | number: '1.0-0')
+                  ? formatAmount(bonus.calculationResult.pensionInsurance.employeeBurden)
                   : '-'
               }}
             </td>
             <td>
               {{
                 bonus.calculationResult
-                  ? (bonus.calculationResult.pensionInsurance.companyBurden | number: '1.0-0')
+                  ? formatAmount(bonus.calculationResult.pensionInsurance.companyBurden)
                   : '-'
               }}
             </td>
@@ -164,5 +164,40 @@
   <!-- エラーメッセージ表示 -->
   <div class="error-message" *ngIf="errorMessage">
     {{ errorMessage }}
+    <div *ngIf="errorMessage.includes('インデックス')" class="index-guidance">
+      <p><strong>解決方法:</strong></p>
+      <ol>
+        <li>
+          <a
+            href="https://console.firebase.google.com/project/kensyu10093/firestore/indexes"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Firebase Console
+          </a>
+          にアクセス
+        </li>
+        <li>「複合」タブを選択</li>
+        <li>
+          以下のインデックスを作成:
+          <ul>
+            <li>コレクション: <code>bonusPayments</code></li>
+            <li>
+              フィールド: <code>employeeId</code> (昇順), <code>fiscalYear</code> (昇順),
+              <code>paymentDate</code> (昇順)
+            </li>
+          </ul>
+        </li>
+        <li>インデックス作成完了後、ページを再読み込み</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 注記・警告表示 -->
+  <div class="notes" *ngIf="limitNotes.length > 0">
+    <h4>📋 状況</h4>
+    <ul>
+      <li *ngFor="let note of limitNotes">{{ note }}</li>
+    </ul>
   </div>
 </div>

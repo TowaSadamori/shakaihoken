@@ -5,15 +5,17 @@ import { Decimal } from 'decimal.js';
  *
  * 日本の社会保険法規では1円未満の端数処理が厳密に規定されているため、
  * 浮動小数点数の精度問題を回避するためにDecimal.jsを使用
+ *
+ * JavaScript numberの使用を禁止し、全てDecimal文字列で処理
  */
 export class SocialInsuranceCalculator {
   /**
    * 報酬月額の平均値を計算（1円未満切り捨て）
-   * @param amounts 報酬月額の配列
+   * @param amounts 報酬月額の配列（Decimal文字列）
    * @returns 平均報酬月額（1円未満切り捨て後）
    */
-  static calculateAverageRemuneration(amounts: number[]): number {
-    if (amounts.length === 0) return 0;
+  static calculateAverageRemuneration(amounts: string[]): string {
+    if (amounts.length === 0) return '0';
 
     // Decimalで正確な計算
     const total = amounts.reduce((sum, amount) => {
@@ -23,42 +25,42 @@ export class SocialInsuranceCalculator {
     const average = total.dividedBy(amounts.length);
 
     // 1円未満切り捨て
-    return average.floor().toNumber();
+    return average.floor().toString();
   }
 
   /**
    * 遡及支払額を除外した報酬額の計算
-   * @param totalAmount 総報酬額
-   * @param retroactivePay 遡及支払額
+   * @param totalAmount 総報酬額（Decimal文字列）
+   * @param retroactivePay 遡及支払額（Decimal文字列）
    * @returns 調整後報酬額
    */
-  static adjustForRetroactivePay(totalAmount: number, retroactivePay = 0): number {
+  static adjustForRetroactivePay(totalAmount: string, retroactivePay = '0'): string {
     const total = new Decimal(totalAmount);
     const retro = new Decimal(retroactivePay);
 
-    return total.minus(retro).toNumber();
+    return total.minus(retro).toString();
   }
 
   /**
    * 年4回以上賞与の月割り計算
-   * @param annualBonusTotal 年間賞与総額
+   * @param annualBonusTotal 年間賞与総額（Decimal文字列）
    * @returns 月割り賞与額（1円未満切り捨て）
    */
-  static calculateMonthlyBonusAdjustment(annualBonusTotal: number): number {
+  static calculateMonthlyBonusAdjustment(annualBonusTotal: string): string {
     const bonusDecimal = new Decimal(annualBonusTotal);
     const monthlyAdjustment = bonusDecimal.dividedBy(12);
 
-    return monthlyAdjustment.floor().toNumber();
+    return monthlyAdjustment.floor().toString();
   }
 
   /**
    * 等級判定のための報酬範囲チェック
-   * @param amount 報酬月額
-   * @param min 最小額
-   * @param max 最大額
+   * @param amount 報酬月額（Decimal文字列）
+   * @param min 最小額（Decimal文字列）
+   * @param max 最大額（Decimal文字列）
    * @returns 範囲内かどうか
    */
-  static isInGradeRange(amount: number, min: number, max: number): boolean {
+  static isInGradeRange(amount: string, min: string, max: string): boolean {
     const amountDecimal = new Decimal(amount);
     const minDecimal = new Decimal(min);
     const maxDecimal = new Decimal(max);
@@ -68,61 +70,61 @@ export class SocialInsuranceCalculator {
 
   /**
    * 固定的賃金変動の計算
-   * @param beforeAmount 変動前金額
-   * @param afterAmount 変動後金額
+   * @param beforeAmount 変動前金額（Decimal文字列）
+   * @param afterAmount 変動後金額（Decimal文字列）
    * @returns 変動額（正の値は増加、負の値は減少）
    */
-  static calculateFixedWageChange(beforeAmount: number, afterAmount: number): number {
+  static calculateFixedWageChange(beforeAmount: string, afterAmount: string): string {
     const before = new Decimal(beforeAmount);
     const after = new Decimal(afterAmount);
 
-    return after.minus(before).toNumber();
+    return after.minus(before).toString();
   }
 
   /**
    * パーセンテージ計算（保険料率等）
-   * @param amount 基準額
-   * @param rate 料率（例: 0.05 = 5%）
+   * @param amount 基準額（Decimal文字列）
+   * @param rate 料率（Decimal文字列、例: "5" = 5%）
    * @returns 計算結果（1円未満切り捨て）
    */
-  static calculatePercentage(amount: number, rate: number): number {
+  static calculatePercentage(amount: string, rate: string): string {
     const baseAmount = new Decimal(amount);
     const rateDecimal = new Decimal(rate);
 
-    const result = baseAmount.times(rateDecimal);
-    return result.floor().toNumber();
+    const result = baseAmount.times(rateDecimal.dividedBy(100));
+    return result.floor().toString();
   }
 
   /**
    * 等級差の計算
-   * @param beforeGrade 変更前等級
-   * @param afterGrade 変更後等級
+   * @param beforeGrade 変更前等級（Decimal文字列）
+   * @param afterGrade 変更後等級（Decimal文字列）
    * @returns 等級差
    */
-  static calculateGradeDifference(beforeGrade: number, afterGrade: number): number {
+  static calculateGradeDifference(beforeGrade: string, afterGrade: string): string {
     const before = new Decimal(beforeGrade);
     const after = new Decimal(afterGrade);
 
-    return after.minus(before).toNumber();
+    return after.minus(before).toString();
   }
 
   /**
    * 複数月の報酬から3ヶ月平均を計算（随時改定用）
-   * @param monthlyAmounts 3ヶ月分の報酬配列
-   * @param retroactiveAmounts 遡及支払額配列（オプション）
+   * @param monthlyAmounts 3ヶ月分の報酬配列（Decimal文字列）
+   * @param retroactiveAmounts 遡及支払額配列（Decimal文字列、オプション）
    * @returns 平均報酬月額（1円未満切り捨て）
    */
   static calculateThreeMonthAverage(
-    monthlyAmounts: number[],
-    retroactiveAmounts: number[] = []
-  ): number {
+    monthlyAmounts: string[],
+    retroactiveAmounts: string[] = []
+  ): string {
     if (monthlyAmounts.length !== 3) {
       throw new Error('随時改定には3ヶ月分のデータが必要です');
     }
 
     // 遡及支払額を除外した調整後金額を計算
     const adjustedAmounts = monthlyAmounts.map((amount, index) => {
-      const retroPay = retroactiveAmounts[index] || 0;
+      const retroPay = retroactiveAmounts[index] || '0';
       return this.adjustForRetroactivePay(amount, retroPay);
     });
 
@@ -131,20 +133,38 @@ export class SocialInsuranceCalculator {
 
   /**
    * 金額を表示用文字列に変換
-   * @param amount 金額
+   * @param amount 金額（Decimal文字列）
    * @returns カンマ区切り文字列
    */
-  static formatCurrency(amount: number): string {
+  static formatCurrency(amount: string): string {
     return new Decimal(amount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
   /**
+   * 金額を表示用文字列に変換（formatCurrencyのエイリアス）
+   * @param amount 金額（Decimal文字列）
+   * @returns カンマ区切り文字列
+   */
+  static formatAmount(amount: string): string {
+    return this.formatCurrency(amount);
+  }
+
+  /**
+   * 絶対値を取得
+   * @param amount 金額（Decimal文字列）
+   * @returns 絶対値
+   */
+  static abs(amount: string): string {
+    return new Decimal(amount).abs().toString();
+  }
+
+  /**
    * 2つの金額の比較
-   * @param amount1 金額1
-   * @param amount2 金額2
+   * @param amount1 金額1（Decimal文字列）
+   * @param amount2 金額2（Decimal文字列）
    * @returns 比較結果 (-1: amount1 < amount2, 0: 等しい, 1: amount1 > amount2)
    */
-  static compare(amount1: number, amount2: number): number {
+  static compare(amount1: string, amount2: string): number {
     const decimal1 = new Decimal(amount1);
     const decimal2 = new Decimal(amount2);
 
@@ -155,97 +175,102 @@ export class SocialInsuranceCalculator {
 
   /**
    * 2つの金額を加算
-   * @param amount1 金額1
-   * @param amount2 金額2
+   * @param amount1 金額1（Decimal文字列）
+   * @param amount2 金額2（Decimal文字列）
    * @returns 加算結果
    */
-  static addAmounts(amount1: number, amount2: number): number {
+  static addAmounts(amount1: string, amount2: string): string {
     const decimal1 = new Decimal(amount1);
     const decimal2 = new Decimal(amount2);
-    return decimal1.add(decimal2).toNumber();
+    return decimal1.add(decimal2).toString();
   }
 
   /**
    * 2つの金額を減算
-   * @param amount1 被減数
-   * @param amount2 減数
+   * @param amount1 被減数（Decimal文字列）
+   * @param amount2 減数（Decimal文字列）
    * @returns 減算結果
    */
-  static subtractAmounts(amount1: number, amount2: number): number {
+  static subtractAmounts(amount1: string, amount2: string): string {
     const decimal1 = new Decimal(amount1);
     const decimal2 = new Decimal(amount2);
-    return decimal1.minus(decimal2).toNumber();
+    return decimal1.minus(decimal2).toString();
   }
 
   /**
    * 金額を千円単位で四捨五入（標準報酬月額計算用）
-   * @param amount 金額
+   * @param amount 金額（Decimal文字列）
    * @returns 千円単位で四捨五入した金額
    */
-  static roundToThousand(amount: number): number {
+  static roundToThousand(amount: string): string {
     const decimal = new Decimal(amount);
     const divided = decimal.dividedBy(1000);
     const rounded = divided.round();
-    return rounded.times(1000).toNumber();
+    return rounded.times(1000).toString();
   }
 
   /**
    * 金額を千円単位で切り捨て（標準賞与額計算用）
-   * @param amount 金額
+   * @param amount 金額（Decimal文字列）
    * @returns 千円単位で切り捨てした金額
    */
-  static floorToThousand(amount: number): number {
+  static floorToThousand(amount: string): string {
     const decimal = new Decimal(amount);
     const divided = decimal.dividedBy(1000);
     const floored = divided.floor();
-    return floored.times(1000).toNumber();
+    return floored.times(1000).toString();
   }
 
   /**
-   * 乗算して切り捨て（保険料計算用）
-   * @param amount 基準額
-   * @param rate 料率
-   * @returns 乗算結果（1円未満切り捨て）
+   * 掛け算と切り捨て（保険料計算用）
+   * @param amount 基準額（Decimal文字列）
+   * @param rate 料率（Decimal文字列）
+   * @returns 計算結果（1円未満切り捨て）
    */
-  static multiplyAndFloor(amount: number, rate: number): number {
+  static multiplyAndFloor(amount: string, rate: string): string {
     const baseAmount = new Decimal(amount);
     const rateDecimal = new Decimal(rate);
+
     const result = baseAmount.times(rateDecimal);
-    return result.floor().toNumber();
+    return result.floor().toString();
   }
 
   /**
-   * 除算（Decimal.js使用）
-   * @param dividend 被除数
-   * @param divisor 除数
+   * 除算
+   * @param dividend 被除数（Decimal文字列）
+   * @param divisor 除数（Decimal文字列）
    * @returns 除算結果
    */
-  static divide(dividend: number, divisor: number): number {
+  static divide(dividend: string, divisor: string): string {
     const dividendDecimal = new Decimal(dividend);
     const divisorDecimal = new Decimal(divisor);
-    return dividendDecimal.dividedBy(divisorDecimal).toNumber();
+
+    return dividendDecimal.dividedBy(divisorDecimal).toString();
   }
 
   /**
-   * 除算して切り捨て
-   * @param dividend 被除数
-   * @param divisor 除数
-   * @returns 除算結果（切り捨て）
+   * 除算と切り捨て
+   * @param dividend 被除数（Decimal文字列）
+   * @param divisor 除数（Decimal文字列）
+   * @returns 除算結果（1円未満切り捨て）
    */
-  static divideAndFloor(dividend: number, divisor: number): number {
+  static divideAndFloor(dividend: string, divisor: string): string {
     const dividendDecimal = new Decimal(dividend);
     const divisorDecimal = new Decimal(divisor);
+
     const result = dividendDecimal.dividedBy(divisorDecimal);
-    return result.floor().toNumber();
+    return result.floor().toString();
   }
 
   /**
-   * 2つの金額を減算（エイリアス）
-   * @param amount1 被減数
-   * @param amount2 減数
+   * 減算
+   * @param amount1 被減数（Decimal文字列）
+   * @param amount2 減数（Decimal文字列）
    * @returns 減算結果
    */
-  static subtract(amount1: number, amount2: number): number {
-    return this.subtractAmounts(amount1, amount2);
+  static subtract(amount1: string, amount2: string): string {
+    const decimal1 = new Decimal(amount1);
+    const decimal2 = new Decimal(amount2);
+    return decimal1.minus(decimal2).toString();
   }
 }

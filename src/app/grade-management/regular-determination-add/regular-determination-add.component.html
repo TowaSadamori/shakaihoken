@@ -124,10 +124,10 @@
       </div>
 
       <!-- 平均報酬表示 -->
-      <div class="form-group" *ngIf="averageAmount > 0">
+      <div class="form-group" *ngIf="hasAverageAmount()">
         <div class="section-label">算定平均報酬</div>
         <div class="average-display">
-          <span class="average-amount">{{ averageAmount | number }}円</span>
+          <span class="average-amount">{{ formatAmount(averageAmount) }}円</span>
           <small class="calculation-note">（入力された月の平均値）</small>
         </div>
       </div>

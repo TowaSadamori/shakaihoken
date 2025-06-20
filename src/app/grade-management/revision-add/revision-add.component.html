@@ -225,11 +225,7 @@
                 class="difference-value"
                 [class]="
                   'grade-difference-' +
-                  (judgmentResult.gradeDifference.healthInsurance > 0
-                    ? 'increase'
-                    : judgmentResult.gradeDifference.healthInsurance < 0
-                      ? 'decrease'
-                      : 'same')
+                  getGradeDifferenceClass(judgmentResult.gradeDifference.healthInsurance)
                 "
               >
                 {{ getGradeDifferenceText(judgmentResult.gradeDifference.healthInsurance) }}
@@ -272,11 +268,7 @@
                 class="difference-value"
                 [class]="
                   'grade-difference-' +
-                  (judgmentResult.gradeDifference.pensionInsurance > 0
-                    ? 'increase'
-                    : judgmentResult.gradeDifference.pensionInsurance < 0
-                      ? 'decrease'
-                      : 'same')
+                  getGradeDifferenceClass(judgmentResult.gradeDifference.pensionInsurance)
                 "
               >
                 {{ getGradeDifferenceText(judgmentResult.gradeDifference.pensionInsurance) }}
@@ -322,11 +314,7 @@
                 class="difference-value"
                 [class]="
                   'grade-difference-' +
-                  (judgmentResult!.gradeDifference.careInsurance! > 0
-                    ? 'increase'
-                    : judgmentResult!.gradeDifference.careInsurance! < 0
-                      ? 'decrease'
-                      : 'same')
+                  getGradeDifferenceClass(judgmentResult!.gradeDifference.careInsurance!)
                 "
               >
                 {{ getGradeDifferenceText(judgmentResult!.gradeDifference.careInsurance!) }}
