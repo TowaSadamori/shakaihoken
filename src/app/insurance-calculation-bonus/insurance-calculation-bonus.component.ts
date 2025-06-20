@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import {
   BonusCalculationService,
   CalculatedBonusHistoryItem,
@@ -70,7 +70,8 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private officeService: OfficeService,
-    private bonusCalculationService: BonusCalculationService
+    private bonusCalculationService: BonusCalculationService,
+    private location: Location
   ) {}
 
   async ngOnInit() {
@@ -298,7 +299,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
    * 戻るボタン
    */
   goBack() {
-    this.router.navigate(['/']);
+    this.location.back();
   }
 
   formatAmount(amount: string | undefined): string {
