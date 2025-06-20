@@ -106,4 +106,43 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       this.router.navigate(['/insurance-calculation', this.employeeId]);
     }
   }
+
+  formatFiscalYear(year: number): string {
+    return `${year}年度`;
+  }
+
+  previousYear(): void {
+    if (this.targetYear) {
+      this.updateYear(this.targetYear - 1);
+    }
+  }
+
+  nextYear(): void {
+    if (this.targetYear) {
+      this.updateYear(this.targetYear + 1);
+    }
+  }
+
+  currentYear(): void {
+    const currentFiscalYear = this.getCurrentFiscalYear();
+    this.updateYear(currentFiscalYear);
+  }
+
+  private updateYear(year: number): void {
+    this.targetYear = year;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { year: this.targetYear },
+      queryParamsHandling: 'merge',
+    });
+    // ここで必要に応じてデータを再読み込みするロジックを後で追加
+  }
+
+  private getCurrentFiscalYear(): number {
+    const today = new Date();
+    // JSの月は0-11なので+1
+    const month = today.getMonth() + 1;
+    // 日本の年度（4月始まり）で計算
+    return month >= 4 ? today.getFullYear() : today.getFullYear() - 1;
+  }
 }

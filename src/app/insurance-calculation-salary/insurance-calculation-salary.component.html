@@ -26,5 +26,59 @@
     </div>
   </div>
 
+  <!-- 年度選択エリア -->
+  <div class="year-control-section">
+    <div class="control-form">
+      <div class="form-row">
+        <span class="form-label">対象年度:</span>
+        <div class="year-controls" *ngIf="targetYear">
+          <button class="year-nav-btn" (click)="previousYear()">&lt;</button>
+          <span class="current-year">{{ formatFiscalYear(targetYear) }}</span>
+          <button class="year-nav-btn" (click)="nextYear()">&gt;</button>
+          <button class="current-year-btn" (click)="currentYear()">現在年度</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 月別社会保険料テーブル -->
+  <div class="result-table-section" *ngIf="targetYear">
+    <h3>{{ targetYear }}年度 月別社会保険料</h3>
+    <div class="results-table-container">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th rowspan="2">対象月</th>
+            <th colspan="5">健康保険料・介護保険料</th>
+            <th colspan="3">厚生年金保険料</th>
+          </tr>
+          <tr>
+            <th>健康保険等級</th>
+            <th>健康保険料(本人)</th>
+            <th>健康保険料(会社)</th>
+            <th>介護保険料(本人)</th>
+            <th>介護保険料(会社)</th>
+            <th>厚生年金等級</th>
+            <th>厚生年金保険料(本人)</th>
+            <th>厚生年金保険料(会社)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let month of [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]">
+            <td>{{ month >= 4 ? targetYear : targetYear! + 1 }}年 {{ month }}月</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- この下に給与計算のコンテンツが追加されます -->
 </div>
