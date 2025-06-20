@@ -61,17 +61,26 @@
     <div class="excel-table">
       <table>
         <thead>
-          <tr>
-            <th>支給年月日</th>
-            <th>報酬額</th>
-            <th>健康保険料・介護保険料の等級</th>
-            <th>健康保険料従業員負担分</th>
-            <th>健康保険料会社負担分</th>
-            <th>介護保険料従業員負担分</th>
-            <th>介護保険料会社負担分</th>
-            <th>厚生年金等級</th>
-            <th>厚生年金保険料従業員負担分</th>
-            <th>厚生年金保険料会社負担分</th>
+          <tr class="header-row-1">
+            <th rowspan="3">支給年月日</th>
+            <th rowspan="3">報酬額</th>
+            <th colspan="5">全国健康保険協会管掌健康保険料</th>
+            <th colspan="3">厚生年金保険料（厚生年金基金加入員を除く）</th>
+          </tr>
+          <tr class="header-row-2">
+            <th rowspan="2">等級</th>
+            <th colspan="2">介護保険第2号被保険者<br />に該当しない場合</th>
+            <th colspan="2">介護保険第2号被保険者<br />に該当する場合</th>
+            <th rowspan="2">等級</th>
+            <th colspan="2">一般、坑内員・船員</th>
+          </tr>
+          <tr class="header-row-3">
+            <th>従業員負担</th>
+            <th>会社負担</th>
+            <th>従業員負担</th>
+            <th>会社負担</th>
+            <th>従業員負担</th>
+            <th>会社負担</th>
           </tr>
         </thead>
         <tbody>
@@ -79,33 +88,47 @@
             <td>{{ bonus.paymentDate || '-' }}</td>
             <td>{{ bonus.amount ? formatAmount(bonus.amount) : '-' }}</td>
             <td>{{ bonus.healthInsuranceGrade || '-' }}</td>
+            <!-- 40歳未満の場合（介護保険第2号被保険者に該当しない場合） -->
             <td>
-              {{
-                bonus.calculationResult
-                  ? formatAmount(bonus.calculationResult.healthInsurance.employeeBurden)
-                  : '-'
-              }}
+              <ng-container *ngIf="employeeInfo && employeeInfo.age < 40; else nonNursingEmpty">
+                {{
+                  bonus.calculationResult
+                    ? formatAmount(bonus.calculationResult.healthInsurance.employeeBurden)
+                    : '-'
+                }}
+              </ng-container>
+              <ng-template #nonNursingEmpty>-</ng-template>
             </td>
             <td>
-              {{
-                bonus.calculationResult
-                  ? formatAmount(bonus.calculationResult.healthInsurance.companyBurden)
-                  : '-'
-              }}
+              <ng-container *ngIf="employeeInfo && employeeInfo.age < 40; else nonNursingEmpty2">
+                {{
+                  bonus.calculationResult
+                    ? formatAmount(bonus.calculationResult.healthInsurance.companyBurden)
+                    : '-'
+                }}
+              </ng-container>
+              <ng-template #nonNursingEmpty2>-</ng-template>
+            </td>
+            <!-- 40歳以上の場合（介護保険第2号被保険者に該当する場合） -->
+            <td>
+              <ng-container *ngIf="employeeInfo && employeeInfo.age >= 40; else nursingEmpty">
+                {{
+                  bonus.calculationResult
+                    ? formatAmount(bonus.calculationResult.healthInsurance.employeeBurden)
+                    : '-'
+                }}
+              </ng-container>
+              <ng-template #nursingEmpty>-</ng-template>
             </td>
             <td>
-              {{
-                bonus.calculationResult
-                  ? formatAmount(bonus.calculationResult.careInsurance?.employeeBurden || '0')
-                  : '-'
-              }}
-            </td>
-            <td>
-              {{
-                bonus.calculationResult
-                  ? formatAmount(bonus.calculationResult.careInsurance?.companyBurden || '0')
-                  : '-'
-              }}
+              <ng-container *ngIf="employeeInfo && employeeInfo.age >= 40; else nursingEmpty2">
+                {{
+                  bonus.calculationResult
+                    ? formatAmount(bonus.calculationResult.healthInsurance.companyBurden)
+                    : '-'
+                }}
+              </ng-container>
+              <ng-template #nursingEmpty2>-</ng-template>
             </td>
             <td>{{ bonus.pensionInsuranceGrade || '-' }}</td>
             <td>
