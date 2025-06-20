@@ -5,8 +5,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './insurance-calculation-salary.component.html',
-  styleUrl: './insurance-calculation-salary.component.scss'
+  styleUrl: './insurance-calculation-salary.component.scss',
 })
-export class InsuranceCalculationSalaryComponent {
-
-}
+export class InsuranceCalculationSalaryComponent {}
