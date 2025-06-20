@@ -225,30 +225,32 @@ export class GradeManagementService {
 
       // 数値データをDecimal文字列に変換
       const insuranceTable: InsuranceRateTableRow[] = (data['insuranceTable'] || []).map(
-        (row: any) => ({
-          grade: row.grade,
-          standardSalary: row.standardSalary,
-          salaryRange: row.salaryRange,
-          nonNursingRate: row.nonNursingRate,
+        (row: Partial<InsuranceRateTableRow>) => ({
+          grade: row.grade ?? '',
+          standardSalary: row.standardSalary ?? '',
+          salaryRange: row.salaryRange ?? '',
+          nonNursingRate: row.nonNursingRate ?? '',
           nonNursingTotal: row.nonNursingTotal?.toString() || '0',
           nonNursingHalf: row.nonNursingHalf?.toString() || '0',
-          nursingRate: row.nursingRate,
+          nursingRate: row.nursingRate ?? '',
           nursingTotal: row.nursingTotal?.toString() || '0',
           nursingHalf: row.nursingHalf?.toString() || '0',
-          pensionRate: row.pensionRate,
+          pensionRate: row.pensionRate ?? '',
           pensionTotal: row.pensionTotal?.toString() || '0',
           pensionHalf: row.pensionHalf?.toString() || '0',
         })
       );
 
-      const pensionTable: PensionRateTableRow[] = (data['pensionTable'] || []).map((row: any) => ({
-        grade: BigInt(row.grade),
-        standardSalary: row.standardSalary,
-        salaryRange: row.salaryRange,
-        pensionRate: row.pensionRate,
-        pensionTotal: row.pensionTotal?.toString() || '0',
-        pensionHalf: row.pensionHalf?.toString() || '0',
-      }));
+      const pensionTable: PensionRateTableRow[] = (data['pensionTable'] || []).map(
+        (row: Partial<PensionRateTableRow> & { grade?: string | number }) => ({
+          grade: BigInt(row.grade ?? 0),
+          standardSalary: row.standardSalary ?? '',
+          salaryRange: row.salaryRange ?? '',
+          pensionRate: row.pensionRate ?? '',
+          pensionTotal: row.pensionTotal?.toString() || '0',
+          pensionHalf: row.pensionHalf?.toString() || '0',
+        })
+      );
 
       const result: InsuranceRateTable = {
         insuranceTable,
@@ -409,7 +411,7 @@ export class GradeManagementService {
   /**
    * Timestamp型またはDate型をDate型に変換
    */
-  private convertToDate(value: any): Date {
+  private convertToDate(value: unknown): Date {
     if (value instanceof Timestamp) {
       return value.toDate();
     } else if (value instanceof Date) {

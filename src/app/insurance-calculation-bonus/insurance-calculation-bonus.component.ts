@@ -1169,16 +1169,13 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         }
       }
 
-      // 該当する等級が見つからなかった場合、最高等級を適用する
+      // 該当等級が見つからない場合は最高等級を適用
       if (gradeTable && gradeTable.length > 0) {
-        const highestGrade = gradeTable[gradeTable.length - 1];
-        if (highestGrade.grade) {
-          return {
-            employeeBurden: highestGrade.pensionHalf || '0',
-            companyBurden: highestGrade.pensionTotal || '0',
-            total: highestGrade.pensionTotal || '0',
-          };
-        }
+        const highestGradeItem = gradeTable[gradeTable.length - 1];
+        const employeeBurden = highestGradeItem.pensionHalf || '0';
+        const total = highestGradeItem.pensionTotal || '0';
+        const companyBurden = SocialInsuranceCalculator.subtract(total, employeeBurden);
+        return { employeeBurden, companyBurden, total };
       }
 
       console.error(`該当する厚生年金等級が見つかりませんでした (入力金額: ${amount})`);
