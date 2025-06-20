@@ -311,11 +311,21 @@ export class SocialInsuranceCalculator {
    * @returns 減算結果
    */
   static subtract(amount1: string, amount2: string): string {
+    return this.subtractAmounts(amount1, amount2);
+  }
+
+  /**
+   * 2つの金額を乗算
+   * @param amount1 金額1（Decimal文字列）
+   * @param amount2 金額2（Decimal文字列）
+   * @returns 乗算結果
+   */
+  static multiply(amount1: string, amount2: string): Decimal {
     const cleanAmount1 = amount1.replace(/,/g, '');
     const cleanAmount2 = amount2.replace(/,/g, '');
 
     const decimal1 = new Decimal(cleanAmount1);
     const decimal2 = new Decimal(cleanAmount2);
-    return decimal1.minus(decimal2).toString();
+    return decimal1.times(decimal2);
   }
 }

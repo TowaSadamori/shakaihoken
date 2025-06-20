@@ -58,109 +58,64 @@
   <div class="result-table-section">
     <h3>賞与社会保険料計算結果</h3>
 
-    <div class="excel-table">
-      <table>
-        <thead>
-          <tr class="header-row-1">
-            <th rowspan="3">支給年月日</th>
-            <th rowspan="3">報酬額</th>
-            <th colspan="5">全国健康保険協会管掌健康保険料</th>
-            <th colspan="3">厚生年金保険料（厚生年金基金加入員を除く）</th>
-          </tr>
-          <tr class="header-row-2">
-            <th rowspan="2">等級</th>
-            <th colspan="2">介護保険第2号被保険者<br />に該当しない場合</th>
-            <th colspan="2">介護保険第2号被保険者<br />に該当する場合</th>
-            <th rowspan="2">等級</th>
-            <th colspan="2">一般、坑内員・船員</th>
-          </tr>
-          <tr class="header-row-3">
-            <th>従業員負担</th>
-            <th>会社負担</th>
-            <th>従業員負担</th>
-            <th>会社負担</th>
-            <th>従業員負担</th>
-            <th>会社負担</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let bonus of bonusDataList; let i = index">
-            <td>{{ bonus.paymentDate || '-' }}</td>
-            <td>{{ bonus.amount ? formatAmount(bonus.amount) : '-' }}</td>
-            <td>{{ bonus.healthInsuranceGrade || '-' }}</td>
-            <!-- 40歳未満の場合（介護保険第2号被保険者に該当しない場合） -->
-            <td>
-              <ng-container *ngIf="employeeInfo && employeeInfo.age < 40; else nonNursingEmpty">
-                {{
-                  bonus.calculationResult
-                    ? formatAmount(bonus.calculationResult.healthInsurance.employeeBurden)
-                    : '-'
-                }}
-              </ng-container>
-              <ng-template #nonNursingEmpty>-</ng-template>
-            </td>
-            <td>
-              <ng-container *ngIf="employeeInfo && employeeInfo.age < 40; else nonNursingEmpty2">
-                {{
-                  bonus.calculationResult
-                    ? formatAmount(bonus.calculationResult.healthInsurance.companyBurden)
-                    : '-'
-                }}
-              </ng-container>
-              <ng-template #nonNursingEmpty2>-</ng-template>
-            </td>
-            <!-- 40歳以上の場合（介護保険第2号被保険者に該当する場合） -->
-            <td>
-              <ng-container *ngIf="employeeInfo && employeeInfo.age >= 40; else nursingEmpty">
-                {{
-                  bonus.calculationResult
-                    ? formatAmount(bonus.calculationResult.healthInsurance.employeeBurden)
-                    : '-'
-                }}
-              </ng-container>
-              <ng-template #nursingEmpty>-</ng-template>
-            </td>
-            <td>
-              <ng-container *ngIf="employeeInfo && employeeInfo.age >= 40; else nursingEmpty2">
-                {{
-                  bonus.calculationResult
-                    ? formatAmount(bonus.calculationResult.healthInsurance.companyBurden)
-                    : '-'
-                }}
-              </ng-container>
-              <ng-template #nursingEmpty2>-</ng-template>
-            </td>
-            <td>{{ bonus.pensionInsuranceGrade || '-' }}</td>
-            <td>
-              {{
-                bonus.calculationResult
-                  ? formatAmount(bonus.calculationResult.pensionInsurance.employeeBurden)
-                  : '-'
-              }}
-            </td>
-            <td>
-              {{
-                bonus.calculationResult
-                  ? formatAmount(bonus.calculationResult.pensionInsurance.companyBurden)
-                  : '-'
-              }}
-            </td>
-          </tr>
-          <!-- データがない場合の空行表示 -->
-          <tr *ngIf="bonusDataList.length === 0">
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="container is-fluid">
+      <div *ngIf="employeeInfo" class="mt-5 content">
+        <div class="card">
+          <header class="card-header">
+            <p class="card-header-title">賞与社会保険料計算結果</p>
+          </header>
+          <div class="card-content">
+            <!-- ピボットテーブル -->
+            <div class="results-table-container" *ngIf="pivotedTable; else noData">
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>賞与</th>
+                    <ng-container *ngFor="let col of pivotedTable.columns">
+                      <th
+                        *ngIf="!col.isSeparator"
+                        [innerHTML]="col.header"
+                        [class.is-numeric]="col.isNumeric"
+                      ></th>
+                      <th *ngIf="col.isSeparator" class="separator-col"></th>
+                    </ng-container>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of pivotedTable.rows" class="data-row">
+                    <td [innerHTML]="row.header"></td>
+                    <ng-container *ngFor="let col of pivotedTable.columns; let i = index">
+                      <td *ngIf="!col.isSeparator" [class.is-numeric]="col.isNumeric">
+                        {{ row.values[i] }}
+                      </td>
+                      <td *ngIf="col.isSeparator" class="separator-col"></td>
+                    </ng-container>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <ng-template #noData>
+              <div *ngIf="isLoading" class="has-text-centered">
+                <div class="loader-container">
+                  <div class="loader"></div>
+                  <span>データを読み込み中...</span>
+                </div>
+              </div>
+              <div *ngIf="!isLoading && !bonusDataList.length" class="has-text-centered">
+                <p>{{ importStatusMessage || 'データがありません。' }}</p>
+              </div>
+            </ng-template>
+
+            <div *ngIf="errorMessage" class="notification is-danger mt-4">
+              <p>
+                <strong>エラー</strong>
+              </p>
+              <p>{{ errorMessage }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 上限適用の注記 -->
@@ -169,38 +124,6 @@
       <ul>
         <li *ngFor="let note of limitNotes">{{ note }}</li>
       </ul>
-    </div>
-  </div>
-
-  <!-- エラーメッセージ表示 -->
-  <div class="error-message" *ngIf="errorMessage">
-    {{ errorMessage }}
-    <div *ngIf="errorMessage.includes('インデックス')" class="index-guidance">
-      <p><strong>解決方法:</strong></p>
-      <ol>
-        <li>
-          <a
-            href="https://console.firebase.google.com/project/kensyu10093/firestore/indexes"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Firebase Console
-          </a>
-          にアクセス
-        </li>
-        <li>「複合」タブを選択</li>
-        <li>
-          以下のインデックスを作成:
-          <ul>
-            <li>コレクション: <code>bonusPayments</code></li>
-            <li>
-              フィールド: <code>employeeId</code> (昇順), <code>fiscalYear</code> (昇順),
-              <code>paymentDate</code> (昇順)
-            </li>
-          </ul>
-        </li>
-        <li>インデックス作成完了後、ページを再読み込み</li>
-      </ol>
     </div>
   </div>
 
