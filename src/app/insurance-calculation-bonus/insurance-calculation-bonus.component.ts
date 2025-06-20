@@ -49,6 +49,7 @@ interface BonusDataItem {
   calculationResult?: BonusCalculationResult;
   healthInsuranceGrade?: string;
   pensionInsuranceGrade?: string;
+  calculationNote?: string;
 }
 
 interface GradeTableItem {
@@ -671,62 +672,42 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       // 等級を判定
       for (const item of gradeTable) {
         const salaryRange = item.salaryRange || '';
-
         if (salaryRange && (salaryRange.includes('~') || salaryRange.includes('～'))) {
           const separator = salaryRange.includes('～') ? '～' : '~';
           const [minStr, maxStr] = salaryRange.split(separator).map((s: string) => s.trim());
 
           if (minStr) {
-            const cleanMinStr = minStr.replace(/,/g, '');
-            const cleanMaxStr = maxStr ? maxStr.replace(/,/g, '') : '';
+            const cleanMinStr = minStr.replace(/,|円/g, '');
+            const cleanMaxStr = maxStr ? maxStr.replace(/,|円/g, '') : '';
 
-            // 範囲内かチェック
-            if (SocialInsuranceCalculator.compare(amount, cleanMinStr) >= 0) {
+            const isGteMin = SocialInsuranceCalculator.compare(amount, cleanMinStr) >= 0;
+
+            if (isGteMin) {
               if (cleanMaxStr && cleanMaxStr !== '') {
-                if (SocialInsuranceCalculator.compare(amount, cleanMaxStr) <= 0) {
-                  // 40歳以上は介護保険対象
-                  const isNursingTarget = employeeAge >= 40n;
-                  const employeeBurden = isNursingTarget
-                    ? item.nursingHalf || '0'
-                    : item.nonNursingHalf || '0';
-                  const total = isNursingTarget
-                    ? item.nursingTotal || '0'
-                    : item.nonNursingTotal || '0';
+                const isLtMax = SocialInsuranceCalculator.compare(amount, cleanMaxStr) < 0;
+                if (isLtMax) {
+                  const employeeBurden =
+                    employeeAge >= 40n ? item.nursingHalf || '0' : item.nonNursingHalf || '0';
+                  const total =
+                    employeeAge >= 40n ? item.nursingTotal || '0' : item.nonNursingTotal || '0';
                   const companyBurden = SocialInsuranceCalculator.subtract(total, employeeBurden);
-
-                  console.log(
-                    `💰 等級${item.grade}の保険料取得: 従業員${employeeBurden}円, 会社${companyBurden}円, 合計${total}円`
-                  );
-
-                  return {
-                    employeeBurden,
-                    companyBurden,
-                    total,
-                  };
+                  return { employeeBurden, companyBurden, total };
                 }
               } else {
-                // 最高等級
-                const isNursingTarget = employeeAge >= 40n;
-                const employeeBurden = isNursingTarget
-                  ? item.nursingHalf || '0'
-                  : item.nonNursingHalf || '0';
-                const total = isNursingTarget
-                  ? item.nursingTotal || '0'
-                  : item.nonNursingTotal || '0';
+                // 上限がない場合（最高等級）
+                const employeeBurden =
+                  employeeAge >= 40n ? item.nursingHalf || '0' : item.nonNursingHalf || '0';
+                const total =
+                  employeeAge >= 40n ? item.nursingTotal || '0' : item.nonNursingTotal || '0';
                 const companyBurden = SocialInsuranceCalculator.subtract(total, employeeBurden);
-
-                return {
-                  employeeBurden,
-                  companyBurden,
-                  total,
-                };
+                return { employeeBurden, companyBurden, total };
               }
             }
           }
         }
       }
 
-      console.log('❌ 該当する等級が見つかりませんでした');
+      console.log('❌ 該当する健康保険等級が見つかりませんでした');
       return { employeeBurden: '0', companyBurden: '0', total: '0' };
     } catch (error) {
       console.error('等級ベース保険料取得エラー:', error);
@@ -759,110 +740,39 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
       // キャッシュから取得を試行
       let gradeTable = this.pensionInsuranceGradeCache.get(cacheKey);
+      console.log(
+        `[診断] キャッシュから等級テーブル取得試行:`,
+        gradeTable ? `あり (${gradeTable.length}件)` : 'なし'
+      );
 
       if (!gradeTable) {
         // Firestoreから等級データを取得
         const docPath = `insurance_rates/${this.targetYear.toString()}/prefectures/${normalizedPrefecture}/rate_table/main`;
-        console.log('厚生年金等級データ取得パス:', docPath);
+        console.log('[診断] Firestoreから等級データ取得パス:', docPath);
 
         const docRef = doc(this.firestore, docPath);
         const docSnap = await getDoc(docRef);
 
-        console.log('厚生年金等級データ存在確認:', docSnap.exists());
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('取得した厚生年金等級データ:', data);
           gradeTable = (data['pensionTable'] as GradeTableItem[]) || [];
-          console.log('厚生年金等級テーブル:', gradeTable.length, '件');
-
-          // キャッシュに保存
+          console.log(`[診断] Firestoreから pensionTable 取得成功:`, gradeTable);
           this.pensionInsuranceGradeCache.set(cacheKey, gradeTable);
         } else {
-          console.warn('等級データが見つかりません:', cacheKey, 'パス:', docPath);
-
-          // フォールバック: 2024年度のデータを試行
-          const fallbackDocPath = `insurance_rates/2024/prefectures/${normalizedPrefecture}/rate_table/main`;
-          console.log('フォールバック等級データ取得パス:', fallbackDocPath);
-
-          const fallbackDocRef = doc(this.firestore, fallbackDocPath);
-          const fallbackDocSnap = await getDoc(fallbackDocRef);
-
-          if (fallbackDocSnap.exists()) {
-            const fallbackData = fallbackDocSnap.data();
-            console.log('フォールバック等級データ取得成功:', fallbackData);
-            gradeTable = (fallbackData['pensionTable'] as GradeTableItem[]) || [];
-            this.pensionInsuranceGradeCache.set(cacheKey, gradeTable);
-          } else {
-            console.error('フォールバック等級データも見つかりません');
-            return '-';
-          }
+          console.error('[診断] Firestoreにドキュメントなし:', docPath);
+          return '-';
         }
-      } else {
-        console.log('厚生年金等級データをキャッシュから取得:', gradeTable.length, '件');
       }
 
-      // 等級を検索（厚生年金は上限なし、Firestoreのデータに従う）
-      if (gradeTable) {
-        console.log('厚生年金等級検索開始 - 対象金額:', amount);
-
-        for (const item of gradeTable) {
-          const salaryRange = item.salaryRange || '';
-          const standardSalary = item.standardSalary || '';
-          const grade = item.grade || '';
-
-          console.log(`等級${grade}をチェック - 範囲:${salaryRange}, 標準:${standardSalary}`);
-
-          // 標準報酬月額と一致するかチェック（カンマを除去して比較）
-          if (standardSalary) {
-            const cleanStandardSalary = standardSalary.replace(/,/g, '');
-            if (SocialInsuranceCalculator.compare(amount, cleanStandardSalary) === 0) {
-              console.log(`厚生年金等級決定（標準一致）: ${grade}級`);
-              return `${grade}級`;
-            }
-          }
-
-          // 範囲内かチェック（複数の区切り文字に対応）
-          if (salaryRange && (salaryRange.includes('~') || salaryRange.includes('～'))) {
-            // 日本語の波ダッシュ（～）と英語のチルダ（~）の両方に対応
-            const separator = salaryRange.includes('～') ? '～' : '~';
-            const [minStr, maxStr] = salaryRange.split(separator).map((s: string) => s.trim());
-            if (minStr) {
-              // カンマを除去して数値比較
-              const cleanMinStr = minStr.replace(/,/g, '');
-              const cleanMaxStr = maxStr ? maxStr.replace(/,/g, '') : '';
-
-              console.log(
-                `範囲チェック: ${amount} が ${cleanMinStr} ~ ${cleanMaxStr || '上限なし'} の範囲内か`
-              );
-
-              // 最低額以上であることを確認
-              if (SocialInsuranceCalculator.compare(amount, cleanMinStr) >= 0) {
-                // 上限がある場合は上限以下であることも確認
-                if (cleanMaxStr && cleanMaxStr !== '') {
-                  if (SocialInsuranceCalculator.compare(amount, cleanMaxStr) <= 0) {
-                    console.log(`厚生年金等級決定（範囲一致）: ${grade}級`);
-                    return `${grade}級`;
-                  }
-                } else {
-                  // 上限がない場合（最高等級）は最低額以上であればOK
-                  console.log(`厚生年金等級決定（最高等級）: ${grade}級`);
-                  return `${grade}級`;
-                }
-              }
-            }
-          }
-        }
-
-        // 最高等級を超える場合は最高等級を返す
-        if (gradeTable.length > 0) {
-          const highestGrade = gradeTable[gradeTable.length - 1];
-          console.log(`厚生年金等級: 最高等級として${highestGrade.grade}級を返す`);
+      // 該当する等級が見つからなかった場合、最高等級を適用する
+      if (gradeTable && gradeTable.length > 0) {
+        const highestGrade = gradeTable[gradeTable.length - 1];
+        if (highestGrade.grade) {
           return `${highestGrade.grade}級`;
         }
       }
 
-      console.log('厚生年金等級: 該当する等級が見つかりませんでした');
+      console.error(`[最終結果] 該当する厚生年金等級が見つかりませんでした (入力金額: ${amount})`);
       return '-';
     } catch (error) {
       console.error('厚生年金等級取得エラー:', error);
@@ -1063,14 +973,8 @@ export class InsuranceCalculationBonusComponent implements OnInit {
             const month = BigInt(paymentDate.getMonth() + 1);
             const year = BigInt(paymentDate.getFullYear());
 
-            // 等級ベースで健康保険料を取得
-            const gradePremiums = await this.getHealthInsurancePremiumByGrade(
-              item.amount,
-              this.employeeInfo!.age
-            );
-
-            // 等級ベースで介護保険料を取得
-            const carePremiums = await this.getCareInsurancePremiumByGrade(
+            // 等級ベースで健康保険料・介護保険料を取得
+            const healthPremiums = await this.getHealthInsurancePremiumByGrade(
               item.amount,
               this.employeeInfo!.age
             );
@@ -1078,7 +982,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
             // 等級ベースで厚生年金保険料を取得
             const pensionPremiums = await this.getPensionInsurancePremiumByGrade(item.amount);
 
-            // 各賞与データに対して保険料計算を実行
+            // 各賞与データに対して保険料計算を実行（標準賞与額取得のため）
             const calculationResult =
               await this.bonusCalculationService.calculateAndSaveBonusInsurance(
                 this.employeeId,
@@ -1097,28 +1001,23 @@ export class InsuranceCalculationBonusComponent implements OnInit {
               standardBonusAmountPension:
                 calculationResult.calculationResult.standardBonusAmountPension,
               healthInsurance: {
-                employeeBurden:
-                  this.employeeInfo!.age >= 40n
-                    ? gradePremiums.employeeBurden // 40歳以上：健康保険料のみ（介護保険料は別途表示）
-                    : carePremiums.employeeBurden, // 40歳未満：健康保険料（介護保険料込み）
-                companyBurden:
-                  this.employeeInfo!.age >= 40n
-                    ? gradePremiums.companyBurden // 40歳以上：健康保険料のみ（介護保険料は別途表示）
-                    : carePremiums.companyBurden, // 40歳未満：健康保険料（介護保険料込み）
+                employeeBurden: healthPremiums.employeeBurden,
+                companyBurden: healthPremiums.companyBurden,
               },
-              careInsurance:
-                this.employeeInfo!.age >= 40n
-                  ? {
-                      employeeBurden: carePremiums.employeeBurden,
-                      companyBurden: carePremiums.companyBurden,
-                    }
-                  : undefined,
+              // 介護保険料は healthPremiums に含まれているためここでは設定しない
+              careInsurance: undefined,
               pensionInsurance: {
                 employeeBurden: pensionPremiums.employeeBurden,
                 companyBurden: pensionPremiums.companyBurden,
               },
-              totalEmployeeBurden: calculationResult.calculationResult.employeeBurden,
-              totalCompanyBurden: calculationResult.calculationResult.companyBurden,
+              totalEmployeeBurden: SocialInsuranceCalculator.addAmounts(
+                healthPremiums.employeeBurden,
+                pensionPremiums.employeeBurden
+              ),
+              totalCompanyBurden: SocialInsuranceCalculator.addAmounts(
+                healthPremiums.companyBurden,
+                pensionPremiums.companyBurden
+              ),
               limitInfo: {
                 isHealthLimitApplied: calculationResult.limitResult.isHealthLimitApplied,
                 isPensionLimitApplied: calculationResult.limitResult.isPensionLimitApplied,
@@ -1167,8 +1066,19 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         })
       );
 
+      // 支給日順にソート（昇順：古い日付から新しい日付へ）
+      this.bonusDataList.sort((a, b) => {
+        const dateA = new Date(a.paymentDate);
+        const dateB = new Date(b.paymentDate);
+        return dateA.getTime() - dateB.getTime();
+      });
+
       if (this.bonusDataList.length > 0) {
-        console.log('賞与履歴データ表示完了:', this.bonusDataList.length, '件');
+        console.log(
+          '賞与履歴データ表示完了（支給日順ソート済み）:',
+          this.bonusDataList.length,
+          '件'
+        );
         this.bonusDataList.forEach((item, index) => {
           console.log(`賞与データ[${index}]:`, {
             paymentDate: item.paymentDate,
@@ -1232,153 +1142,53 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       const cacheKey = `${this.targetYear}_${normalizedPrefecture}`;
       console.log('厚生年金保険料取得 - キャッシュキー:', cacheKey);
 
-      // キャッシュから取得を試行
       let gradeTable = this.pensionInsuranceGradeCache.get(cacheKey);
+      console.log(
+        `[診断] (保険料) キャッシュから等級テーブル取得試行:`,
+        gradeTable ? `あり (${gradeTable.length}件)` : 'なし'
+      );
 
       if (!gradeTable) {
-        // Firestoreから等級データを取得
         const docPath = `insurance_rates/${this.targetYear.toString()}/prefectures/${normalizedPrefecture}/rate_table/main`;
-        console.log('厚生年金保険料データ取得パス:', docPath);
-
+        console.log('[診断] (保険料) Firestoreから等級データ取得パス:', docPath);
         const docRef = doc(this.firestore, docPath);
         const docSnap = await getDoc(docRef);
 
-        console.log('厚生年金保険料データ存在確認:', docSnap.exists());
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('取得した厚生年金保険料データ:', data);
           gradeTable = (data['pensionTable'] as GradeTableItem[]) || [];
-          console.log('厚生年金保険料テーブル:', gradeTable.length, '件');
-
-          // キャッシュに保存
+          console.log(`[診断] (保険料) Firestoreから pensionTable 取得成功:`, gradeTable);
           this.pensionInsuranceGradeCache.set(cacheKey, gradeTable);
         } else {
-          console.warn('厚生年金保険料データが見つかりません:', cacheKey, 'パス:', docPath);
-
-          // フォールバック: 2024年度のデータを試行
-          const fallbackDocPath = `insurance_rates/2024/prefectures/${normalizedPrefecture}/rate_table/main`;
-          console.log('フォールバック厚生年金保険料データ取得パス:', fallbackDocPath);
-
-          const fallbackDocRef = doc(this.firestore, fallbackDocPath);
-          const fallbackDocSnap = await getDoc(fallbackDocRef);
-
-          if (fallbackDocSnap.exists()) {
-            const fallbackData = fallbackDocSnap.data();
-            console.log('フォールバック厚生年金保険料データ取得成功:', fallbackData);
-            gradeTable = (fallbackData['pensionTable'] as GradeTableItem[]) || [];
-            this.pensionInsuranceGradeCache.set(cacheKey, gradeTable);
-          } else {
-            console.error('フォールバック厚生年金保険料データも見つかりません');
-            return {
-              employeeBurden: '0',
-              companyBurden: '0',
-              total: '0',
-            };
-          }
-        }
-      } else {
-        console.log('厚生年金保険料データをキャッシュから取得:', gradeTable.length, '件');
-      }
-
-      // 等級を検索して保険料を取得
-      if (gradeTable) {
-        console.log('厚生年金保険料検索開始 - 対象金額:', amount);
-
-        for (const item of gradeTable) {
-          const salaryRange = item.salaryRange || '';
-          const standardSalary = item.standardSalary || '';
-          const grade = item.grade || '';
-          const pensionTotal = item.pensionTotal || '0';
-          const pensionHalf = item.pensionHalf || '0';
-
-          console.log(
-            `等級${grade}をチェック - 範囲:${salaryRange}, 標準:${standardSalary}, 保険料合計:${pensionTotal}, 保険料半額:${pensionHalf}`
-          );
-
-          // 標準報酬月額と一致するかチェック（カンマを除去して比較）
-          if (standardSalary) {
-            const cleanStandardSalary = standardSalary.replace(/,/g, '');
-            if (SocialInsuranceCalculator.compare(amount, cleanStandardSalary) === 0) {
-              console.log(
-                `厚生年金保険料決定（標準一致）: ${grade}級 - 保険料合計:${pensionTotal}, 保険料半額:${pensionHalf}`
-              );
-              return {
-                employeeBurden: pensionHalf,
-                companyBurden: pensionHalf,
-                total: pensionTotal,
-              };
-            }
-          }
-
-          // 範囲内かチェック（複数の区切り文字に対応）
-          if (salaryRange && (salaryRange.includes('~') || salaryRange.includes('～'))) {
-            // 日本語の波ダッシュ（～）と英語のチルダ（~）の両方に対応
-            const separator = salaryRange.includes('～') ? '～' : '~';
-            const [minStr, maxStr] = salaryRange.split(separator).map((s: string) => s.trim());
-            if (minStr) {
-              // カンマを除去して数値比較
-              const cleanMinStr = minStr.replace(/,/g, '');
-              const cleanMaxStr = maxStr ? maxStr.replace(/,/g, '') : '';
-
-              console.log(
-                `範囲チェック: ${amount} が ${cleanMinStr} ~ ${cleanMaxStr || '上限なし'} の範囲内か`
-              );
-
-              // 最低額以上であることを確認
-              if (SocialInsuranceCalculator.compare(amount, cleanMinStr) >= 0) {
-                // 上限がある場合は上限以下であることも確認
-                if (cleanMaxStr && cleanMaxStr !== '') {
-                  if (SocialInsuranceCalculator.compare(amount, cleanMaxStr) <= 0) {
-                    console.log(
-                      `厚生年金保険料決定（範囲一致）: ${grade}級 - 保険料合計:${pensionTotal}, 保険料半額:${pensionHalf}`
-                    );
-                    return {
-                      employeeBurden: pensionHalf,
-                      companyBurden: pensionHalf,
-                      total: pensionTotal,
-                    };
-                  }
-                } else {
-                  // 上限がない場合（最高等級）は最低額以上であればOK
-                  console.log(
-                    `厚生年金保険料決定（最高等級）: ${grade}級 - 保険料合計:${pensionTotal}, 保険料半額:${pensionHalf}`
-                  );
-                  return {
-                    employeeBurden: pensionHalf,
-                    companyBurden: pensionHalf,
-                    total: pensionTotal,
-                  };
-                }
-              }
-            }
-          }
-        }
-
-        // 最高等級を超える場合は最高等級の保険料を返す
-        if (gradeTable.length > 0) {
-          const highestGrade = gradeTable[gradeTable.length - 1];
-          const pensionTotal = highestGrade.pensionTotal || '0';
-          const pensionHalf = highestGrade.pensionHalf || '0';
-          console.log(
-            `厚生年金保険料: 最高等級として${highestGrade.grade}級の保険料を返す - 保険料合計:${pensionTotal}, 保険料半額:${pensionHalf}`
-          );
+          console.error('[診断] (保険料) Firestoreにドキュメントなし:', docPath);
           return {
-            employeeBurden: pensionHalf,
-            companyBurden: pensionHalf,
-            total: pensionTotal,
+            employeeBurden: '0',
+            companyBurden: '0',
+            total: '0',
           };
         }
       }
 
-      console.log('厚生年金保険料: 該当する等級が見つかりませんでした');
+      // 該当する等級が見つからなかった場合、最高等級を適用する
+      if (gradeTable && gradeTable.length > 0) {
+        const highestGrade = gradeTable[gradeTable.length - 1];
+        if (highestGrade.grade) {
+          return {
+            employeeBurden: highestGrade.pensionHalf || '0',
+            companyBurden: highestGrade.pensionTotal || '0',
+            total: highestGrade.pensionTotal || '0',
+          };
+        }
+      }
+
+      console.error(`該当する厚生年金等級が見つかりませんでした (入力金額: ${amount})`);
       return {
         employeeBurden: '0',
         companyBurden: '0',
         total: '0',
       };
     } catch (error) {
-      console.error('厚生年金保険料取得エラー:', error);
+      console.error('等級ベース厚生年金保険料取得エラー:', error);
       return {
         employeeBurden: '0',
         companyBurden: '0',
@@ -1388,7 +1198,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   }
 
   /**
-   * 介護保険料を等級から取得（年齢に応じて適切な保険料を取得）
+   * 介護保険料を等級から取得
    */
   async getCareInsurancePremiumByGrade(
     amount: string,
@@ -1398,199 +1208,93 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     companyBurden: string;
     total: string;
   }> {
-    console.log('介護保険料取得開始 - 入力金額:', amount, '年齢:', employeeAge);
-
-    if (amount === '0') {
-      console.log('介護保険料取得: 金額が0のため処理終了');
-      return {
-        employeeBurden: '0',
-        companyBurden: '0',
-        total: '0',
-      };
-    }
-
-    if (!this.employeeInfo) {
-      console.log('介護保険料取得: 従業員情報が未設定のため処理終了');
-      return {
-        employeeBurden: '0',
-        companyBurden: '0',
-        total: '0',
-      };
-    }
-
     try {
+      if (!this.employeeInfo) {
+        return { employeeBurden: '0', companyBurden: '0', total: '0' };
+      }
+
+      if (employeeAge < 40n) {
+        return { employeeBurden: '0', companyBurden: '0', total: '0' };
+      }
+
       const normalizedPrefecture = this.normalizePrefectureName(
         this.employeeInfo.addressPrefecture
       );
       const cacheKey = `${this.targetYear}_${normalizedPrefecture}`;
-      console.log('介護保険料取得 - キャッシュキー:', cacheKey);
 
-      // キャッシュから取得を試行
       let gradeTable = this.healthInsuranceGradeCache.get(cacheKey);
 
       if (!gradeTable) {
-        // Firestoreから等級データを取得
         const docPath = `insurance_rates/${this.targetYear.toString()}/prefectures/${normalizedPrefecture}/rate_table/main`;
-        console.log('介護保険料データ取得パス:', docPath);
-
         const docRef = doc(this.firestore, docPath);
         const docSnap = await getDoc(docRef);
 
-        console.log('介護保険料データ存在確認:', docSnap.exists());
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('取得した介護保険料データ:', data);
-          gradeTable = (data['healthTable'] as GradeTableItem[]) || [];
-          console.log('介護保険料テーブル:', gradeTable.length, '件');
-
-          // キャッシュに保存
+          gradeTable =
+            (data['healthInsuranceTable'] as GradeTableItem[]) ||
+            (data['insuranceTable'] as GradeTableItem[]) ||
+            [];
           this.healthInsuranceGradeCache.set(cacheKey, gradeTable);
         } else {
-          console.warn('介護保険料データが見つかりません:', cacheKey, 'パス:', docPath);
-
-          // フォールバック: 2024年度のデータを試行
-          const fallbackDocPath = `insurance_rates/2024/prefectures/${normalizedPrefecture}/rate_table/main`;
-          console.log('フォールバック介護保険料データ取得パス:', fallbackDocPath);
-
-          const fallbackDocRef = doc(this.firestore, fallbackDocPath);
-          const fallbackDocSnap = await getDoc(fallbackDocRef);
-
-          if (fallbackDocSnap.exists()) {
-            const fallbackData = fallbackDocSnap.data();
-            console.log('フォールバック介護保険料データ取得成功:', fallbackData);
-            gradeTable = (fallbackData['healthTable'] as GradeTableItem[]) || [];
-            this.healthInsuranceGradeCache.set(cacheKey, gradeTable);
-          } else {
-            console.error('フォールバック介護保険料データも見つかりません');
-            return {
-              employeeBurden: '0',
-              companyBurden: '0',
-              total: '0',
-            };
-          }
+          return { employeeBurden: '0', companyBurden: '0', total: '0' };
         }
-      } else {
-        console.log('介護保険料データをキャッシュから取得:', gradeTable.length, '件');
       }
 
-      // 等級を検索して保険料を取得
-      if (gradeTable) {
-        console.log('介護保険料検索開始 - 対象金額:', amount, '年齢:', employeeAge);
+      for (const item of gradeTable) {
+        const salaryRange = item.salaryRange || '';
+        if (salaryRange && (salaryRange.includes('~') || salaryRange.includes('～'))) {
+          const separator = salaryRange.includes('～') ? '～' : '~';
+          const [minStr, maxStr] = salaryRange.split(separator).map((s: string) => s.trim());
 
-        for (const item of gradeTable) {
-          const salaryRange = item.salaryRange || '';
-          const standardSalary = item.standardSalary || '';
-          const grade = item.grade || '';
+          if (minStr) {
+            const cleanMinStr = minStr.replace(/,/g, '');
+            const cleanMaxStr = maxStr ? maxStr.replace(/,/g, '') : '';
 
-          // 年齢に応じて適切な保険料フィールドを選択
-          const careTotal =
-            employeeAge >= 40n
-              ? item.nursingTotal || '0' // 40歳以上：介護保険料あり
-              : item.nonNursingTotal || '0'; // 40歳未満：介護保険料なし（健康保険料のみ）
-          const careHalf =
-            employeeAge >= 40n
-              ? item.nursingHalf || '0' // 40歳以上：介護保険料あり
-              : item.nonNursingHalf || '0'; // 40歳未満：介護保険料なし（健康保険料のみ）
-
-          console.log(
-            `等級${grade}をチェック - 範囲:${salaryRange}, 標準:${standardSalary}, 年齢:${employeeAge}, 保険料合計:${careTotal}, 保険料半額:${careHalf}`
-          );
-
-          // 標準報酬月額と一致するかチェック（カンマを除去して比較）
-          if (standardSalary) {
-            const cleanStandardSalary = standardSalary.replace(/,/g, '');
-            if (SocialInsuranceCalculator.compare(amount, cleanStandardSalary) === 0) {
-              console.log(
-                `介護保険料決定（標準一致）: ${grade}級 - 年齢:${employeeAge}, 保険料合計:${careTotal}, 保険料半額:${careHalf}`
-              );
-              return {
-                employeeBurden: careHalf,
-                companyBurden: careHalf,
-                total: careTotal,
-              };
-            }
-          }
-
-          // 範囲内かチェック（複数の区切り文字に対応）
-          if (salaryRange && (salaryRange.includes('~') || salaryRange.includes('～'))) {
-            // 日本語の波ダッシュ（～）と英語のチルダ（~）の両方に対応
-            const separator = salaryRange.includes('～') ? '～' : '~';
-            const [minStr, maxStr] = salaryRange.split(separator).map((s: string) => s.trim());
-            if (minStr) {
-              // カンマを除去して数値比較
-              const cleanMinStr = minStr.replace(/,/g, '');
-              const cleanMaxStr = maxStr ? maxStr.replace(/,/g, '') : '';
-
-              console.log(
-                `範囲チェック: ${amount} が ${cleanMinStr} ~ ${cleanMaxStr || '上限なし'} の範囲内か`
-              );
-
-              // 最低額以上であることを確認
-              if (SocialInsuranceCalculator.compare(amount, cleanMinStr) >= 0) {
-                // 上限がある場合は上限以下であることも確認
-                if (cleanMaxStr && cleanMaxStr !== '') {
-                  if (SocialInsuranceCalculator.compare(amount, cleanMaxStr) <= 0) {
-                    console.log(
-                      `介護保険料決定（範囲一致）: ${grade}級 - 年齢:${employeeAge}, 保険料合計:${careTotal}, 保険料半額:${careHalf}`
-                    );
-                    return {
-                      employeeBurden: careHalf,
-                      companyBurden: careHalf,
-                      total: careTotal,
-                    };
-                  }
-                } else {
-                  // 上限がない場合（最高等級）は最低額以上であればOK
-                  console.log(
-                    `介護保険料決定（最高等級）: ${grade}級 - 年齢:${employeeAge}, 保険料合計:${careTotal}, 保険料半額:${careHalf}`
+            if (SocialInsuranceCalculator.compare(amount, cleanMinStr) >= 0) {
+              if (cleanMaxStr && cleanMaxStr !== '') {
+                if (SocialInsuranceCalculator.compare(amount, cleanMaxStr) <= 0) {
+                  const healthTotal = item.nursingTotal || '0';
+                  const nonNursingTotal = item.nonNursingTotal || '0';
+                  const careTotal = SocialInsuranceCalculator.subtract(
+                    healthTotal,
+                    nonNursingTotal
                   );
+                  const employeeBurden = SocialInsuranceCalculator.divide(careTotal, '2');
+                  const companyBurden = SocialInsuranceCalculator.subtract(
+                    careTotal,
+                    employeeBurden
+                  );
+
                   return {
-                    employeeBurden: careHalf,
-                    companyBurden: careHalf,
+                    employeeBurden: SocialInsuranceCalculator.formatAmount(employeeBurden),
+                    companyBurden: SocialInsuranceCalculator.formatAmount(companyBurden),
                     total: careTotal,
                   };
                 }
+              } else {
+                const healthTotal = item.nursingTotal || '0';
+                const nonNursingTotal = item.nonNursingTotal || '0';
+                const careTotal = SocialInsuranceCalculator.subtract(healthTotal, nonNursingTotal);
+                const employeeBurden = SocialInsuranceCalculator.divide(careTotal, '2');
+                const companyBurden = SocialInsuranceCalculator.subtract(careTotal, employeeBurden);
+
+                return {
+                  employeeBurden: SocialInsuranceCalculator.formatAmount(employeeBurden),
+                  companyBurden: SocialInsuranceCalculator.formatAmount(companyBurden),
+                  total: careTotal,
+                };
               }
             }
           }
         }
-
-        // 最高等級を超える場合は最高等級の保険料を返す
-        if (gradeTable.length > 0) {
-          const highestGrade = gradeTable[gradeTable.length - 1];
-          const careTotal =
-            employeeAge >= 40n
-              ? highestGrade.nursingTotal || '0'
-              : highestGrade.nonNursingTotal || '0';
-          const careHalf =
-            employeeAge >= 40n
-              ? highestGrade.nursingHalf || '0'
-              : highestGrade.nonNursingHalf || '0';
-          console.log(
-            `介護保険料: 最高等級として${highestGrade.grade}級の保険料を返す - 年齢:${employeeAge}, 保険料合計:${careTotal}, 保険料半額:${careHalf}`
-          );
-          return {
-            employeeBurden: careHalf,
-            companyBurden: careHalf,
-            total: careTotal,
-          };
-        }
       }
 
-      console.log('介護保険料: 該当する等級が見つかりませんでした');
-      return {
-        employeeBurden: '0',
-        companyBurden: '0',
-        total: '0',
-      };
+      console.log('❌ 該当する介護保険等級が見つかりませんでした');
+      return { employeeBurden: '0', companyBurden: '0', total: '0' };
     } catch (error) {
-      console.error('介護保険料取得エラー:', error);
-      return {
-        employeeBurden: '0',
-        companyBurden: '0',
-        total: '0',
-      };
+      console.error('等級ベース介護保険料取得エラー:', error);
+      return { employeeBurden: '0', companyBurden: '0', total: '0' };
     }
   }
 }
