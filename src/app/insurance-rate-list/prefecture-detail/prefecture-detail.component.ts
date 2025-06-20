@@ -193,10 +193,14 @@ export class PrefectureDetailComponent {
       const gradeNumber = Number(r[0].match(/（(\d+)）/)?.[1] || '0');
       const prevUpperLimit = gradeNumber === 1 ? '' : index > 0 ? pensionRows[index - 1][4] : r[2];
 
+      // 等級32の場合は上限を設けない
+      const salaryRange =
+        gradeNumber === 32 ? `${prevUpperLimit} ～` : `${prevUpperLimit} ～ ${r[4]}`;
+
       return {
         grade: gradeNumber,
         standardSalary: r[1],
-        salaryRange: `${prevUpperLimit} ～ ${r[4]}`,
+        salaryRange: salaryRange,
         pensionRate: pensionRate,
         pensionTotal: r[9]?.replace(/,/g, '') || '0',
         pensionHalf: r[10]?.replace(/,/g, '') || '0',
