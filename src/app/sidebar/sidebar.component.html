@@ -3,6 +3,7 @@
     <ul>
       <li *ngFor="let item of navItems">
         <a
+          *ngIf="item.label !== 'その他申請'; else otherApplicationsBtn"
           [routerLink]="item.path"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: true }"
@@ -16,6 +17,23 @@
           </ng-template>
           <span class="sidebar-label" *ngIf="isLabelVisible">{{ item.label }}</span>
         </a>
+
+        <ng-template #otherApplicationsBtn>
+          <a
+            (click)="goToOtherApplications()"
+            role="button"
+            tabindex="0"
+            (keydown.enter)="goToOtherApplications()"
+            class="nav-item-link"
+            [ngClass]="{
+              active: router.isActive('/employee-procedures/application-form', false),
+            }"
+          >
+            <span class="icon-placeholder"></span>
+            <span class="sidebar-label" *ngIf="isLabelVisible">{{ item.label }}</span>
+          </a>
+        </ng-template>
+
         <ng-container *ngIf="item.label === '設定' && !isMini">
           <button class="create-account-btn" (click)="goToCreateAccount()">
             <span class="sidebar-label align-with-settings">アカウント作成</span>
