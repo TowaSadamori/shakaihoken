@@ -106,11 +106,6 @@ export class Over70NonApplicationComponent implements OnInit {
         const user = await this.userService.getUserByUid(this.uid);
         if (user) {
           this.userName = user.lastName + user.firstName;
-          // 被保険者氏名に自動設定
-          this.form.patchValue({
-            被保険者氏名カナ: this.userName,
-            被保険者氏名漢字: this.userName,
-          });
         } else {
           this.userName = '';
         }
@@ -125,21 +120,11 @@ export class Over70NonApplicationComponent implements OnInit {
       if (currentUser.role === 'employee_user') {
         this.userName = currentUser.lastName + currentUser.firstName;
         this.uid = currentUser.uid;
-        // 被保険者氏名に自動設定
-        this.form.patchValue({
-          被保険者氏名カナ: this.userName,
-          被保険者氏名漢字: this.userName,
-        });
       } else {
         // 管理者でuid無しは何も表示しない
         this.userName = '';
       }
       this.cdr.detectChanges();
-    }
-
-    // 既存データの読み込み
-    if (this.uid) {
-      await this.loadExistingData();
     }
   }
 
