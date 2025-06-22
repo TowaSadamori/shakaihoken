@@ -198,21 +198,14 @@ export class HomeComponent implements OnInit {
           )
         );
       } else {
-        // 従業員：自分のデータのみ表示
-        const currentUserData = employees.find(
-          (emp) => emp.uid === this.currentUser?.uid
-        ) as UserWithJudgment;
+        // 従業員：自分のデータのみをテーブル形式で表示
+        const currentUserData = employees.find((emp) => emp.uid === this.currentUser?.uid);
         if (currentUserData) {
-          this.allEmployeesData = [await this.convertToEmployeeInsuranceData(currentUserData)];
-          // 個人保険料データも更新
-          const employeeData = this.allEmployeesData.find(
-            (e) => e.employeeNumber === currentUserData.employeeNumber
-          );
-          if (employeeData) {
-            this.currentUserInsurance = employeeData.currentMonth;
-          }
-          // 月別データを再生成
-          this.monthlyData = this.generateMonthlyData(currentUserData);
+          this.allEmployeesData = [
+            await this.convertToEmployeeInsuranceData(currentUserData as UserWithJudgment),
+          ];
+        } else {
+          this.allEmployeesData = [];
         }
       }
 
@@ -225,7 +218,7 @@ export class HomeComponent implements OnInit {
       const currentYear = new Date().getFullYear();
       this.years = Array.from({ length: 10 }, (_, i) => currentYear - i);
     } catch (error) {
-      console.error('データ取得エラー:', error);
+      console.error('An error occurred during ngOnInit:', error);
     }
   }
 
