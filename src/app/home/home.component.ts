@@ -109,6 +109,9 @@ export class HomeComponent implements OnInit {
   // 全従業員データ
   allEmployeesData: EmployeeInsuranceData[] = [];
 
+  // 産休育休状態を管理するマップ
+  leaveStatusMap = new Map<string, string>();
+
   // テーブル表示用の列定義
   displayedColumns: string[] = [
     'month',
@@ -148,11 +151,15 @@ export class HomeComponent implements OnInit {
   displayedColumnsAdminBonus: string[] = [
     'employeeNumber',
     'employeeName',
+    'leaveStatus',
     'paymentAmount',
     'standardBonusAmount',
     'healthInsuranceRate',
     'healthInsuranceEmployee',
     'healthInsuranceCompany',
+    'careInsuranceRate',
+    'careInsuranceEmployee',
+    'careInsuranceCompany',
     'pensionInsuranceRate',
     'pensionInsuranceEmployee',
     'pensionInsuranceCompany',
@@ -389,6 +396,12 @@ export class HomeComponent implements OnInit {
             this.convertToEmployeeInsuranceData(employee)
           )
         );
+
+        // 賞与月の場合、産休育休状態を読み込み
+        if (this.selectedMonth >= 13) {
+          await this.loadLeaveStatusForAllEmployees(employees, this.selectedYear);
+        }
+
         // 管理者の月別データを再生成
         this.monthlyData = this.generateMonthlyDataForAdmin(employees);
       } else {
@@ -412,5 +425,73 @@ export class HomeComponent implements OnInit {
     } catch (error) {
       console.error('データ更新エラー:', error);
     }
+  }
+
+  // 全従業員の産休育休状態を読み込む
+  private async loadLeaveStatusForAllEmployees(employees: User[], year: number): Promise<void> {
+    const companyId = await this.authService.getCurrentUserCompanyId();
+    if (!companyId) return;
+
+    this.leaveStatusMap.clear();
+
+    for (const employee of employees) {
+      if (!employee.employeeNumber) continue;
+
+      try {
+        const docPath = `companies/${companyId}/employees/${employee.employeeNumber}/bonus_calculation_results/${year}`;
+        const docRef = doc(this.firestore, docPath);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const results = data['results'] || [];
+
+          // 選択された月に対応する賞与データを検索
+          const bonusIndex = this.selectedMonth - 13; // 13=1回目, 14=2回目, 15=3回目
+          if (bonusIndex >= 0 && bonusIndex < results.length) {
+            const leaveType = results[bonusIndex].leaveType || 'none';
+            this.leaveStatusMap.set(employee.employeeNumber, leaveType);
+          } else {
+            this.leaveStatusMap.set(employee.employeeNumber, 'none');
+          }
+        } else {
+          this.leaveStatusMap.set(employee.employeeNumber, 'none');
+        }
+      } catch (error) {
+        console.error(`産休育休状態の読み込みエラー (従業員: ${employee.employeeNumber}):`, error);
+        this.leaveStatusMap.set(employee.employeeNumber, 'none');
+      }
+    }
+  }
+
+  // 従業員の産休育休状態を取得
+  getLeaveStatus(employeeNumber: string): string {
+    return this.leaveStatusMap.get(employeeNumber) || 'none';
+  }
+
+  // 従業員の産休育休状態をラベル形式で取得
+  getLeaveStatusLabel(employeeNumber: string): string {
+    const status = this.getLeaveStatus(employeeNumber);
+    switch (status) {
+      case 'maternity':
+        return '産休';
+      case 'childcare':
+        return '育休';
+      case 'none':
+      default:
+        return 'なし';
+    }
+  }
+
+  // 産休育休状態の変更処理
+  onLeaveStatusChange(event: Event, employeeNumber: string): void {
+    const target = event.target as HTMLSelectElement;
+    const newLeaveType = target.value;
+
+    // マップを更新
+    this.leaveStatusMap.set(employeeNumber, newLeaveType);
+
+    // TODO: Firestoreに保存する処理を後で実装
+    console.log(`産休育休状態変更: ${employeeNumber} -> ${newLeaveType}`);
   }
 }
