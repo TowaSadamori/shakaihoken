@@ -120,21 +120,11 @@ export class HomeComponent implements OnInit {
     'totalCompany',
   ];
 
+  // グループヘッダー用の列定義
+  headerRowDefGroup: string[] = [];
+
   // テーブル表示用の列定義（動的に設定）
-  displayedColumnsAdmin: string[] = [
-    'employeeNumber',
-    'officeNumber',
-    'employeeName',
-    'attribute',
-    'healthInsuranceGrade',
-    'pensionInsuranceGrade',
-    'healthInsuranceEmployee',
-    'healthInsuranceCompany',
-    'pensionInsuranceEmployee',
-    'pensionInsuranceCompany',
-    'totalEmployee',
-    'totalCompany',
-  ];
+  displayedColumnsAdmin: string[] = [];
 
   // 月表示用の列定義
   displayedColumnsAdminMonth: string[] = [
@@ -143,9 +133,11 @@ export class HomeComponent implements OnInit {
     'employeeName',
     'attribute',
     'healthInsuranceGrade',
-    'pensionInsuranceGrade',
     'healthInsuranceEmployee',
     'healthInsuranceCompany',
+    'careInsuranceEmployee',
+    'careInsuranceCompany',
+    'pensionInsuranceGrade',
     'pensionInsuranceEmployee',
     'pensionInsuranceCompany',
     'totalEmployee',
@@ -368,8 +360,16 @@ export class HomeComponent implements OnInit {
   private setDisplayedColumns() {
     if (this.selectedMonth >= 13) {
       this.displayedColumnsAdmin = this.displayedColumnsAdminBonus;
+      this.headerRowDefGroup = []; // 賞与テーブルにはグループヘッダーなし
     } else {
       this.displayedColumnsAdmin = this.displayedColumnsAdminMonth;
+      this.headerRowDefGroup = [
+        'employeeInfoGroup',
+        'healthInsuranceGroup',
+        'careInsuranceGroup',
+        'pensionInsuranceGroup',
+        'totalsGroup',
+      ];
     }
   }
 
