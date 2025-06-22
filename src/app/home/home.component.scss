@@ -221,11 +221,12 @@
   // 従業員番号と事業所番号の列幅を調整
   .mat-column-employeeNumber,
   .mat-column-officeNumber {
-    width: 60px;
-    min-width: 60px;
-    max-width: 60px;
+    width: 45px;
+    min-width: 45px;
+    max-width: 45px;
     text-align: center;
     font-weight: 500;
+    font-size: 0.7em;
   }
 
   // 従業員名の列幅を調整
@@ -233,8 +234,7 @@
     width: 90px;
     min-width: 90px;
     max-width: 90px;
-    text-align: left;
-    padding-left: 6px;
+    text-align: center;
     font-weight: 500;
   }
 
@@ -259,7 +259,7 @@
     width: 75px;
     min-width: 75px;
     max-width: 75px;
-    text-align: right;
+    text-align: center;
     font-weight: 500;
     color: #1565c0;
   }
@@ -284,7 +284,7 @@
     text-align: center;
   }
 
-  // 保険料の列幅を調整（右寄せ）
+  // 保険料の列幅を調整（中央揃え）
   .mat-column-healthInsuranceEmployee,
   .mat-column-healthInsuranceCompany,
   .mat-column-careInsuranceEmployee,
@@ -294,7 +294,7 @@
     width: 70px;
     min-width: 70px;
     max-width: 70px;
-    text-align: right;
+    text-align: center;
   }
 
   // 合計列の強調
@@ -303,7 +303,7 @@
     width: 80px;
     min-width: 80px;
     max-width: 80px;
-    text-align: right;
+    text-align: center;
     font-weight: 600;
     background-color: #f3e5f5 !important;
     color: #6a1b9a;
