@@ -51,12 +51,29 @@ export class EmployeeProceduresPlaceholderComponent implements OnInit {
 
   async ngOnInit() {
     const companyId = await this.authService.getCurrentUserCompanyId();
-    const allUsers = await this.userService.getAllUsers();
-    this.users = allUsers
-      .filter((user) => user.companyId === companyId)
-      .sort((a, b) =>
-        (a.employeeNumber || '').localeCompare(b.employeeNumber || '', undefined, { numeric: true })
-      );
+    if (!companyId) return;
+
+    const currentUser = await this.authService.getCurrentUserProfileWithRole();
+    if (!currentUser) return;
+
+    if (currentUser.role === 'admin') {
+      const allUsers = await this.userService.getAllUsers();
+      this.users = allUsers
+        .filter((user) => user.companyId === companyId)
+        .sort((a, b) =>
+          (a.employeeNumber || '').localeCompare(b.employeeNumber || '', undefined, {
+            numeric: true,
+          })
+        );
+    } else {
+      const user = await this.userService.getUserByUid(currentUser.uid);
+      if (user) {
+        this.users = [user];
+      } else {
+        this.users = [];
+      }
+    }
+
     this.sortOrder = 'asc';
 
     // 各ユーザーの判定結果を取得
