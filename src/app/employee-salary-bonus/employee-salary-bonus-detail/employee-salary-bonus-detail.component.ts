@@ -79,13 +79,8 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
     '11月',
     '12月',
   ];
-  bonusColumns = [
-    '賞与（1回目）',
-    '賞与（2回目）',
-    '賞与（3回目）',
-    '賞与（4回目以降に支給された合計額）',
-  ];
-  visibleBonusCount = 0;
+  bonusColumns = ['賞与（1回目）', '賞与（2回目）', '賞与（3回目）'];
+  visibleBonusCount = 3;
   get columns() {
     return [...this.baseColumns, ...this.bonusColumns.slice(0, this.visibleBonusCount)];
   }
@@ -281,14 +276,16 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
   }
 
   addBonusColumn() {
-    if (this.visibleBonusCount < this.bonusColumns.length) {
+    if (this.visibleBonusCount < 3) {
       this.visibleBonusCount++;
+      this.recalcTotals();
     }
   }
 
   removeBonusColumn() {
     if (this.visibleBonusCount > 0) {
       this.visibleBonusCount--;
+      this.recalcTotals();
     }
   }
 
