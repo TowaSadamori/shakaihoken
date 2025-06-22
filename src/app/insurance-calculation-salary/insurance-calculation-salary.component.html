@@ -27,7 +27,7 @@
   </div>
 
   <!-- 年度選択エリア -->
-  <div class="year-control-section">
+  <div class="control-section">
     <div class="control-form">
       <div class="form-row">
         <span class="form-label">対象年度:</span>
@@ -43,7 +43,16 @@
 
   <!-- 月別社会保険料テーブル -->
   <div class="result-table-section" *ngIf="targetYear">
-    <h3>{{ targetYear }}年度 月別社会保険料</h3>
+    <h3 *ngIf="targetYear">{{ formatFiscalYear(targetYear) }} 月別社会保険料</h3>
+    <div class="save-button-container">
+      <button
+        class="save-btn"
+        (click)="saveMonthlyResults()"
+        [disabled]="isLoading || monthlyResults.length === 0"
+      >
+        📥 データベースに保存
+      </button>
+    </div>
     <div class="results-table-container">
       <table class="results-table">
         <thead>

@@ -11,6 +11,7 @@ import {
   doc,
   getDoc,
   Timestamp,
+  setDoc,
 } from 'firebase/firestore';
 import { OfficeService } from '../services/office.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
@@ -407,5 +408,34 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     }
     if (!value || value === '0' || value === '-') return '-';
     return new Intl.NumberFormat('ja-JP').format(Number(value));
+  }
+
+  async saveMonthlyResults(): Promise<void> {
+    if (!this.employeeInfo || !this.targetYear || this.monthlyResults.length === 0) {
+      console.error('保存に必要な情報が不足しています。');
+      // 必要に応じてユーザーにフィードバックを表示
+      return;
+    }
+    this.isLoading = true;
+    const { companyId, employeeNumber } = this.employeeInfo;
+    const docPath = `companies/${companyId}/employees/${employeeNumber}/salary_calculation_results/${this.targetYear}`;
+    const docRef = doc(this.firestore, docPath);
+
+    const dataToSave = {
+      updatedAt: new Date(),
+      results: this.monthlyResults.map((r) => ({ ...r })), // 念のためシャローコピー
+    };
+
+    try {
+      await setDoc(docRef, dataToSave, { merge: true });
+      // 保存成功のフィードバックをユーザーに表示
+      alert(`${this.targetYear}年度の計算結果を保存しました。`);
+    } catch (error) {
+      console.error('計算結果の保存に失敗しました:', error);
+      // 保存失敗のフィードバックをユーザーに表示
+      alert('エラーが発生しました。計算結果の保存に失敗しました。');
+    } finally {
+      this.isLoading = false;
+    }
   }
 }
