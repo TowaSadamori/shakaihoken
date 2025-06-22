@@ -86,6 +86,9 @@ export class HomeComponent implements OnInit {
     { value: 10, display: '10月' },
     { value: 11, display: '11月' },
     { value: 12, display: '12月' },
+    { value: 13, display: '賞与1回目' },
+    { value: 14, display: '賞与2回目' },
+    { value: 15, display: '賞与3回目' },
   ];
 
   // 現在のユーザーの保険料データ
