@@ -144,7 +144,7 @@ export class InsuranceJudgmentComponent implements OnInit {
   questionHistory: string[] = [];
 
   // デバッグ情報の表示制御
-  showDebugInfo = true;
+  showDebugInfo = false;
 
   // 判定結果の保存状態
   isJudgmentSaved = false;
