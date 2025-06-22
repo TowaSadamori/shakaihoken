@@ -64,16 +64,16 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let month of [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]">
-            <td>{{ month >= 4 ? targetYear : targetYear! + 1 }}年 {{ month }}月</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
+          <tr *ngFor="let result of monthlyResults">
+            <td>{{ result.year }}年 {{ result.month }}月</td>
+            <td>{{ result.healthInsuranceGrade }}</td>
+            <td>{{ result.healthInsuranceFeeEmployee }}</td>
+            <td>{{ result.healthInsuranceFeeCompany }}</td>
+            <td>{{ result.careInsuranceFeeEmployee }}</td>
+            <td>{{ result.careInsuranceFeeCompany }}</td>
+            <td>{{ result.pensionInsuranceGrade }}</td>
+            <td>{{ result.pensionInsuranceFeeEmployee }}</td>
+            <td>{{ result.pensionInsuranceFeeCompany }}</td>
           </tr>
         </tbody>
       </table>
