@@ -228,6 +228,13 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       return;
     }
 
+    // タイムゾーン問題を回避するため、日付をYYYY-MM-DD形式の文字列に変換するヘルパー関数
+    const toISODateString = (date: Date): string => {
+      return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split('T')[0];
+    };
+
     this.isLoading = true;
     this.errorMessage = '';
     try {
@@ -252,12 +259,23 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       for (const month of months) {
         const year = month >= 4 ? this.targetYear! : this.targetYear! + 1;
         const firstDayOfMonth = new Date(year, month - 1, 1);
+        const lastDayOfMonth = new Date(year, month, 0);
 
-        const applicableRecords = gradeHistory.filter(
-          (record) =>
-            record.effectiveDate <= firstDayOfMonth &&
-            (!record.endDate || record.endDate >= firstDayOfMonth)
-        );
+        const firstDayStr = toISODateString(firstDayOfMonth);
+        const lastDayStr = toISODateString(lastDayOfMonth);
+
+        const applicableRecords = gradeHistory.filter((record) => {
+          const effectiveDateStr = toISODateString(record.effectiveDate);
+          const endDateStr = record.endDate ? toISODateString(record.endDate) : null;
+
+          // 適用期間 [effectiveDate, endDate] が
+          // 対象月 [firstDayOfMonth, lastDayOfMonth] と重なるかを判定
+          // 条件: effectiveDate <= lastDayOfMonth AND firstDayOfMonth <= endDate
+          const isStarted = effectiveDateStr <= lastDayStr;
+          const isNotEnded = !endDateStr || endDateStr >= firstDayStr;
+
+          return isStarted && isNotEnded;
+        });
 
         let applicableGrade: GradeJudgmentRecord | undefined;
         if (applicableRecords.length > 0) {

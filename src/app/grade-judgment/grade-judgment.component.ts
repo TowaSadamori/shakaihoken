@@ -8,7 +8,9 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
   query,
   orderBy,
   Timestamp,
@@ -58,7 +60,6 @@ interface GradeJudgmentRecord {
 interface JudgmentDialogData {
   judgmentType: 'manual' | 'regular' | 'irregular';
   effectiveDate: string;
-  endDate: string;
   standardMonthlyAmount: string;
   healthInsuranceGrade: bigint;
   pensionInsuranceGrade: bigint;
@@ -451,22 +452,58 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   async saveJudgment(): Promise<void> {
-    if (!this.isDialogValid() || !this.employeeId) {
+    if (!this.employeeId || !this.isDialogValid()) {
+      this.errorMessage = '入力内容に不備があります。';
       return;
     }
 
+    this.isLoading = true;
+    this.errorMessage = '';
+
     try {
-      const judgmentData = {
+      const judgmentsRef = collection(
+        this.firestore,
+        'gradeJudgments',
+        this.employeeId,
+        'judgments'
+      );
+      const newEffectiveDate = new Date(this.dialogData.effectiveDate);
+
+      // 既存の「継続中」の履歴を探してendDateを設定する
+      const q = query(judgmentsRef, where('endDate', '==', null));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // 複数の「継続中」が見つかった場合は、最も新しいeffectiveDateのものだけを更新対象とする
+        const latestRecord = querySnapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as { id: string; effectiveDate: Timestamp })
+          .sort(
+            (a, b) =>
+              (b.effectiveDate as Timestamp).toMillis() - (a.effectiveDate as Timestamp).toMillis()
+          )[0];
+
+        // 新しい等級の適用開始日の前日を計算
+        const newEndDate = new Date(newEffectiveDate.getTime() - 24 * 60 * 60 * 1000);
+
+        // 新しい開始日が既存の開始日より後の場合のみ更新
+        if (newEffectiveDate > (latestRecord.effectiveDate as Timestamp).toDate()) {
+          const docToUpdateRef = doc(judgmentsRef, latestRecord.id);
+          await updateDoc(docToUpdateRef, {
+            endDate: Timestamp.fromDate(newEndDate),
+            updatedAt: Timestamp.now(),
+          });
+        }
+      }
+
+      // 新しい等級履歴データを作成
+      const newJudgmentData = {
         employeeId: this.employeeId,
         judgmentType: this.dialogData.judgmentType,
-        judgmentDate: Timestamp.now(),
-        effectiveDate: Timestamp.fromDate(new Date(this.dialogData.effectiveDate)),
-        endDate: this.dialogData.endDate
-          ? Timestamp.fromDate(new Date(this.dialogData.endDate))
-          : null,
+        judgmentDate: Timestamp.now(), // 仮。本来は判定日が入る
+        effectiveDate: Timestamp.fromDate(newEffectiveDate),
+        endDate: null, // 常にnullで保存
         healthInsuranceGrade: this.dialogData.healthInsuranceGrade,
         pensionInsuranceGrade: this.dialogData.pensionInsuranceGrade,
-        careInsuranceGrade: this.dialogData.careInsuranceGrade,
         standardMonthlyAmount: this.dialogData.standardMonthlyAmount,
         reason: this.dialogData.reason,
         inputData: this.dialogData.inputData,
@@ -474,22 +511,45 @@ export class GradeJudgmentComponent implements OnInit {
         updatedAt: Timestamp.now(),
       };
 
-      // 新しいドキュメントIDを生成
-      const newDocRef = doc(
-        collection(this.firestore, 'gradeJudgments', this.employeeId, 'judgments')
-      );
-      await setDoc(newDocRef, judgmentData);
+      // 新しいドキュメントを 'judgments' サブコレクションに追加
+      await addDoc(judgmentsRef, newJudgmentData);
 
-      console.log('等級判定データを保存しました');
-
-      // 履歴を再読み込み
-      await this.loadJudgmentHistory();
-
-      // ダイアログを閉じる
       this.closeDialog();
+      await this.loadJudgmentHistory(); // 履歴を再読み込みして表示を更新
     } catch (error) {
-      console.error('等級判定データ保存エラー:', error);
-      this.errorMessage = 'データの保存に失敗しました';
+      console.error('等級履歴の保存エラー:', error);
+      this.errorMessage = '等級履歴の保存に失敗しました。';
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async deleteJudgment(recordId: string): Promise<void> {
+    if (!this.employeeId) {
+      this.errorMessage = '従業員IDが不明です。';
+      return;
+    }
+
+    const confirmed = confirm('この等級履歴を本当に削除しますか？この操作は元に戻せません。');
+    if (!confirmed) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    try {
+      const docRef = doc(this.firestore, 'gradeJudgments', this.employeeId, 'judgments', recordId);
+      await deleteDoc(docRef);
+
+      // 履歴を再読み込みして表示を更新
+      await this.loadJudgmentHistory();
+      alert('履歴を削除しました。');
+    } catch (error) {
+      console.error('等級履歴の削除エラー:', error);
+      this.errorMessage = '履歴の削除に失敗しました。';
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -507,7 +567,6 @@ export class GradeJudgmentComponent implements OnInit {
     return {
       judgmentType: 'manual',
       effectiveDate: '',
-      endDate: '',
       standardMonthlyAmount: '0',
       healthInsuranceGrade: 0n,
       pensionInsuranceGrade: 0n,
@@ -539,7 +598,7 @@ export class GradeJudgmentComponent implements OnInit {
         return '手入力';
       case 'regular':
         return '定時決定';
-      case 'irregular':
+      case 'revision':
         return '随時改定';
       default:
         return type;
@@ -547,10 +606,14 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   formatDate(date: Date): string {
-    return date.toLocaleDateString('ja-JP');
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // getMonth()は0から始まるため+1する
+    return `${year}年${month}月`;
   }
 
   formatCurrency(amount: string): string {
+    if (!amount || amount === '0') return '';
     return amount + '円';
   }
 

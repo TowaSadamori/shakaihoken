@@ -83,9 +83,9 @@
           <tr>
             <th>判定方法</th>
             <th>適用期間</th>
-            <th>健康保険等級</th>
-            <th>介護保険等級</th>
+            <th>健康保険・介護保険等級</th>
             <th>厚生年金保険等級</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -97,11 +97,12 @@
               <span *ngIf="!record.endDate"> ～ 継続中</span>
             </td>
             <td class="grade">{{ record.healthInsuranceGrade }}等級</td>
-            <td class="grade">
-              <span *ngIf="record.careInsuranceGrade">{{ record.careInsuranceGrade }}等級</span>
-              <span *ngIf="!record.careInsuranceGrade">-</span>
-            </td>
             <td class="grade">{{ record.pensionInsuranceGrade }}等級</td>
+            <td class="actions">
+              <button class="btn btn-danger btn-sm" (click)="deleteJudgment(record.id)">
+                削除
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -144,15 +145,6 @@
                 id="effectiveDate"
                 [(ngModel)]="dialogData.effectiveDate"
                 required
-              />
-            </div>
-            <div class="form-group">
-              <label for="endDate">適用終了日</label>
-              <input
-                type="date"
-                id="endDate"
-                [(ngModel)]="dialogData.endDate"
-                placeholder="継続の場合は空欄"
               />
             </div>
           </div>
