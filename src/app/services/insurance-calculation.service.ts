@@ -29,8 +29,8 @@ export interface MonthlyInsuranceFee {
   careInsuranceCompany: string;
   totalEmployee: string;
   totalCompany: string;
-  healthInsuranceGrade?: number;
-  pensionInsuranceGrade?: number;
+  healthInsuranceGrade?: number | string;
+  pensionInsuranceGrade?: number | string;
   paymentAmount?: string;
   standardBonusAmount?: string;
   healthInsuranceRate?: string;
@@ -69,16 +69,18 @@ export class InsuranceCalculationService {
 
       const yearData = docSnap.data();
 
-      // 入れ子になったmonthlyResultsオブジェクトを取得
-      const monthlyResults = yearData['monthlyResults'];
-      if (!monthlyResults) {
-        return null;
-      }
+      // 新しい形式：results配列から取得
+      let monthData: MonthlyRecord | undefined;
 
-      // monthlyResultsの中から、引数monthと一致するmonthフィールドを持つオブジェクトを探す
-      const monthData = Object.values(monthlyResults).find(
-        (data) => (data as MonthlyRecord).month === month
-      ) as MonthlyRecord | undefined;
+      if (yearData['results']) {
+        // 新しい形式：results配列から検索
+        monthData = yearData['results'].find((data: MonthlyRecord) => data.month === month);
+      } else if (yearData['monthlyResults']) {
+        // 旧形式：monthlyResultsオブジェクトから検索（後方互換性のため）
+        monthData = Object.values(yearData['monthlyResults']).find(
+          (data) => (data as MonthlyRecord).month === month
+        ) as MonthlyRecord | undefined;
+      }
 
       if (!monthData) {
         return null;
@@ -86,18 +88,26 @@ export class InsuranceCalculationService {
 
       // FirestoreのデータからMonthlyInsuranceFeeを組み立てる
       // カンマ付き文字列を数値に変換可能な形式にサニタイズする
-      const sanitize = (val: string | undefined) => (val || '0').replace(/,/g, '');
+      const sanitize = (val: string | number | null | undefined): string => {
+        if (val === null || val === undefined || val === '' || val === '-') {
+          return '0';
+        }
+        if (typeof val === 'number') {
+          return val.toString();
+        }
+        if (typeof val === 'string') {
+          // カンマを削除し、数値として有効かチェック
+          const cleaned = val.replace(/,/g, '');
+          const num = parseFloat(cleaned);
+          return isNaN(num) ? '0' : cleaned;
+        }
+        return '0';
+      };
 
       const healthEmployee = sanitize(monthData['healthInsuranceFeeEmployee']);
       const healthCompany = sanitize(monthData['healthInsuranceFeeCompany']);
-      const careEmployee =
-        monthData['careInsuranceFeeEmployee'] === '-'
-          ? '0'
-          : sanitize(monthData['careInsuranceFeeEmployee']);
-      const careCompany =
-        monthData['careInsuranceFeeCompany'] === '-'
-          ? '0'
-          : sanitize(monthData['careInsuranceFeeCompany']);
+      const careEmployee = sanitize(monthData['careInsuranceFeeEmployee']);
+      const careCompany = sanitize(monthData['careInsuranceFeeCompany']);
       const pensionEmployee = sanitize(monthData['pensionInsuranceFeeEmployee']);
       const pensionCompany = sanitize(monthData['pensionInsuranceFeeCompany']);
 
@@ -115,6 +125,15 @@ export class InsuranceCalculationService {
         pensionCompany
       );
 
+      // 等級の処理：数値に変換できる場合は数値、できない場合（「育休」など）は文字列のまま
+      const parseGrade = (gradeValue: string): number | string | undefined => {
+        if (!gradeValue || gradeValue === '-') {
+          return undefined;
+        }
+        const numericGrade = Number(gradeValue);
+        return isNaN(numericGrade) ? gradeValue : numericGrade;
+      };
+
       return {
         healthInsuranceEmployee: healthEmployee,
         healthInsuranceCompany: healthCompany,
@@ -124,8 +143,8 @@ export class InsuranceCalculationService {
         careInsuranceCompany: careCompany,
         totalEmployee: totalEmployee,
         totalCompany: totalCompany,
-        healthInsuranceGrade: Number(monthData['healthInsuranceGrade']) || undefined,
-        pensionInsuranceGrade: Number(monthData['pensionInsuranceGrade']) || undefined,
+        healthInsuranceGrade: parseGrade(monthData['healthInsuranceGrade']),
+        pensionInsuranceGrade: parseGrade(monthData['pensionInsuranceGrade']),
       };
     } catch (error) {
       console.error(`保険料詳細データの取得エラー: ${docPath}`, error);

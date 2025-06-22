@@ -38,8 +38,8 @@ interface EmployeeInsuranceData {
   employeeName: string;
   attribute: string;
   currentMonth: MonthlyInsuranceFee;
-  healthInsuranceGrade?: number;
-  pensionInsuranceGrade?: number;
+  healthInsuranceGrade?: number | string;
+  pensionInsuranceGrade?: number | string;
 }
 
 // ユーザーに判定結果を追加した拡張インターフェース
