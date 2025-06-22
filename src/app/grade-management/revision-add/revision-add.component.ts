@@ -12,6 +12,8 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  updateDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import { AuthService } from '../../services/auth.service';
 import { OfficeService } from '../../services/office.service';
@@ -117,6 +119,15 @@ interface CalculationSnapshot {
   timestamp: Date;
 }
 
+interface GradeData {
+  healthInsuranceGrade: string | number;
+  healthInsuranceStandardSalary: string;
+  pensionInsuranceGrade: string | number;
+  pensionInsuranceStandardSalary: string;
+  careInsuranceGrade?: string | number;
+  careInsuranceStandardSalary?: string;
+}
+
 @Component({
   selector: 'app-revision-add',
   standalone: true,
@@ -142,6 +153,8 @@ export class RevisionAddComponent implements OnInit {
   judgmentResult: GradeJudgmentResult | null = null;
   applicableYear: bigint | null = null;
   applicableMonth: bigint | null = null;
+  endYear: bigint | null = null;
+  endMonth: bigint | null = null;
 
   revisionReasons = [
     { value: 'salary_increase', label: '昇給' },
@@ -153,6 +166,8 @@ export class RevisionAddComponent implements OnInit {
   ];
 
   private employeeId: string | null = null;
+  private recordId: string | null = null;
+  isEditMode = false;
   private firestore = getFirestore();
 
   savedRevisionData: RevisionSaveData | null = null;
@@ -167,14 +182,22 @@ export class RevisionAddComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     this.employeeId = this.route.snapshot.paramMap.get('employeeId');
+    this.recordId = this.route.snapshot.paramMap.get('recordId');
+    this.isEditMode = !!this.recordId;
+
     if (this.employeeId) {
       await this.loadEmployeeInfo();
-      await this.loadExistingRevisionData();
+      if (this.isEditMode && this.recordId) {
+        await this.loadExistingRevisionData(this.recordId);
+      }
     }
-    this.initializeDefaultDates();
+    if (!this.isEditMode) {
+      this.initializeDefaultDates();
+    }
   }
 
   private initializeDefaultDates(): void {
+    if (this.revisionData.revisionDate) return;
     const today = new Date();
     this.revisionData.revisionDate = today.toISOString().split('T')[0];
     this.updateApplicablePeriod();
@@ -182,11 +205,9 @@ export class RevisionAddComponent implements OnInit {
 
   updateApplicablePeriod(): void {
     if (this.revisionData.revisionDate) {
-      // タイムゾーンの問題を避けるため、UTCとして日付を解析
       const parts = this.revisionData.revisionDate.split('-').map((p) => parseInt(p, 10));
       const revisionDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
 
-      // 4ヶ月後の1日を計算
       revisionDate.setUTCMonth(revisionDate.getUTCMonth() + 4);
       revisionDate.setUTCDate(1);
 
@@ -202,7 +223,6 @@ export class RevisionAddComponent implements OnInit {
     try {
       console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
 
-      // employeeNumberで検索（等級判定画面と同じ方法）
       const usersRef = collection(this.firestore, 'users');
       const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
       const querySnapshot = await getDocs(q);
@@ -214,13 +234,10 @@ export class RevisionAddComponent implements OnInit {
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
 
-        // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
         const formattedBirthDate = birthDate.toISOString().split('T')[0];
 
-        // 事業所情報から addressPrefecture を取得
         let addressPrefecture = userData['addressPrefecture'] || '';
 
-        // ユーザーデータに addressPrefecture がない場合、事業所データから取得
         if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
           try {
             console.log('=== 事業所データ取得開始 ===');
@@ -269,7 +286,6 @@ export class RevisionAddComponent implements OnInit {
   }
 
   private calculateAge(birthDate: Date): bigint {
-    // 年齢計算は整数の年月日計算なので通常計算で問題なし
     const today = new Date();
     let age = BigInt(today.getFullYear()) - BigInt(birthDate.getFullYear());
     const monthDiff = BigInt(today.getMonth()) - BigInt(birthDate.getMonth());
@@ -298,7 +314,6 @@ export class RevisionAddComponent implements OnInit {
   onAmountChange(): void {
     if (this.revisionData.beforeAmount && this.revisionData.afterAmount) {
       this.checkSignificantChange();
-      // 報酬月額が入力されたら自動的に等級判定を実行
       this.calculateGrade();
     }
   }
@@ -312,7 +327,6 @@ export class RevisionAddComponent implements OnInit {
     const beforeGrade = this.findGradeFromHealthInsuranceTable(this.revisionData.beforeAmount);
     const afterGrade = this.findGradeFromHealthInsuranceTable(this.revisionData.afterAmount);
 
-    // Decimal.jsを使用した正確な等級差計算
     const gradeDifference = SocialInsuranceCalculator.abs(
       SocialInsuranceCalculator.calculateGradeDifference(
         beforeGrade.grade.toString(),
@@ -347,9 +361,6 @@ export class RevisionAddComponent implements OnInit {
         pensionInsurance: String(pensionDiff),
       },
     };
-
-    // 計算に成功したら、そのまま保存処理を呼び出す
-    // await this.saveRevisionData();
   }
 
   async judgeAndSave(): Promise<void> {
@@ -438,7 +449,6 @@ export class RevisionAddComponent implements OnInit {
       { grade: BigInt(50), standardSalary: '1390000', min: '1355000', max: '99999999999' },
     ];
 
-    // Decimal.jsを使用した正確な範囲判定
     const targetGrade = healthInsuranceTable.find(
       (grade) =>
         SocialInsuranceCalculator.compare(amount, grade.min) >= 0 &&
@@ -486,7 +496,6 @@ export class RevisionAddComponent implements OnInit {
       { grade: BigInt(32), standardSalary: '650000', min: '635000', max: '99999999999' },
     ];
 
-    // Decimal.jsを使用した正確な範囲判定
     const targetGrade = pensionInsuranceTable.find(
       (grade) =>
         SocialInsuranceCalculator.compare(amount, grade.min) >= 0 &&
@@ -525,31 +534,72 @@ export class RevisionAddComponent implements OnInit {
     return 'no-change';
   }
 
-  private async loadExistingRevisionData(): Promise<void> {
+  private async loadExistingRevisionData(recordId: string): Promise<void> {
     if (!this.employeeId) return;
-
+    this.isLoading = true;
     try {
-      const docId = `${this.employeeId}_revision`;
-      const docRef = doc(this.firestore, 'employee_grades', docId);
+      const docRef = doc(this.firestore, `gradeJudgments/${this.employeeId}/judgments`, recordId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        const data = docSnap.data() as RevisionSaveData;
-        this.savedRevisionData = { ...data, id: docSnap.id };
+        const data = docSnap.data();
 
-        // Load existing data into form
-        this.revisionData = { ...data.revisionData };
-        this.judgmentResult = data.judgmentResult;
-        this.applicableYear = data.applicableYear;
-        this.applicableMonth = data.applicableMonth;
-
-        // 既存データの場合でも等級判定を再実行（最新の等級表で計算）
-        if (this.revisionData.beforeAmount && this.revisionData.afterAmount) {
-          this.calculateGrade();
+        if (data['inputData']) {
+          this.revisionData = {
+            revisionReason: data['inputData'].revisionReason || '',
+            beforeAmount: data['inputData'].beforeAmount || null,
+            afterAmount: data['inputData'].afterAmount || null,
+            revisionDate: data['inputData'].revisionDate || '',
+            continuousMonths: data['calculationSnapshot']?.revisionTrigger?.continuousMonths
+              ? BigInt(data['calculationSnapshot'].revisionTrigger.continuousMonths)
+              : BigInt(3),
+            isSignificantChange:
+              data['calculationSnapshot']?.validationResults?.isSignificantChange || false,
+            isFixedSalaryChange:
+              data['calculationSnapshot']?.validationResults?.hasFixedWageChange || false,
+          };
         }
+
+        const effectiveDate = (data['effectiveDate'] as Timestamp).toDate();
+        this.applicableYear = BigInt(effectiveDate.getFullYear());
+        this.applicableMonth = BigInt(effectiveDate.getMonth() + 1);
+
+        // 終了日がある場合は読み込み
+        if (data['endDate']) {
+          const endDate = (data['endDate'] as Timestamp).toDate();
+          this.endYear = BigInt(endDate.getFullYear());
+          this.endMonth = BigInt(endDate.getMonth() + 1);
+        }
+
+        if (data['calculationSnapshot']?.beforeAfterComparison) {
+          const loadedJudgment = data['calculationSnapshot'].beforeAfterComparison;
+          const convertGrades = (grades: GradeData) => ({
+            healthInsuranceGrade: BigInt(grades.healthInsuranceGrade),
+            healthInsuranceStandardSalary: grades.healthInsuranceStandardSalary,
+            pensionInsuranceGrade: BigInt(grades.pensionInsuranceGrade),
+            pensionInsuranceStandardSalary: grades.pensionInsuranceStandardSalary,
+            careInsuranceGrade: grades.careInsuranceGrade
+              ? BigInt(grades.careInsuranceGrade)
+              : undefined,
+            careInsuranceStandardSalary: grades.careInsuranceStandardSalary,
+          });
+
+          this.judgmentResult = {
+            beforeGrades: convertGrades(loadedJudgment.beforeGrades),
+            afterGrades: convertGrades(loadedJudgment.afterGrades),
+            gradeDifference: loadedJudgment.gradeDifference,
+          };
+        }
+
+        console.log('読み込んだ随時改定データ:', this.revisionData);
+      } else {
+        this.errorMessage = '指定された随時改定データが見つかりません。';
       }
     } catch (error) {
       console.error('既存随時改定データ読み込みエラー:', error);
+      this.errorMessage = 'データの読み込み中にエラーが発生しました。';
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -563,31 +613,24 @@ export class RevisionAddComponent implements OnInit {
 
     const calculationSnapshot = this.createCalculationSnapshot();
 
-    const saveData: RevisionSaveData = {
-      employeeId: this.employeeId,
-      revisionData: this.revisionData,
-      judgmentResult: this.judgmentResult,
-      applicableYear: this.applicableYear!,
-      applicableMonth: this.applicableMonth!,
-      calculationSnapshot: calculationSnapshot,
-      createdAt: this.savedRevisionData?.createdAt || new Date(),
-      updatedAt: new Date(),
-      judgmentType: 'revision',
-    };
+    const historyData = this.createHistoryData(calculationSnapshot);
 
     try {
-      const docId = this.savedRevisionData?.id || `${this.employeeId}_${new Date().getTime()}`;
-      const docRef = doc(this.firestore, 'employee_revisions', docId);
+      if (this.isEditMode && this.recordId) {
+        const historyDocRef = doc(
+          this.firestore,
+          `gradeJudgments/${this.employeeId}/judgments`,
+          this.recordId
+        );
+        const dataToUpdate = this.deepConvertBigIntToString(historyData);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await updateDoc(historyDocRef, dataToUpdate as any);
+        alert('随時改定データが正常に更新されました。');
+      } else {
+        await this.saveToGradeJudgmentHistory(historyData);
+        alert('随時改定データが正常に保存されました。');
+      }
 
-      // BigIntをNumberに変換
-      const convertedData = this.deepConvertBigInts(saveData);
-      await setDoc(docRef, convertedData);
-
-      this.savedRevisionData = { ...saveData, id: docId };
-
-      await this.saveToGradeJudgmentHistory();
-
-      alert('随時改定データが正常に保存されました。');
       this.router.navigate(['/grade-judgment', this.employeeId]);
     } catch (error) {
       console.error('保存エラー:', error);
@@ -600,7 +643,6 @@ export class RevisionAddComponent implements OnInit {
   private createCalculationSnapshot(): CalculationSnapshot {
     const appliedRules: string[] = [];
 
-    // Track which rules were applied
     if (this.revisionData.isSignificantChange) {
       appliedRules.push('2等級以上差異確認');
     }
@@ -611,7 +653,6 @@ export class RevisionAddComponent implements OnInit {
       appliedRules.push('3ヶ月継続性確認');
     }
 
-    // undefinedフィールドを除外したbeforeGrades
     const cleanedBeforeGrades = {
       healthInsuranceGrade: this.judgmentResult!.beforeGrades.healthInsuranceGrade,
       healthInsuranceStandardSalary:
@@ -625,7 +666,6 @@ export class RevisionAddComponent implements OnInit {
       }),
     };
 
-    // undefinedフィールドを除外したafterGrades
     const cleanedAfterGrades = {
       healthInsuranceGrade: this.judgmentResult!.afterGrades.healthInsuranceGrade,
       healthInsuranceStandardSalary: this.judgmentResult!.afterGrades.healthInsuranceStandardSalary,
@@ -638,7 +678,6 @@ export class RevisionAddComponent implements OnInit {
       }),
     };
 
-    // undefinedフィールドを除外したgradeDifference
     const cleanedGradeDifference = {
       healthInsurance: this.judgmentResult!.gradeDifference.healthInsurance,
       pensionInsurance: this.judgmentResult!.gradeDifference.pensionInsurance,
@@ -682,16 +721,18 @@ export class RevisionAddComponent implements OnInit {
       this.judgmentResult.afterGrades.healthInsuranceGrade >
       this.judgmentResult.beforeGrades.healthInsuranceGrade;
 
-    // Check for contradiction (fixed wage direction vs total remuneration direction)
     const hasContradiction =
       (fixedWageIncreased && !totalGradeIncreased) || (!fixedWageIncreased && totalGradeIncreased);
 
-    return !hasContradiction; // Returns true if passes the rule (no contradiction)
+    return !hasContradiction;
   }
 
   async deleteRevisionData(): Promise<void> {
-    if (!this.savedRevisionData?.id) {
-      this.clearForm();
+    if (!this.employeeId || !this.recordId) {
+      alert('削除対象のデータが特定できません。');
+      return;
+    }
+    if (!confirm('この随時改定履歴を削除しますか？この操作は元に戻せません。')) {
       return;
     }
 
@@ -699,16 +740,15 @@ export class RevisionAddComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      const docRef = doc(this.firestore, 'employee_grades', this.savedRevisionData.id);
+      const docRef = doc(
+        this.firestore,
+        `gradeJudgments/${this.employeeId}/judgments`,
+        this.recordId
+      );
       await deleteDoc(docRef);
 
-      this.clearForm();
-      this.savedRevisionData = null;
-
-      this.errorMessage = '随時改定データを削除しました';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
+      alert('随時改定データを削除しました');
+      this.router.navigate(['/grade-judgment', this.employeeId]);
     } catch (error) {
       console.error('削除エラー:', error);
       this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
@@ -717,60 +757,85 @@ export class RevisionAddComponent implements OnInit {
     }
   }
 
-  private async saveToGradeJudgmentHistory(): Promise<void> {
-    if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+  private createHistoryData(snapshot: CalculationSnapshot): Record<string, unknown> {
+    const effectiveDate = new Date(
+      Number(this.applicableYear!),
+      Number(this.applicableMonth!) - 1,
+      1
+    );
+
+    // 終了日の設定
+    let endDate: Date | null = null;
+    if (this.endYear && this.endMonth) {
+      endDate = new Date(Number(this.endYear), Number(this.endMonth) - 1, 1);
+    }
+
+    const gradeJudgmentRecord: Record<string, unknown> = {
+      employeeId: this.employeeId,
+      judgmentType: 'revision' as const,
+      judgmentDate: new Date(),
+      effectiveDate: effectiveDate,
+      endDate: endDate,
+      healthInsuranceGrade: this.judgmentResult!.afterGrades.healthInsuranceGrade,
+      pensionInsuranceGrade: this.judgmentResult!.afterGrades.pensionInsuranceGrade,
+      standardMonthlyAmount: this.revisionData.afterAmount,
+      reason: `随時改定（${this.getRevisionReasonLabel(this.revisionData.revisionReason)}）`,
+      inputData: {
+        revisionReason: this.revisionData.revisionReason,
+        beforeAmount: this.revisionData.beforeAmount,
+        afterAmount: this.revisionData.afterAmount,
+        revisionDate: this.revisionData.revisionDate,
+        gradeDifference: {
+          healthInsurance: this.judgmentResult!.gradeDifference.healthInsurance,
+          pensionInsurance: this.judgmentResult!.gradeDifference.pensionInsurance,
+          ...(this.judgmentResult!.gradeDifference.careInsurance !== undefined && {
+            careInsurance: this.judgmentResult!.gradeDifference.careInsurance,
+          }),
+        },
+      },
+      calculationSnapshot: snapshot,
+      createdAt: this.isEditMode ? this.savedRevisionData?.createdAt || new Date() : new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (this.judgmentResult!.afterGrades.careInsuranceGrade !== undefined) {
+      gradeJudgmentRecord['careInsuranceGrade'] =
+        this.judgmentResult!.afterGrades.careInsuranceGrade;
+    }
+    return gradeJudgmentRecord;
+  }
+
+  private async saveToGradeJudgmentHistory(
+    gradeJudgmentRecord: Record<string, unknown>
+  ): Promise<void> {
+    if (!this.employeeId) {
       return;
     }
 
     try {
-      const effectiveDate = new Date(
-        Number(this.applicableYear!),
-        Number(this.applicableMonth!) - 1,
-        1
-      );
-
-      const gradeJudgmentRecord: Record<string, unknown> = {
-        employeeId: this.employeeId,
-        judgmentType: 'revision' as const,
-        judgmentDate: new Date(),
-        effectiveDate: effectiveDate,
-        healthInsuranceGrade: this.judgmentResult.afterGrades.healthInsuranceGrade,
-        pensionInsuranceGrade: this.judgmentResult.afterGrades.pensionInsuranceGrade,
-        standardMonthlyAmount: this.revisionData.afterAmount,
-        reason: `随時改定による等級変更（${this.getRevisionReasonLabel(this.revisionData.revisionReason)}）`,
-        inputData: {
-          revisionReason: this.revisionData.revisionReason,
-          beforeAmount: this.revisionData.beforeAmount,
-          afterAmount: this.revisionData.afterAmount,
-          revisionDate: this.revisionData.revisionDate,
-          gradeDifference: {
-            healthInsurance: this.judgmentResult.gradeDifference.healthInsurance,
-            pensionInsurance: this.judgmentResult.gradeDifference.pensionInsurance,
-            ...(this.judgmentResult.gradeDifference.careInsurance !== undefined && {
-              careInsurance: this.judgmentResult.gradeDifference.careInsurance,
-            }),
-          },
-        },
-        calculationSnapshot: this.createCalculationSnapshot(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // 介護保険等級がある場合のみ追加
-      if (this.judgmentResult.afterGrades.careInsuranceGrade !== undefined) {
-        gradeJudgmentRecord['careInsuranceGrade'] =
-          this.judgmentResult.afterGrades.careInsuranceGrade;
-      }
-
       const historyCollectionRef = collection(
         this.firestore,
         'gradeJudgments',
         this.employeeId,
         'judgments'
       );
+
+      const q = query(historyCollectionRef, where('endDate', '==', null));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const activeDoc = querySnapshot.docs[0];
+        const newEffectiveDate = gradeJudgmentRecord['effectiveDate'] as Date;
+        const newEndDate = new Date(newEffectiveDate.getTime() - 24 * 60 * 60 * 1000);
+
+        await updateDoc(activeDoc.ref, {
+          endDate: Timestamp.fromDate(newEndDate),
+          updatedAt: Timestamp.now(),
+        });
+      }
+
       const newDocRef = doc(historyCollectionRef);
-      // BigIntをNumberに変換
-      const convertedRecord = this.deepConvertBigInts(gradeJudgmentRecord);
+      const convertedRecord = this.deepConvertBigIntToString(gradeJudgmentRecord);
       await setDoc(newDocRef, convertedRecord);
     } catch (error) {
       console.error('等級履歴への保存エラー:', error);
@@ -789,6 +854,8 @@ export class RevisionAddComponent implements OnInit {
       isFixedSalaryChange: false,
     };
     this.judgmentResult = null;
+    this.endYear = null;
+    this.endMonth = null;
     this.initializeDefaultDates();
   }
 
@@ -796,7 +863,6 @@ export class RevisionAddComponent implements OnInit {
     return this.isFormValid() && this.judgmentResult !== null;
   }
 
-  // テンプレート用のnullチェックを含むgetter
   get hasCareInsurance(): boolean {
     return !!(
       this.judgmentResult?.beforeGrades?.careInsuranceGrade !== undefined &&
@@ -808,14 +874,22 @@ export class RevisionAddComponent implements OnInit {
     return !!(this.judgmentResult && !this.judgmentResult.beforeGrades.careInsuranceGrade);
   }
 
-  // テンプレート用のsafeアクセスメソッド（*ngIfでjudgmentResultの存在が保証されている場合に使用）
   get safeJudgmentResult() {
     return this.judgmentResult!;
   }
 
-  /**
-   * Type guard for Firestore timestamp
-   */
+  getAvailableYears(): bigint[] {
+    const currentYear = BigInt(new Date().getFullYear());
+    const years: bigint[] = [];
+
+    // 現在年から10年後まで選択可能
+    for (let i = 0; i <= 10; i++) {
+      years.push(currentYear + BigInt(i));
+    }
+
+    return years;
+  }
+
   private hasToDateMethod(timestamp: unknown): timestamp is { toDate(): Date } {
     return (
       timestamp !== null &&
@@ -825,13 +899,9 @@ export class RevisionAddComponent implements OnInit {
     );
   }
 
-  /**
-   * Firestoreタイムスタンプを日付に変換（テンプレート用）
-   */
   formatTimestamp(timestamp: Date | { toDate(): Date } | unknown): string {
     if (!timestamp) return '';
 
-    // Firestoreタイムスタンプの場合
     if (this.hasToDateMethod(timestamp)) {
       return timestamp.toDate().toLocaleString('ja-JP', {
         year: 'numeric',
@@ -843,7 +913,6 @@ export class RevisionAddComponent implements OnInit {
       });
     }
 
-    // 通常のDateオブジェクトの場合
     if (timestamp instanceof Date) {
       return timestamp.toLocaleString('ja-JP', {
         year: 'numeric',
@@ -858,27 +927,31 @@ export class RevisionAddComponent implements OnInit {
     return '';
   }
 
-  private deepConvertBigInts(obj: unknown): unknown {
-    if (obj === null || typeof obj !== 'object') {
+  private deepConvertBigIntToString(obj: unknown): unknown {
+    if (obj === null || obj === undefined || typeof obj !== 'object') {
       return obj;
     }
 
-    if (obj instanceof Date) {
+    if (obj instanceof Date || obj instanceof Timestamp) {
       return obj;
     }
 
     if (Array.isArray(obj)) {
-      return obj.map((item) => this.deepConvertBigInts(item));
+      return obj.map((item) => this.deepConvertBigIntToString(item));
     }
 
     const newObj: Record<string, unknown> = {};
     for (const key in obj as Record<string, unknown>) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const value = (obj as Record<string, unknown>)[key];
+        // undefinedの値は除外する
+        if (value === undefined) {
+          continue;
+        }
         if (typeof value === 'bigint') {
-          newObj[key] = Number(value);
+          newObj[key] = String(value);
         } else if (typeof value === 'object') {
-          newObj[key] = this.deepConvertBigInts(value);
+          newObj[key] = this.deepConvertBigIntToString(value);
         } else {
           newObj[key] = value;
         }

@@ -675,4 +675,29 @@ export class GradeJudgmentComponent implements OnInit {
   navigateToRevisionAdd(): void {
     this.router.navigate(['/revision-add', this.employeeId]);
   }
+
+  editJudgment(record: GradeJudgmentRecord): void {
+    if (!this.employeeId) return;
+
+    let path = '';
+    // 'revision' の場合は gradeJudgments のドキュメントIDを、
+    // それ以外は employee_grades のドキュメントIDを使用する想定
+    const recordId = record.id;
+
+    switch (record.judgmentType) {
+      case 'regular':
+        path = `/regular-determination-add/${this.employeeId}/${recordId}`;
+        break;
+      case 'revision':
+        path = `/revision-add/${this.employeeId}/${recordId}`;
+        break;
+      case 'manual':
+        path = `/manual-grade-add/${this.employeeId}/${recordId}`;
+        break;
+      default:
+        console.error('未対応の判定方法です:', record.judgmentType);
+        return;
+    }
+    this.router.navigate([path]);
+  }
 }

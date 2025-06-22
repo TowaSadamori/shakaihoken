@@ -99,6 +99,7 @@
             <td class="grade">{{ record.healthInsuranceGrade }}等級</td>
             <td class="grade">{{ record.pensionInsuranceGrade }}等級</td>
             <td class="actions">
+              <button class="btn btn-secondary btn-sm" (click)="editJudgment(record)">編集</button>
               <button class="btn btn-danger btn-sm" (click)="deleteJudgment(record.id)">
                 削除
               </button>

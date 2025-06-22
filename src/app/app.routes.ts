@@ -111,6 +111,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'manual-grade-add/:employeeId/:recordId',
+        loadComponent: () =>
+          import('./grade-management/manual-grade-add/manual-grade-add.component').then(
+            (m) => m.ManualGradeAddComponent
+          ),
+      },
+      {
         path: 'regular-determination-add/:employeeId',
         loadComponent: () =>
           import(
@@ -118,7 +125,21 @@ export const routes: Routes = [
           ).then((m) => m.RegularDeterminationAddComponent),
       },
       {
+        path: 'regular-determination-add/:employeeId/:recordId',
+        loadComponent: () =>
+          import(
+            './grade-management/regular-determination-add/regular-determination-add.component'
+          ).then((m) => m.RegularDeterminationAddComponent),
+      },
+      {
         path: 'revision-add/:employeeId',
+        loadComponent: () =>
+          import('./grade-management/revision-add/revision-add.component').then(
+            (m) => m.RevisionAddComponent
+          ),
+      },
+      {
+        path: 'revision-add/:employeeId/:recordId',
         loadComponent: () =>
           import('./grade-management/revision-add/revision-add.component').then(
             (m) => m.RevisionAddComponent
