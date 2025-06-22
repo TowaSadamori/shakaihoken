@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { CsvImportComponent } from './insurance-rate-csv-import.component';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import Papa from 'papaparse';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-prefecture-detail',
@@ -17,6 +18,7 @@ export class PrefectureDetailComponent {
   prefecture: string | null = null;
   prefectureName: string | null = null;
   showCsvImport = false;
+  isEmployee = false;
 
   // 都道府県コードと名称の対応表
   static PREF_LIST = [
@@ -103,13 +105,18 @@ export class PrefectureDetailComponent {
 
   constructor(
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private authService: AuthService
   ) {
     this.route.paramMap.subscribe(async (params) => {
       this.year = params.get('year');
       this.prefecture = params.get('prefecture');
       this.prefectureName =
         PrefectureDetailComponent.PREF_LIST.find((p) => p.code === this.prefecture)?.name || '';
+
+      const user = await this.authService.getCurrentUserProfileWithRole();
+      this.isEmployee = user?.role !== 'admin';
+
       // Firestoreからデータ取得
       if (this.year && this.prefectureName) {
         const db = getFirestore();

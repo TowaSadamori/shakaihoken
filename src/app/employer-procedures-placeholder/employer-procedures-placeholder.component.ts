@@ -25,7 +25,7 @@ export class EmployerProceduresPlaceholderComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const user = await this.authService.getCurrentUserProfileWithRole();
-    this.isEmployee = user?.role === 'employee_user';
+    this.isEmployee = user?.role !== 'admin';
 
     this.offices = await this.officeService.getOfficesForCurrentUser();
     if (this.offices.length > 0) {

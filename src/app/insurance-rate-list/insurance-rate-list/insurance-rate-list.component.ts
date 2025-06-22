@@ -3,6 +3,7 @@ import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { getFirestore, collection, getDocs, doc, setDoc, query, orderBy } from 'firebase/firestore';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-insurance-rate-list',
@@ -14,6 +15,7 @@ import { getFirestore, collection, getDocs, doc, setDoc, query, orderBy } from '
 export class InsuranceRateListComponent implements OnInit {
   showYearSelect = false;
   years: number[] = [];
+  isEmployee = false;
   private allYears: number[] = [2024, 2023, 2022, 2021];
   get candidateYears(): number[] {
     return this.allYears.filter((y) => !this.years.includes(y));
@@ -29,9 +31,15 @@ export class InsuranceRateListComponent implements OnInit {
   eraYear = 1;
   errorMessage = '';
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {}
 
   async ngOnInit() {
+    const user = await this.authService.getCurrentUserProfileWithRole();
+    this.isEmployee = user?.role !== 'admin';
+
     await this.loadYearsFromFirestore();
   }
 

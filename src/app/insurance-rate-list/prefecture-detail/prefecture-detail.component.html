@@ -3,7 +3,9 @@
     <button type="button" class="back-pref-list-btn" (click)="goBackToPrefList()">
       年度一覧に戻る
     </button>
-    <button type="button" class="import-csv-btn" (click)="openCsvImport()">CSV取り込み</button>
+    <button *ngIf="!isEmployee" type="button" class="import-csv-btn" (click)="openCsvImport()">
+      CSV取り込み
+    </button>
   </div>
   <div class="pref-detail-prefname-center">
     <span *ngIf="year" class="pref-detail-year">{{ year }}年度</span>
