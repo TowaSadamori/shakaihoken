@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { getFirestore, collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 import { AuthService } from '../services/auth.service';
 import { UserService, User } from '../services/user.service';
 
@@ -59,27 +59,42 @@ export class EmployeeSalaryBonusComponent implements OnInit {
       );
       const officePromises = usersSnapshot.docs.map(async (userDoc) => {
         const user = userDoc.data() as User;
-        const officeSnap = await getDoc(
-          doc(db, `companies/${companyId}/offices/${user.branchNumber}`)
-        );
-        return {
-          ...user,
-          officeAddress: officeSnap.exists() ? officeSnap.data()['addressPrefecture'] : 'N/A',
-        };
+        let officeAddress = 'N/A';
+        if (user.branchNumber) {
+          const officeQuery = query(
+            collection(db, 'offices'),
+            where('companyId', '==', companyId),
+            where('branchNumber', '==', user.branchNumber)
+          );
+          const officeSnap = await getDocs(officeQuery);
+          if (!officeSnap.empty) {
+            officeAddress = officeSnap.docs[0].data()['addressPrefecture'] || 'N/A';
+          }
+        }
+        return { ...user, officeAddress };
       });
       this.employees = (await Promise.all(officePromises)) as Employee[];
+      this.employees.sort((a, b) =>
+        (a.employeeNumber || '').localeCompare(b.employeeNumber || '', undefined, {
+          numeric: true,
+        })
+      );
     } else {
       const user = await this.userService.getUserByUid(currentUser.uid);
       if (user) {
-        const officeSnap = await getDoc(
-          doc(db, `companies/${companyId}/offices/${user.branchNumber}`)
-        );
-        this.employees = [
-          {
-            ...user,
-            officeAddress: officeSnap.exists() ? officeSnap.data()['addressPrefecture'] : 'N/A',
-          },
-        ];
+        let officeAddress = 'N/A';
+        if (user.branchNumber) {
+          const officeQuery = query(
+            collection(db, 'offices'),
+            where('companyId', '==', companyId),
+            where('branchNumber', '==', user.branchNumber)
+          );
+          const officeSnap = await getDocs(officeQuery);
+          if (!officeSnap.empty) {
+            officeAddress = officeSnap.docs[0].data()['addressPrefecture'] || 'N/A';
+          }
+        }
+        this.employees = [{ ...user, officeAddress }];
       } else {
         this.employees = [];
       }
