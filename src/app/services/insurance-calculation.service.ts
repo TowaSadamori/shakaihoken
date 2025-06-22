@@ -11,6 +11,7 @@ import {
 import { User } from './user.service';
 import { OfficeService } from './office.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
+import { CalculatedBonusHistoryItem } from './bonus-calculation.service';
 
 // 等級履歴データのインターフェース
 interface GradeJudgmentRecord {
@@ -18,6 +19,11 @@ interface GradeJudgmentRecord {
   endDate?: Date;
   healthInsuranceGrade: number;
   pensionInsuranceGrade: number;
+  paymentAmount?: string;
+  standardBonusAmount?: string;
+  healthInsuranceRate?: string;
+  careInsuranceRate?: string;
+  pensionInsuranceRate?: string;
 }
 
 // 保険料率・テーブルのインターフェース
@@ -47,6 +53,11 @@ export interface MonthlyInsuranceFee {
   totalCompany: string;
   healthInsuranceGrade?: number;
   pensionInsuranceGrade?: number;
+  paymentAmount?: string;
+  standardBonusAmount?: string;
+  healthInsuranceRate?: string;
+  careInsuranceRate?: string;
+  pensionInsuranceRate?: string;
 }
 
 @Injectable({
@@ -69,8 +80,15 @@ export class InsuranceCalculationService {
       totalCompany: '0',
     };
 
-    if (!user.uid || !user.birthDate) {
+    if (!user.uid || !user.birthDate || !user.employeeNumber) {
       return emptyResult;
+    }
+
+    // 賞与の場合の処理
+    if (month >= 13) {
+      const bonusIndex = month - 13; // 0, 1, 2
+      // 保存された賞与計算結果を読み込むように変更
+      return this.fetchAndFormatBonusResult(user, year, bonusIndex);
     }
 
     try {
@@ -116,6 +134,105 @@ export class InsuranceCalculationService {
       console.error(`保険料計算エラー (従業員ID: ${user.uid}, 年月: ${year}/${month})`, error);
       return emptyResult;
     }
+  }
+
+  // Firestoreから保存済みの賞与計算結果を取得して整形するメソッド
+  private async fetchAndFormatBonusResult(
+    user: User,
+    year: number,
+    bonusIndex: number
+  ): Promise<MonthlyInsuranceFee> {
+    const emptyResult: MonthlyInsuranceFee = {
+      healthInsuranceEmployee: '0',
+      healthInsuranceCompany: '0',
+      pensionInsuranceEmployee: '0',
+      pensionInsuranceCompany: '0',
+      careInsuranceEmployee: '0',
+      careInsuranceCompany: '0',
+      totalEmployee: '0',
+      totalCompany: '0',
+    };
+
+    if (!user.companyId || !user.employeeNumber) return emptyResult;
+
+    const docPath = `companies/${user.companyId}/employees/${user.employeeNumber}/bonus_calculation_results/${year}`;
+    const docRef = doc(this.firestore, docPath);
+
+    try {
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const savedData = docSnap.data() as { results: CalculatedBonusHistoryItem[] };
+        if (savedData.results && savedData.results.length > bonusIndex) {
+          const targetBonus = savedData.results[bonusIndex];
+          const targetBonusResult = targetBonus.calculationResult;
+
+          const healthEmployee = targetBonusResult.healthInsurance.employeeBurden;
+          const healthCompany = targetBonusResult.healthInsurance.companyBurden;
+          const pensionEmployee = targetBonusResult.pensionInsurance.employeeBurden;
+          const pensionCompany = targetBonusResult.pensionInsurance.companyBurden;
+          const careEmployee = targetBonusResult.careInsurance?.employeeBurden ?? '0';
+          const careCompany = targetBonusResult.careInsurance?.companyBurden ?? '0';
+
+          const totalHealthEmployee = SocialInsuranceCalculator.addAmounts(
+            healthEmployee,
+            careEmployee
+          );
+          const totalHealthCompany = SocialInsuranceCalculator.addAmounts(
+            healthCompany,
+            careCompany
+          );
+
+          return {
+            healthInsuranceEmployee: totalHealthEmployee,
+            healthInsuranceCompany: totalHealthCompany,
+            pensionInsuranceEmployee: pensionEmployee,
+            pensionInsuranceCompany: pensionCompany,
+            careInsuranceEmployee: careEmployee,
+            careInsuranceCompany: careCompany,
+            totalEmployee: SocialInsuranceCalculator.addAmounts(
+              totalHealthEmployee,
+              pensionEmployee
+            ),
+            totalCompany: SocialInsuranceCalculator.addAmounts(totalHealthCompany, pensionCompany),
+            paymentAmount: targetBonus.amount,
+            standardBonusAmount: targetBonusResult.standardBonusAmount,
+            healthInsuranceRate: targetBonusResult.healthInsuranceRate,
+            careInsuranceRate: targetBonusResult.careInsuranceRate,
+            pensionInsuranceRate: targetBonusResult.pensionInsuranceRate,
+          };
+        }
+      }
+      // データが見つからない場合は空の結果を返す
+      return emptyResult;
+    } catch (error) {
+      console.error('保存済み賞与データ取得エラー:', error);
+      return emptyResult;
+    }
+  }
+
+  // このメソッドはもう使用しないので、中身を空にするか、削除する
+  private async calculateBonusInsurance(
+    user: User,
+    year: number,
+    bonusIndex: number
+  ): Promise<MonthlyInsuranceFee> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const u = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const y = year;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const i = bonusIndex;
+    return Promise.resolve({
+      healthInsuranceEmployee: '0',
+      healthInsuranceCompany: '0',
+      pensionInsuranceEmployee: '0',
+      pensionInsuranceCompany: '0',
+      careInsuranceEmployee: '0',
+      careInsuranceCompany: '0',
+      totalEmployee: '0',
+      totalCompany: '0',
+    });
   }
 
   private async getPrefecture(user: User): Promise<string | null> {

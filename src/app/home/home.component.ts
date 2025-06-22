@@ -147,9 +147,12 @@ export class HomeComponent implements OnInit {
     'standardBonusAmount',
     'healthInsuranceRate',
     'healthInsuranceEmployee',
+    'healthInsuranceCompany',
     'pensionInsuranceRate',
     'pensionInsuranceEmployee',
+    'pensionInsuranceCompany',
     'totalEmployee',
+    'totalCompany',
   ];
 
   constructor(
