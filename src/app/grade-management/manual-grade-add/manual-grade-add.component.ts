@@ -66,16 +66,24 @@ interface SavedGradeData {
   judgmentType: 'manual';
 }
 
-interface FirestoreGradeData {
+// Firestoreから読み込む際の生のデータ型。BigIntは文字列、DateはTimestampとして扱われる。
+interface FirestoreRawData {
   employeeId: string;
   monthlyAmount: string;
-  applicableYear: bigint;
-  applicableMonth: bigint;
-  endYear?: bigint;
-  endMonth?: bigint;
-  judgmentResult: GradeJudgmentResult;
-  createdAt: Date;
-  updatedAt: Date;
+  applicableYear: string;
+  applicableMonth: string;
+  endYear?: string;
+  endMonth?: string;
+  judgmentResult: {
+    healthInsuranceGrade: string;
+    healthInsuranceStandardSalary: string;
+    pensionInsuranceGrade: string;
+    pensionInsuranceStandardSalary: string;
+    careInsuranceGrade?: string;
+    careInsuranceStandardSalary?: string;
+  };
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
   judgmentType: 'manual';
 }
 
@@ -105,20 +113,20 @@ export class ManualGradeAddComponent implements OnInit {
   savedGradeData: SavedGradeData | null = null;
 
   // 選択肢用データ
-  availableYears: number[] = [];
+  availableYears: bigint[] = [];
   availableMonths = [
-    { value: 1, label: '1月' },
-    { value: 2, label: '2月' },
-    { value: 3, label: '3月' },
-    { value: 4, label: '4月' },
-    { value: 5, label: '5月' },
-    { value: 6, label: '6月' },
-    { value: 7, label: '7月' },
-    { value: 8, label: '8月' },
-    { value: 9, label: '9月' },
-    { value: 10, label: '10月' },
-    { value: 11, label: '11月' },
-    { value: 12, label: '12月' },
+    { value: BigInt(1), label: '1月' },
+    { value: BigInt(2), label: '2月' },
+    { value: BigInt(3), label: '3月' },
+    { value: BigInt(4), label: '4月' },
+    { value: BigInt(5), label: '5月' },
+    { value: BigInt(6), label: '6月' },
+    { value: BigInt(7), label: '7月' },
+    { value: BigInt(8), label: '8月' },
+    { value: BigInt(9), label: '9月' },
+    { value: BigInt(10), label: '10月' },
+    { value: BigInt(11), label: '11月' },
+    { value: BigInt(12), label: '12月' },
   ];
 
   private employeeId: string | null = null;
@@ -145,7 +153,7 @@ export class ManualGradeAddComponent implements OnInit {
   private initializeYears(): void {
     const currentYear = new Date().getFullYear();
     for (let year = currentYear - 5; year <= currentYear + 10; year++) {
-      this.availableYears.push(year);
+      this.availableYears.push(BigInt(year));
     }
   }
 
@@ -239,7 +247,7 @@ export class ManualGradeAddComponent implements OnInit {
   isFormValid(): boolean {
     return !!(
       this.monthlyAmount &&
-      SocialInsuranceCalculator.compare(this.monthlyAmount, '0') > 0 &&
+      SocialInsuranceCalculator.compare(String(this.monthlyAmount), '0') > 0 &&
       this.applicableYear &&
       this.applicableMonth
     );
@@ -465,9 +473,9 @@ export class ManualGradeAddComponent implements OnInit {
       { grade: 50n, standardSalary: '1390000', min: '1355000', max: 'Infinity' },
     ];
 
-    // Decimal.jsを使用した正確な範囲判定
+    const amountStr = String(amount);
     const targetGrade = healthInsuranceTable.find((grade) =>
-      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
+      SocialInsuranceCalculator.isInGradeRange(amountStr, grade.min, grade.max)
     );
     return targetGrade || healthInsuranceTable[healthInsuranceTable.length - 1];
   }
@@ -514,9 +522,9 @@ export class ManualGradeAddComponent implements OnInit {
       { grade: 32n, standardSalary: '650000', min: '635000', max: 'Infinity' },
     ];
 
-    // Decimal.jsを使用した正確な範囲判定
+    const amountStr = String(amount);
     const targetGrade = pensionInsuranceTable.find((grade) =>
-      SocialInsuranceCalculator.isInGradeRange(amount, grade.min, grade.max)
+      SocialInsuranceCalculator.isInGradeRange(amountStr, grade.min, grade.max)
     );
     return targetGrade || pensionInsuranceTable[pensionInsuranceTable.length - 1];
   }
@@ -531,70 +539,92 @@ export class ManualGradeAddComponent implements OnInit {
 
   private async loadExistingGradeData(): Promise<void> {
     if (!this.employeeId) return;
-
     try {
-      // 一時的な回避策: 単純なクエリを使用
+      // 便宜上、IDを固定
       const docId = `${this.employeeId}_manual`;
       const docRef = doc(this.firestore, 'employee_grades', docId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        const data = docSnap.data() as SavedGradeData;
-        this.savedGradeData = { ...data, id: docSnap.id };
+        const data = docSnap.data() as FirestoreRawData;
 
-        // フォームに既存データを設定
-        this.monthlyAmount = data.monthlyAmount;
-        this.applicableYear = data.applicableYear;
-        this.applicableMonth = data.applicableMonth;
-        this.endYear = data.endYear || null;
-        this.endMonth = data.endMonth || null;
-        this.judgmentResult = data.judgmentResult;
+        const judgmentResult: GradeJudgmentResult = {
+          healthInsuranceGrade: BigInt(data.judgmentResult.healthInsuranceGrade),
+          healthInsuranceStandardSalary: data.judgmentResult.healthInsuranceStandardSalary,
+          pensionInsuranceGrade: BigInt(data.judgmentResult.pensionInsuranceGrade),
+          pensionInsuranceStandardSalary: data.judgmentResult.pensionInsuranceStandardSalary,
+          careInsuranceGrade: data.judgmentResult.careInsuranceGrade
+            ? BigInt(data.judgmentResult.careInsuranceGrade)
+            : undefined,
+          careInsuranceStandardSalary: data.judgmentResult.careInsuranceStandardSalary,
+        };
+
+        this.savedGradeData = {
+          id: docSnap.id,
+          employeeId: data.employeeId,
+          monthlyAmount: data.monthlyAmount,
+          applicableYear: BigInt(data.applicableYear),
+          applicableMonth: BigInt(data.applicableMonth),
+          endYear: data.endYear ? BigInt(data.endYear) : undefined,
+          endMonth: data.endMonth ? BigInt(data.endMonth) : undefined,
+          judgmentResult: judgmentResult,
+          createdAt: data.createdAt.toDate(),
+          updatedAt: data.updatedAt.toDate(),
+          judgmentType: 'manual',
+        };
+
+        // 既存のデータをフォームにロード
+        this.monthlyAmount = this.savedGradeData.monthlyAmount;
+        this.applicableYear = this.savedGradeData.applicableYear;
+        this.applicableMonth = this.savedGradeData.applicableMonth;
+        this.endYear = this.savedGradeData.endYear ?? null;
+        this.endMonth = this.savedGradeData.endMonth ?? null;
+        this.judgmentResult = this.savedGradeData.judgmentResult;
       }
     } catch (error) {
-      console.error('既存データ読み込みエラー:', error);
+      console.error('既存の手入力データ読み込みエラー:', error);
+      this.errorMessage = '既存の手入力データの読み込みに失敗しました。';
     }
   }
 
   async saveGradeData(): Promise<void> {
     if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+      this.errorMessage = '保存に必要な情報が不足しています。';
       return;
     }
-
     this.isSaving = true;
     this.errorMessage = '';
 
+    const docId = this.savedGradeData?.id || `${this.employeeId}_manual`;
+
+    const gradeData: SavedGradeData = {
+      id: docId,
+      employeeId: this.employeeId,
+      monthlyAmount: this.monthlyAmount!,
+      applicableYear: this.applicableYear!,
+      applicableMonth: this.applicableMonth!,
+      judgmentResult: this.judgmentResult,
+      createdAt: this.savedGradeData?.createdAt || new Date(),
+      updatedAt: new Date(),
+      judgmentType: 'manual',
+    };
+
+    if (this.endYear && this.endMonth) {
+      gradeData.endYear = this.endYear;
+      gradeData.endMonth = this.endMonth;
+    }
+
     try {
-      const gradeData: FirestoreGradeData = {
-        employeeId: this.employeeId,
-        monthlyAmount: this.monthlyAmount!,
-        applicableYear: this.applicableYear!,
-        applicableMonth: this.applicableMonth!,
-        judgmentResult: this.judgmentResult,
-        createdAt: this.savedGradeData?.createdAt || new Date(),
-        updatedAt: new Date(),
-        judgmentType: 'manual',
-      };
-
-      // undefinedの場合はフィールドを除外、値がある場合は含める
-      if (this.endYear !== null && this.endYear !== undefined) {
-        gradeData.endYear = this.endYear;
-      }
-      if (this.endMonth !== null && this.endMonth !== undefined) {
-        gradeData.endMonth = this.endMonth;
-      }
-
-      const docId = this.savedGradeData?.id || `${this.employeeId}_manual`;
       const docRef = doc(this.firestore, 'employee_grades', docId);
+      const dataForFirestore = this.deepConvertBigIntToString(gradeData);
+      await setDoc(docRef, dataForFirestore);
 
-      await setDoc(docRef, gradeData);
+      await this.saveToGradeJudgmentHistory();
 
-      this.savedGradeData = { ...gradeData, id: docId };
-
-      // 成功メッセージを表示（3秒後に消去）
-      this.errorMessage = '等級データが保存されました';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
+      // 保存成功後、コンポーネントの状態を更新
+      this.savedGradeData = gradeData;
+      alert('手入力データが保存されました');
+      this.router.navigate(['/grade-judgment', this.employeeId]);
     } catch (error) {
       console.error('保存エラー:', error);
       this.errorMessage = '保存に失敗しました: ' + (error as Error).message;
@@ -604,13 +634,17 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   private isFirestoreTimestamp(value: unknown): value is Timestamp {
-    return value !== null && typeof value === 'object' && 'toDate' in (value as object);
+    return (
+      value !== null &&
+      typeof value === 'object' &&
+      'toDate' in (value as object) &&
+      typeof (value as Record<string, unknown>)['toDate'] === 'function'
+    );
   }
 
   getFormattedDate(timestamp: Date | Timestamp): string {
     if (!timestamp) return '';
 
-    // FirestoreのTimestampオブジェクトの場合
     if (this.isFirestoreTimestamp(timestamp)) {
       return timestamp.toDate().toLocaleString('ja-JP', {
         year: 'numeric',
@@ -621,7 +655,6 @@ export class ManualGradeAddComponent implements OnInit {
       });
     }
 
-    // 既にDateオブジェクトの場合
     if (timestamp instanceof Date) {
       return timestamp.toLocaleString('ja-JP', {
         year: 'numeric',
@@ -640,69 +673,42 @@ export class ManualGradeAddComponent implements OnInit {
       return;
     }
 
-    this.isSaving = true;
-    this.errorMessage = '';
-
     try {
-      // 適用開始日を作成
       const effectiveDate = new Date(
         Number(this.applicableYear!),
         Number(this.applicableMonth!) - 1,
         1
       );
 
-      // 適用終了日を作成（ある場合のみ）
-      let endDate: Date | undefined;
-      if (this.endYear && this.endMonth) {
-        endDate = new Date(Number(this.endYear), Number(this.endMonth) - 1, 1);
-      }
-
-      // 等級判定履歴用のデータを作成
-      const gradeJudgmentRecord = {
+      const historyRecord: Record<string, unknown> = {
         employeeId: this.employeeId,
         judgmentType: 'manual' as const,
         judgmentDate: new Date(),
         effectiveDate: effectiveDate,
-        endDate: endDate,
         healthInsuranceGrade: this.judgmentResult.healthInsuranceGrade,
         pensionInsuranceGrade: this.judgmentResult.pensionInsuranceGrade,
-        careInsuranceGrade: this.judgmentResult.careInsuranceGrade,
-        standardMonthlyAmount: this.monthlyAmount!,
-        reason: '手入力による等級判定',
-        inputData: {
-          manualAmount: this.monthlyAmount!,
-        },
+        standardMonthlyAmount: this.monthlyAmount,
+        reason: '手入力による等級決定',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      // 等級判定履歴コレクションに保存
+      if (this.judgmentResult.careInsuranceGrade) {
+        historyRecord['careInsuranceGrade'] = this.judgmentResult.careInsuranceGrade;
+      }
+
       const historyCollectionRef = collection(
         this.firestore,
         'gradeJudgments',
         this.employeeId,
         'judgments'
       );
-      await setDoc(doc(historyCollectionRef), gradeJudgmentRecord);
-
-      // 判定結果をクリア
-      this.judgmentResult = null;
-      this.monthlyAmount = null;
-      this.applicableYear = null;
-      this.applicableMonth = null;
-      this.endYear = null;
-      this.endMonth = null;
-
-      // 成功メッセージを表示
-      this.errorMessage = '等級判定結果が履歴に保存されました';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
+      const newDocRef = doc(historyCollectionRef);
+      const convertedRecord = this.deepConvertBigIntToString(historyRecord);
+      await setDoc(newDocRef, convertedRecord);
     } catch (error) {
-      console.error('履歴保存エラー:', error);
-      this.errorMessage = '履歴への保存に失敗しました: ' + (error as Error).message;
-    } finally {
-      this.isSaving = false;
+      console.error('等級履歴への保存エラー:', error);
+      throw new Error('等級履歴への保存に失敗しました。');
     }
   }
 
@@ -746,5 +752,40 @@ export class ManualGradeAddComponent implements OnInit {
     } finally {
       this.isSaving = false;
     }
+  }
+
+  /**
+   * オブジェクト内のBigIntをすべて文字列に再帰的に変換します。
+   * FirestoreはBigIntをサポートしていないため、保存前にこの関数を使用します。
+   * @param obj 変換するオブジェクト
+   * @returns BigIntが文字列に変換された新しいオブジェクト
+   */
+  private deepConvertBigIntToString(obj: unknown): unknown {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (obj instanceof Date) {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.deepConvertBigIntToString(item));
+    }
+
+    const newObj: Record<string, unknown> = {};
+    for (const key in obj as Record<string, unknown>) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = (obj as Record<string, unknown>)[key];
+        if (typeof value === 'bigint') {
+          newObj[key] = value.toString();
+        } else if (typeof value === 'object') {
+          newObj[key] = this.deepConvertBigIntToString(value);
+        } else {
+          newObj[key] = value;
+        }
+      }
+    }
+    return newObj;
   }
 }

@@ -64,9 +64,17 @@
 
       <!-- 改定日 -->
       <div class="form-group">
-        <label for="revisionDate">改定日 *</label>
-        <input type="date" id="revisionDate" [(ngModel)]="revisionData.revisionDate" />
-        <small class="help-text">固定的賃金が変動した日を入力してください</small>
+        <label for="revision-date">改定日*</label>
+        <input
+          type="date"
+          id="revision-date"
+          class="form-control"
+          [(ngModel)]="revisionData.revisionDate"
+          (change)="updateApplicablePeriod()"
+          name="revisionDate"
+          required
+        />
+        <small>固定的な賃金が変動した日を入力してください</small>
       </div>
 
       <!-- 改定前後の報酬月額 -->
@@ -150,10 +158,10 @@
       <button
         type="button"
         class="judgment-btn"
-        (click)="calculateGrade()"
-        [disabled]="!isFormValid()"
+        [disabled]="!isFormValid() || isSaving"
+        (click)="judgeAndSave()"
       >
-        判定
+        {{ isSaving ? '保存中...' : '判定して保存' }}
       </button>
     </div>
   </div>
@@ -203,9 +211,9 @@
             <div class="before-section">
               <span class="section-title">改定前</span>
               <div class="grade-info">
-                <span class="grade">{{ judgmentResult.beforeGrades.healthInsuranceGrade }}級</span>
+                <span class="grade">{{ judgmentResult!.beforeGrades.healthInsuranceGrade }}級</span>
                 <span class="amount"
-                  >{{ judgmentResult.beforeGrades.healthInsuranceStandardSalary | number }}円</span
+                  >{{ judgmentResult!.beforeGrades.healthInsuranceStandardSalary | number }}円</span
                 >
               </div>
             </div>
@@ -213,9 +221,9 @@
             <div class="after-section">
               <span class="section-title">改定後</span>
               <div class="grade-info">
-                <span class="grade">{{ judgmentResult.afterGrades.healthInsuranceGrade }}級</span>
+                <span class="grade">{{ judgmentResult!.afterGrades.healthInsuranceGrade }}級</span>
                 <span class="amount"
-                  >{{ judgmentResult.afterGrades.healthInsuranceStandardSalary | number }}円</span
+                  >{{ judgmentResult!.afterGrades.healthInsuranceStandardSalary | number }}円</span
                 >
               </div>
             </div>
@@ -225,10 +233,10 @@
                 class="difference-value"
                 [class]="
                   'grade-difference-' +
-                  getGradeDifferenceClass(judgmentResult.gradeDifference.healthInsurance)
+                  getGradeDifferenceClass(judgmentResult!.gradeDifference.healthInsurance)
                 "
               >
-                {{ getGradeDifferenceText(judgmentResult.gradeDifference.healthInsurance) }}
+                {{ getGradeDifferenceText(judgmentResult!.gradeDifference.healthInsurance) }}
               </span>
             </div>
           </div>
@@ -246,9 +254,13 @@
             <div class="before-section">
               <span class="section-title">改定前</span>
               <div class="grade-info">
-                <span class="grade">{{ judgmentResult.beforeGrades.pensionInsuranceGrade }}級</span>
+                <span class="grade"
+                  >{{ judgmentResult!.beforeGrades.pensionInsuranceGrade }}級</span
+                >
                 <span class="amount"
-                  >{{ judgmentResult.beforeGrades.pensionInsuranceStandardSalary | number }}円</span
+                  >{{
+                    judgmentResult!.beforeGrades.pensionInsuranceStandardSalary | number
+                  }}円</span
                 >
               </div>
             </div>
@@ -256,9 +268,9 @@
             <div class="after-section">
               <span class="section-title">改定後</span>
               <div class="grade-info">
-                <span class="grade">{{ judgmentResult.afterGrades.pensionInsuranceGrade }}級</span>
+                <span class="grade">{{ judgmentResult!.afterGrades.pensionInsuranceGrade }}級</span>
                 <span class="amount"
-                  >{{ judgmentResult.afterGrades.pensionInsuranceStandardSalary | number }}円</span
+                  >{{ judgmentResult!.afterGrades.pensionInsuranceStandardSalary | number }}円</span
                 >
               </div>
             </div>
@@ -268,10 +280,201 @@
                 class="difference-value"
                 [class]="
                   'grade-difference-' +
-                  getGradeDifferenceClass(judgmentResult.gradeDifference.pensionInsurance)
+                  getGradeDifferenceClass(judgmentResult!.gradeDifference.pensionInsurance)
                 "
               >
-                {{ getGradeDifferenceText(judgmentResult.gradeDifference.pensionInsurance) }}
+                {{ getGradeDifferenceText(judgmentResult!.gradeDifference.pensionInsurance) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 介護保険等級の変更 -->
+      <div class="form-group insurance-group" *ngIf="hasCareInsurance">
+        <div class="insurance-label">
+          <span class="insurance-icon">🤝</span>
+          介護保険
+        </div>
+        <div class="insurance-comparison">
+          <div class="before-after-container">
+            <div class="before-section">
+              <span class="section-title">改定前</span>
+              <div class="grade-info">
+                <span class="grade">{{ judgmentResult!.beforeGrades.careInsuranceGrade }}級</span>
+                <span class="amount"
+                  >{{ judgmentResult!.beforeGrades.careInsuranceStandardSalary | number }}円</span
+                >
+              </div>
+            </div>
+            <div class="arrow-section">→</div>
+            <div class="after-section">
+              <span class="section-title">改定後</span>
+              <div class="grade-info">
+                <span class="grade">{{ judgmentResult!.afterGrades.careInsuranceGrade }}級</span>
+                <span class="amount"
+                  >{{ judgmentResult!.afterGrades.careInsuranceStandardSalary | number }}円</span
+                >
+              </div>
+            </div>
+            <div
+              class="difference-section"
+              *ngIf="judgmentResult!.gradeDifference.careInsurance !== undefined"
+            >
+              <span class="difference-label">変更</span>
+              <span
+                class="difference-value"
+                [class]="
+                  'grade-difference-' +
+                  getGradeDifferenceClass(judgmentResult!.gradeDifference.careInsurance!)
+                "
+              >
+                {{ getGradeDifferenceText(judgmentResult!.gradeDifference.careInsurance!) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 介護保険対象外の場合 -->
+      <div class="form-group insurance-group" *ngIf="isNoCareInsurance">
+        <div class="insurance-label">
+          <span class="insurance-icon">🤝</span>
+          介護保険
+        </div>
+        <div class="insurance-info not-applicable">
+          <div class="info-item">
+            <span class="info-value not-applicable-text">対象外（40歳未満）</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 保存ボタン -->
+    <div class="form-button-section">
+      <button type="button" class="save-btn" (click)="saveRevisionData()" [disabled]="isSaving">
+        {{ isSaving ? '保存中...' : 'この内容で保存する' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- 既存の判定データを表示 -->
+  <div class="existing-data-section" *ngIf="savedRevisionData">
+    <h3 class="section-title">保存済みの判定データ</h3>
+    <div class="existing-data-content">
+      <!-- 適用期間表示 -->
+      <div class="form-group period-group" *ngIf="applicableYear && applicableMonth">
+        <div class="period-label">適用期間</div>
+        <div class="period-display">
+          <span class="period-text">{{ applicableYear }}年{{ applicableMonth }}月～継続</span>
+        </div>
+      </div>
+
+      <!-- 改定概要 -->
+      <div class="form-group revision-summary-group">
+        <div class="revision-summary-label">改定概要</div>
+        <div class="revision-summary-info">
+          <div class="info-item">
+            <span class="info-label">改定理由:</span>
+            <span class="info-value">{{
+              getRevisionReasonLabel(revisionData.revisionReason)
+            }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">改定前報酬:</span>
+            <span class="info-value">{{ revisionData.beforeAmount | number }}円</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">改定後報酬:</span>
+            <span class="info-value">{{ revisionData.afterAmount | number }}円</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 健康保険等級の変更 -->
+      <div class="form-group insurance-group">
+        <div class="insurance-label">
+          <span class="insurance-icon">🏥</span>
+          健康保険
+        </div>
+        <div class="insurance-comparison">
+          <div class="before-after-container">
+            <div class="before-section">
+              <span class="section-title">改定前</span>
+              <div class="grade-info">
+                <span class="grade">{{ judgmentResult!.beforeGrades.healthInsuranceGrade }}級</span>
+                <span class="amount"
+                  >{{ judgmentResult!.beforeGrades.healthInsuranceStandardSalary | number }}円</span
+                >
+              </div>
+            </div>
+            <div class="arrow-section">→</div>
+            <div class="after-section">
+              <span class="section-title">改定後</span>
+              <div class="grade-info">
+                <span class="grade">{{ judgmentResult!.afterGrades.healthInsuranceGrade }}級</span>
+                <span class="amount"
+                  >{{ judgmentResult!.afterGrades.healthInsuranceStandardSalary | number }}円</span
+                >
+              </div>
+            </div>
+            <div class="difference-section">
+              <span class="difference-label">変更</span>
+              <span
+                class="difference-value"
+                [class]="
+                  'grade-difference-' +
+                  getGradeDifferenceClass(judgmentResult!.gradeDifference.healthInsurance)
+                "
+              >
+                {{ getGradeDifferenceText(judgmentResult!.gradeDifference.healthInsurance) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 厚生年金保険等級の変更 -->
+      <div class="form-group insurance-group">
+        <div class="insurance-label">
+          <span class="insurance-icon">👴</span>
+          厚生年金保険
+        </div>
+        <div class="insurance-comparison">
+          <div class="before-after-container">
+            <div class="before-section">
+              <span class="section-title">改定前</span>
+              <div class="grade-info">
+                <span class="grade"
+                  >{{ judgmentResult!.beforeGrades.pensionInsuranceGrade }}級</span
+                >
+                <span class="amount"
+                  >{{
+                    judgmentResult!.beforeGrades.pensionInsuranceStandardSalary | number
+                  }}円</span
+                >
+              </div>
+            </div>
+            <div class="arrow-section">→</div>
+            <div class="after-section">
+              <span class="section-title">改定後</span>
+              <div class="grade-info">
+                <span class="grade">{{ judgmentResult!.afterGrades.pensionInsuranceGrade }}級</span>
+                <span class="amount"
+                  >{{ judgmentResult!.afterGrades.pensionInsuranceStandardSalary | number }}円</span
+                >
+              </div>
+            </div>
+            <div class="difference-section">
+              <span class="difference-label">変更</span>
+              <span
+                class="difference-value"
+                [class]="
+                  'grade-difference-' +
+                  getGradeDifferenceClass(judgmentResult!.gradeDifference.pensionInsurance)
+                "
+              >
+                {{ getGradeDifferenceText(judgmentResult!.gradeDifference.pensionInsurance) }}
               </span>
             </div>
           </div>
@@ -340,18 +543,6 @@
 
     <!-- アクションボタン -->
     <div class="button-section">
-      <!-- 保存ボタン -->
-      <button
-        type="button"
-        class="save-btn"
-        [disabled]="!isSaveValid() || isSaving"
-        (click)="saveRevisionData()"
-        *ngIf="judgmentResult"
-      >
-        <span *ngIf="!isSaving">{{ savedRevisionData ? '更新' : '保存' }}</span>
-        <span *ngIf="isSaving">保存中...</span>
-      </button>
-
       <!-- 削除ボタン -->
       <button
         type="button"

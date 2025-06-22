@@ -177,13 +177,22 @@ export class RevisionAddComponent implements OnInit {
   private initializeDefaultDates(): void {
     const today = new Date();
     this.revisionData.revisionDate = today.toISOString().split('T')[0];
+    this.updateApplicablePeriod();
+  }
 
-    const applicableDate = new Date(today);
-    applicableDate.setMonth(applicableDate.getMonth() + 4);
-    applicableDate.setDate(1);
+  updateApplicablePeriod(): void {
+    if (this.revisionData.revisionDate) {
+      // タイムゾーンの問題を避けるため、UTCとして日付を解析
+      const parts = this.revisionData.revisionDate.split('-').map((p) => parseInt(p, 10));
+      const revisionDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
 
-    this.applicableYear = BigInt(applicableDate.getFullYear());
-    this.applicableMonth = BigInt(applicableDate.getMonth() + 1);
+      // 4ヶ月後の1日を計算
+      revisionDate.setUTCMonth(revisionDate.getUTCMonth() + 4);
+      revisionDate.setUTCDate(1);
+
+      this.applicableYear = BigInt(revisionDate.getUTCFullYear());
+      this.applicableMonth = BigInt(revisionDate.getUTCMonth() + 1);
+    }
   }
 
   private async loadEmployeeInfo(): Promise<void> {
@@ -316,34 +325,38 @@ export class RevisionAddComponent implements OnInit {
 
   async calculateGrade(): Promise<void> {
     if (!this.isFormValid()) {
+      this.errorMessage = '入力内容に不備があります。';
       return;
     }
+    this.errorMessage = '';
 
-    const beforeGrades = this.calculateGradesFromAmount(this.revisionData.beforeAmount!);
-    const afterGrades = this.calculateGradesFromAmount(this.revisionData.afterAmount!);
+    const beforeAmountStr = String(this.revisionData.beforeAmount!);
+    const afterAmountStr = String(this.revisionData.afterAmount!);
 
-    // Decimal.jsを使用した正確な等級差計算
+    const beforeGrades = this.calculateGradesFromAmount(beforeAmountStr);
+    const afterGrades = this.calculateGradesFromAmount(afterAmountStr);
+
+    const healthDiff = afterGrades.healthInsuranceGrade - beforeGrades.healthInsuranceGrade;
+    const pensionDiff = afterGrades.pensionInsuranceGrade - beforeGrades.pensionInsuranceGrade;
+
     this.judgmentResult = {
-      beforeGrades,
-      afterGrades,
+      beforeGrades: beforeGrades,
+      afterGrades: afterGrades,
       gradeDifference: {
-        healthInsurance: SocialInsuranceCalculator.calculateGradeDifference(
-          beforeGrades.healthInsuranceGrade.toString(),
-          afterGrades.healthInsuranceGrade.toString()
-        ),
-        pensionInsurance: SocialInsuranceCalculator.calculateGradeDifference(
-          beforeGrades.pensionInsuranceGrade.toString(),
-          afterGrades.pensionInsuranceGrade.toString()
-        ),
-        careInsurance:
-          'careInsuranceGrade' in afterGrades && 'careInsuranceGrade' in beforeGrades
-            ? SocialInsuranceCalculator.calculateGradeDifference(
-                beforeGrades.careInsuranceGrade!.toString(),
-                afterGrades.careInsuranceGrade!.toString()
-              )
-            : undefined,
+        healthInsurance: String(healthDiff),
+        pensionInsurance: String(pensionDiff),
       },
     };
+
+    // 計算に成功したら、そのまま保存処理を呼び出す
+    // await this.saveRevisionData();
+  }
+
+  async judgeAndSave(): Promise<void> {
+    await this.calculateGrade();
+    if (this.judgmentResult) {
+      await this.saveRevisionData();
+    }
   }
 
   private calculateGradesFromAmount(amount: string) {
@@ -488,25 +501,28 @@ export class RevisionAddComponent implements OnInit {
   }
 
   getGradeDifferenceText(difference: string): string {
-    const compareResult = SocialInsuranceCalculator.compare(difference, '0');
-    if (compareResult > 0) {
-      return `+${SocialInsuranceCalculator.formatAmount(difference)}等級`;
-    } else if (compareResult < 0) {
-      return `${SocialInsuranceCalculator.formatAmount(difference)}等級`;
-    } else {
-      return '変更なし';
+    if (!difference) return '変更なし';
+    const diffStr = String(difference);
+    const absDiff = SocialInsuranceCalculator.abs(diffStr);
+    if (SocialInsuranceCalculator.compare(diffStr, '0') > 0) {
+      return `${absDiff}等級UP`;
     }
+    if (SocialInsuranceCalculator.compare(diffStr, '0') < 0) {
+      return `${absDiff}等級DOWN`;
+    }
+    return `変更なし`;
   }
 
   getGradeDifferenceClass(difference: string): string {
-    const compareResult = SocialInsuranceCalculator.compare(difference, '0');
-    if (compareResult > 0) {
+    if (!difference) return 'no-change';
+    const diffStr = String(difference);
+    if (SocialInsuranceCalculator.compare(diffStr, '0') > 0) {
       return 'increase';
-    } else if (compareResult < 0) {
-      return 'decrease';
-    } else {
-      return 'same';
     }
+    if (SocialInsuranceCalculator.compare(diffStr, '0') < 0) {
+      return 'decrease';
+    }
+    return 'no-change';
   }
 
   private async loadExistingRevisionData(): Promise<void> {
@@ -538,84 +554,44 @@ export class RevisionAddComponent implements OnInit {
   }
 
   async saveRevisionData(): Promise<void> {
-    if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
-      this.errorMessage = '保存に必要な情報が不足しています';
+    if (!this.employeeId || !this.judgmentResult) {
+      this.errorMessage = '保存に必要な情報が不足しています。';
       return;
     }
-
     this.isSaving = true;
     this.errorMessage = '';
 
+    const calculationSnapshot = this.createCalculationSnapshot();
+
+    const saveData: RevisionSaveData = {
+      employeeId: this.employeeId,
+      revisionData: this.revisionData,
+      judgmentResult: this.judgmentResult,
+      applicableYear: this.applicableYear!,
+      applicableMonth: this.applicableMonth!,
+      calculationSnapshot: calculationSnapshot,
+      createdAt: this.savedRevisionData?.createdAt || new Date(),
+      updatedAt: new Date(),
+      judgmentType: 'revision',
+    };
+
     try {
-      // Create calculation snapshot for audit trail
-      const calculationSnapshot = this.createCalculationSnapshot();
+      const docId = this.savedRevisionData?.id || `${this.employeeId}_${new Date().getTime()}`;
+      const docRef = doc(this.firestore, 'employee_revisions', docId);
 
-      // undefinedフィールドを除外したjudgmentResultを作成
-      const cleanedJudgmentResult: GradeJudgmentResult = {
-        beforeGrades: {
-          healthInsuranceGrade: this.judgmentResult.beforeGrades.healthInsuranceGrade,
-          healthInsuranceStandardSalary:
-            this.judgmentResult.beforeGrades.healthInsuranceStandardSalary,
-          pensionInsuranceGrade: this.judgmentResult.beforeGrades.pensionInsuranceGrade,
-          pensionInsuranceStandardSalary:
-            this.judgmentResult.beforeGrades.pensionInsuranceStandardSalary,
-          ...(this.judgmentResult.beforeGrades.careInsuranceGrade !== undefined && {
-            careInsuranceGrade: this.judgmentResult.beforeGrades.careInsuranceGrade,
-            careInsuranceStandardSalary:
-              this.judgmentResult.beforeGrades.careInsuranceStandardSalary,
-          }),
-        },
-        afterGrades: {
-          healthInsuranceGrade: this.judgmentResult.afterGrades.healthInsuranceGrade,
-          healthInsuranceStandardSalary:
-            this.judgmentResult.afterGrades.healthInsuranceStandardSalary,
-          pensionInsuranceGrade: this.judgmentResult.afterGrades.pensionInsuranceGrade,
-          pensionInsuranceStandardSalary:
-            this.judgmentResult.afterGrades.pensionInsuranceStandardSalary,
-          ...(this.judgmentResult.afterGrades.careInsuranceGrade !== undefined && {
-            careInsuranceGrade: this.judgmentResult.afterGrades.careInsuranceGrade,
-            careInsuranceStandardSalary:
-              this.judgmentResult.afterGrades.careInsuranceStandardSalary,
-          }),
-        },
-        gradeDifference: {
-          healthInsurance: this.judgmentResult.gradeDifference.healthInsurance,
-          pensionInsurance: this.judgmentResult.gradeDifference.pensionInsurance,
-          ...(this.judgmentResult.gradeDifference.careInsurance !== undefined && {
-            careInsurance: this.judgmentResult.gradeDifference.careInsurance,
-          }),
-        },
-      };
+      // BigIntをNumberに変換
+      const convertedData = this.deepConvertBigInts(saveData);
+      await setDoc(docRef, convertedData);
 
-      const revisionData: RevisionSaveData = {
-        employeeId: this.employeeId,
-        revisionData: this.revisionData,
-        judgmentResult: cleanedJudgmentResult,
-        applicableYear: this.applicableYear!,
-        applicableMonth: this.applicableMonth!,
-        calculationSnapshot: calculationSnapshot,
-        createdAt: this.savedRevisionData?.createdAt || new Date(),
-        updatedAt: new Date(),
-        judgmentType: 'revision',
-      };
+      this.savedRevisionData = { ...saveData, id: docId };
 
-      const docId = this.savedRevisionData?.id || `${this.employeeId}_revision`;
-      const docRef = doc(this.firestore, 'employee_grades', docId);
-
-      await setDoc(docRef, revisionData);
-
-      this.savedRevisionData = { ...revisionData, id: docId };
-
-      // Save to grade judgment history
       await this.saveToGradeJudgmentHistory();
 
-      this.errorMessage = '随時改定データが保存されました';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
+      alert('随時改定データが正常に保存されました。');
+      this.router.navigate(['/grade-judgment', this.employeeId]);
     } catch (error) {
       console.error('保存エラー:', error);
-      this.errorMessage = '保存に失敗しました: ' + (error as Error).message;
+      this.errorMessage = `データの保存中にエラーが発生しました: ${error}`;
     } finally {
       this.isSaving = false;
     }
@@ -792,9 +768,13 @@ export class RevisionAddComponent implements OnInit {
         this.employeeId,
         'judgments'
       );
-      await setDoc(doc(historyCollectionRef), gradeJudgmentRecord);
+      const newDocRef = doc(historyCollectionRef);
+      // BigIntをNumberに変換
+      const convertedRecord = this.deepConvertBigInts(gradeJudgmentRecord);
+      await setDoc(newDocRef, convertedRecord);
     } catch (error) {
-      console.error('履歴保存エラー:', error);
+      console.error('等級履歴への保存エラー:', error);
+      throw new Error('等級履歴への保存に失敗しました。');
     }
   }
 
@@ -813,7 +793,7 @@ export class RevisionAddComponent implements OnInit {
   }
 
   isSaveValid(): boolean {
-    return this.isFormValid() && !!this.judgmentResult;
+    return this.isFormValid() && this.judgmentResult !== null;
   }
 
   // テンプレート用のnullチェックを含むgetter
@@ -876,5 +856,34 @@ export class RevisionAddComponent implements OnInit {
     }
 
     return '';
+  }
+
+  private deepConvertBigInts(obj: unknown): unknown {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (obj instanceof Date) {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.deepConvertBigInts(item));
+    }
+
+    const newObj: Record<string, unknown> = {};
+    for (const key in obj as Record<string, unknown>) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = (obj as Record<string, unknown>)[key];
+        if (typeof value === 'bigint') {
+          newObj[key] = Number(value);
+        } else if (typeof value === 'object') {
+          newObj[key] = this.deepConvertBigInts(value);
+        } else {
+          newObj[key] = value;
+        }
+      }
+    }
+    return newObj;
   }
 }

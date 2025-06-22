@@ -38,7 +38,7 @@ interface SalaryData {
 interface GradeJudgmentRecord {
   id: string;
   employeeId: string;
-  judgmentType: 'manual' | 'regular' | 'irregular';
+  judgmentType: 'manual' | 'regular' | 'irregular' | 'revision';
   judgmentDate: Date;
   effectiveDate: Date;
   endDate?: Date;
@@ -234,17 +234,17 @@ export class GradeJudgmentComponent implements OnInit {
           id: doc.id,
           employeeId: this.employeeId!,
           judgmentType: data['judgmentType'],
-          judgmentDate: data['judgmentDate'].toDate(),
-          effectiveDate: data['effectiveDate'].toDate(),
-          endDate: data['endDate'] ? data['endDate'].toDate() : undefined,
+          judgmentDate: this.convertToDate(data['judgmentDate']),
+          effectiveDate: this.convertToDate(data['effectiveDate']),
+          endDate: data['endDate'] ? this.convertToDate(data['endDate']) : undefined,
           healthInsuranceGrade: data['healthInsuranceGrade'],
           pensionInsuranceGrade: data['pensionInsuranceGrade'],
           careInsuranceGrade: data['careInsuranceGrade'],
           standardMonthlyAmount: data['standardMonthlyAmount'],
           reason: data['reason'],
           inputData: data['inputData'],
-          createdAt: data['createdAt'].toDate(),
-          updatedAt: data['updatedAt'].toDate(),
+          createdAt: this.convertToDate(data['createdAt']),
+          updatedAt: this.convertToDate(data['updatedAt']),
         });
       });
 
@@ -295,7 +295,7 @@ export class GradeJudgmentComponent implements OnInit {
             id: employeeGradeDoc.id,
             employeeId: this.employeeId,
             judgmentType: gradeType.type as 'manual' | 'regular',
-            judgmentDate: data['updatedAt'].toDate(),
+            judgmentDate: this.convertToDate(data['updatedAt']),
             effectiveDate: effectiveDate,
             endDate: endDate,
             healthInsuranceGrade: judgmentResult['healthInsuranceGrade'],
@@ -304,8 +304,8 @@ export class GradeJudgmentComponent implements OnInit {
             standardMonthlyAmount: standardMonthlyAmount,
             reason: reason,
             inputData: inputData,
-            createdAt: data['createdAt'].toDate(),
-            updatedAt: data['updatedAt'].toDate(),
+            createdAt: this.convertToDate(data['createdAt']),
+            updatedAt: this.convertToDate(data['updatedAt']),
           };
 
           this.judgmentRecords.push(gradeRecord);
@@ -313,7 +313,12 @@ export class GradeJudgmentComponent implements OnInit {
       }
 
       // 効力発生日の降順でソート
-      this.judgmentRecords.sort((a, b) => b.effectiveDate.getTime() - a.effectiveDate.getTime());
+      this.judgmentRecords.sort((a, b) => {
+        // 安全なソート: effectiveDateがDateオブジェクトでない可能性があるため、チェックを行う
+        const timeA = a.effectiveDate instanceof Date ? a.effectiveDate.getTime() : 0;
+        const timeB = b.effectiveDate instanceof Date ? b.effectiveDate.getTime() : 0;
+        return timeB - timeA;
+      });
 
       console.log('等級判定履歴を読み込みました:', this.judgmentRecords);
     } catch (error) {
@@ -530,7 +535,17 @@ export class GradeJudgmentComponent implements OnInit {
       return;
     }
 
-    const confirmed = confirm('この等級履歴を本当に削除しますか？この操作は元に戻せません。');
+    const recordToDelete = this.judgmentRecords.find((r) => r.id === recordId);
+    if (!recordToDelete) {
+      this.errorMessage = '削除対象のレコードが見つかりません。';
+      return;
+    }
+
+    const confirmed = confirm(
+      `この等級履歴（${this.getJudgmentTypeLabel(
+        recordToDelete.judgmentType
+      )}）を本当に削除しますか？この操作は元に戻せません。`
+    );
     if (!confirmed) {
       return;
     }
@@ -539,7 +554,17 @@ export class GradeJudgmentComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      const docRef = doc(this.firestore, 'gradeJudgments', this.employeeId, 'judgments', recordId);
+      let docRef;
+      const judgmentType = recordToDelete.judgmentType;
+
+      if (judgmentType === 'manual' || judgmentType === 'regular') {
+        // 'employee_grades'コレクションから削除
+        docRef = doc(this.firestore, 'employee_grades', recordId);
+      } else {
+        // 'gradeJudgments/{employeeId}/judgments' サブコレクションから削除
+        docRef = doc(this.firestore, 'gradeJudgments', this.employeeId, 'judgments', recordId);
+      }
+
       await deleteDoc(docRef);
 
       // 履歴を再読み込みして表示を更新
@@ -577,19 +602,28 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   private calculateAge(birthDate: Date): bigint {
-    // 年齢計算は整数の年月日計算なので通常計算で問題なし
     const today = new Date();
     let age = BigInt(today.getFullYear()) - BigInt(birthDate.getFullYear());
-    const monthDiff = BigInt(today.getMonth()) - BigInt(birthDate.getMonth());
-
+    const m = BigInt(today.getMonth()) - BigInt(birthDate.getMonth());
     if (
-      monthDiff < 0n ||
-      (monthDiff === 0n && BigInt(today.getDate()) < BigInt(birthDate.getDate()))
+      m < BigInt(0) ||
+      (m === BigInt(0) && BigInt(today.getDate()) < BigInt(birthDate.getDate()))
     ) {
-      age--;
+      age = age - BigInt(1);
     }
-
     return age;
+  }
+
+  /**
+   * FirestoreのTimestampかもしれない値をDateオブジェクトに変換する
+   * @param dateValue Timestamp | Date
+   * @returns Date
+   */
+  private convertToDate(dateValue: { toDate: () => Date } | Date): Date {
+    if (dateValue && 'toDate' in dateValue && typeof dateValue.toDate === 'function') {
+      return dateValue.toDate();
+    }
+    return dateValue as Date;
   }
 
   getJudgmentTypeLabel(type: string): string {
@@ -606,7 +640,10 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   formatDate(date: Date): string {
-    if (!date) return '';
+    // 安全な日付フォーマット：dateがDateオブジェクトであることを確認
+    if (!(date instanceof Date)) {
+      return '無効な日付';
+    }
     const year = date.getFullYear();
     const month = date.getMonth() + 1; // getMonth()は0から始まるため+1する
     return `${year}年${month}月`;

@@ -74,21 +74,6 @@ interface SavedGradeData {
   judgmentType: 'regular';
 }
 
-interface FirestoreGradeData {
-  employeeId: string;
-  targetYear: bigint;
-  monthlyPayments: MonthlyPayment[];
-  averageAmount: string;
-  applicableYear: bigint;
-  applicableMonth: bigint;
-  endYear?: bigint;
-  endMonth?: bigint;
-  judgmentResult: GradeJudgmentResult;
-  createdAt: Date;
-  updatedAt: Date;
-  judgmentType: 'regular';
-}
-
 @Component({
   selector: 'app-regular-determination-add',
   standalone: true,
@@ -891,7 +876,6 @@ export class RegularDeterminationAddComponent implements OnInit {
 
   private async loadExistingGradeData(): Promise<void> {
     if (!this.employeeId) return;
-
     try {
       const docId = `${this.employeeId}_regular`;
       const docRef = doc(this.firestore, 'employee_grades', docId);
@@ -900,75 +884,83 @@ export class RegularDeterminationAddComponent implements OnInit {
       if (docSnap.exists()) {
         const data = docSnap.data() as SavedGradeData;
         this.savedGradeData = { ...data, id: docSnap.id };
-
-        // フォームに既存データを設定
-        this.targetYear = data.targetYear;
-        this.monthlyPayments = [...data.monthlyPayments];
+        // 既存のデータをフォームにロード
+        this.targetYear = BigInt(data.targetYear);
+        this.monthlyPayments = data.monthlyPayments.map((p) => ({
+          ...p,
+          month: BigInt(p.month),
+          workingDays: p.workingDays ? BigInt(p.workingDays) : null,
+        }));
         this.averageAmount = data.averageAmount;
-        this.applicableYear = data.applicableYear;
-        this.applicableMonth = data.applicableMonth;
-        this.endYear = data.endYear || null;
-        this.endMonth = data.endMonth || null;
-        this.judgmentResult = data.judgmentResult;
+        this.applicableYear = BigInt(data.applicableYear);
+        this.applicableMonth = BigInt(data.applicableMonth);
+        this.endYear = data.endYear ? BigInt(data.endYear) : null;
+        this.endMonth = data.endMonth ? BigInt(data.endMonth) : null;
+        this.judgmentResult = {
+          ...data.judgmentResult,
+          healthInsuranceGrade: BigInt(data.judgmentResult.healthInsuranceGrade),
+          pensionInsuranceGrade: BigInt(data.judgmentResult.pensionInsuranceGrade),
+          careInsuranceGrade: data.judgmentResult.careInsuranceGrade
+            ? BigInt(data.judgmentResult.careInsuranceGrade)
+            : undefined,
+        };
       }
     } catch (error) {
-      console.error('既存データ読み込みエラー:', error);
+      console.error('既存の定時決定データ読み込みエラー:', error);
+      this.errorMessage = '既存の定時決定データの読み込みに失敗しました。';
     }
   }
 
   async saveGradeData(): Promise<void> {
     if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+      this.errorMessage = '保存に必要な情報が不足しています。';
       return;
     }
-
     this.isSaving = true;
     this.errorMessage = '';
 
+    const docId = this.savedGradeData?.id || `${this.employeeId}_regular`;
+
+    const gradeData: SavedGradeData = {
+      id: docId,
+      employeeId: this.employeeId,
+      targetYear: this.targetYear,
+      monthlyPayments: this.monthlyPayments,
+      averageAmount: this.averageAmount,
+      applicableYear: this.applicableYear,
+      applicableMonth: this.applicableMonth,
+      judgmentResult: this.judgmentResult,
+      createdAt: this.savedGradeData?.createdAt || new Date(),
+      updatedAt: new Date(),
+      judgmentType: 'regular',
+    };
+
+    if (this.endYear && this.endMonth) {
+      gradeData.endYear = this.endYear;
+      gradeData.endMonth = this.endMonth;
+    }
+
     try {
-      const gradeData: FirestoreGradeData = {
-        employeeId: this.employeeId,
-        targetYear: this.targetYear,
-        monthlyPayments: this.monthlyPayments,
-        averageAmount: this.averageAmount,
-        applicableYear: this.applicableYear,
-        applicableMonth: this.applicableMonth,
-        judgmentResult: this.judgmentResult,
-        createdAt: this.savedGradeData?.createdAt || new Date(),
-        updatedAt: new Date(),
-        judgmentType: 'regular',
-      };
-
-      if (this.endYear !== null && this.endYear !== undefined) {
-        gradeData.endYear = this.endYear;
-      }
-      if (this.endMonth !== null && this.endMonth !== undefined) {
-        gradeData.endMonth = this.endMonth;
-      }
-
-      const docId = this.savedGradeData?.id || `${this.employeeId}_regular`;
       const docRef = doc(this.firestore, 'employee_grades', docId);
+      const dataForFirestore = this.deepConvertBigIntToString(gradeData);
+      await setDoc(docRef, dataForFirestore);
 
-      await setDoc(docRef, gradeData);
+      await this.saveToGradeJudgmentHistory(gradeData);
 
-      this.savedGradeData = { ...gradeData, id: docId };
-
-      // 等級判定履歴にも保存
-      await this.saveToGradeJudgmentHistory();
-
-      this.errorMessage = '定時決定データが保存されました';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
+      // 保存成功後、コンポーネントの状態を更新
+      this.savedGradeData = gradeData;
+      alert('定時決定データが保存されました');
+      this.router.navigate(['/grade-judgment', this.employeeId]);
     } catch (error) {
       console.error('保存エラー:', error);
-      this.errorMessage = '保存に失敗しました: ' + (error as Error).message;
+      this.errorMessage = `データの保存中にエラーが発生しました: ${error}`;
     } finally {
       this.isSaving = false;
     }
   }
 
-  async saveToGradeJudgmentHistory(): Promise<void> {
-    if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+  async saveToGradeJudgmentHistory(gradeData: SavedGradeData): Promise<void> {
+    if (!this.employeeId) {
       return;
     }
 
@@ -979,15 +971,15 @@ export class RegularDeterminationAddComponent implements OnInit {
         1
       );
 
-      const gradeJudgmentRecord: Record<string, unknown> = {
+      const historyRecord: Record<string, unknown> = {
         employeeId: this.employeeId,
         judgmentType: 'regular' as const,
         judgmentDate: new Date(),
         effectiveDate: effectiveDate,
-        healthInsuranceGrade: this.judgmentResult.healthInsuranceGrade,
-        pensionInsuranceGrade: this.judgmentResult.pensionInsuranceGrade,
-        careInsuranceGrade: this.judgmentResult.careInsuranceGrade,
-        standardMonthlyAmount: this.averageAmount,
+        healthInsuranceGrade: gradeData.judgmentResult.healthInsuranceGrade,
+        pensionInsuranceGrade: gradeData.judgmentResult.pensionInsuranceGrade,
+        careInsuranceGrade: gradeData.judgmentResult.careInsuranceGrade,
+        standardMonthlyAmount: gradeData.averageAmount,
         reason: '定時決定による等級判定',
         inputData: {
           targetYear: this.targetYear,
@@ -1000,11 +992,7 @@ export class RegularDeterminationAddComponent implements OnInit {
 
       // endDateは値がある場合のみ設定
       if (this.endYear && this.endMonth) {
-        gradeJudgmentRecord['endDate'] = new Date(
-          Number(this.endYear),
-          Number(this.endMonth) - 1,
-          1
-        );
+        historyRecord['endDate'] = new Date(Number(this.endYear), Number(this.endMonth) - 1, 1);
       }
 
       const historyCollectionRef = collection(
@@ -1013,7 +1001,9 @@ export class RegularDeterminationAddComponent implements OnInit {
         this.employeeId,
         'judgments'
       );
-      await setDoc(doc(historyCollectionRef), gradeJudgmentRecord);
+      const newDocRef = doc(historyCollectionRef);
+      const convertedRecord = this.deepConvertBigIntToString(historyRecord);
+      await setDoc(newDocRef, convertedRecord);
     } catch (error) {
       console.error('履歴保存エラー:', error);
     }
@@ -1115,6 +1105,41 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   formatAmount(amount: string): string {
-    return SocialInsuranceCalculator.formatAmount(amount);
+    return new Intl.NumberFormat('ja-JP').format(Number(amount)) + '円';
+  }
+
+  /**
+   * オブジェクト内のBigIntをすべて文字列に再帰的に変換します。
+   * FirestoreはBigIntをサポートしていないため、保存前にこの関数を使用します。
+   * @param obj 変換するオブジェクト
+   * @returns BigIntが文字列に変換された新しいオブジェクト
+   */
+  private deepConvertBigIntToString(obj: unknown): unknown {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (obj instanceof Date) {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.deepConvertBigIntToString(item));
+    }
+
+    const newObj: Record<string, unknown> = {};
+    for (const key in obj as Record<string, unknown>) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = (obj as Record<string, unknown>)[key];
+        if (typeof value === 'bigint') {
+          newObj[key] = value.toString();
+        } else if (typeof value === 'object') {
+          newObj[key] = this.deepConvertBigIntToString(value);
+        } else {
+          newObj[key] = value;
+        }
+      }
+    }
+    return newObj;
   }
 }
