@@ -10,6 +10,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { UserService, User } from '../services/user.service';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import {
+  InsuranceCalculationService,
+  MonthlyInsuranceFee,
+} from '../services/insurance-calculation.service';
+import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 
 // ユーザープロフィール型定義
 interface UserProfileWithRole {
@@ -19,19 +25,11 @@ interface UserProfileWithRole {
   role: string;
 }
 
-// 社会保険料データの型定義
-interface InsuranceFeeData {
-  year: number;
-  month: number;
-  monthDisplay: string;
-  healthInsuranceEmployee: string;
-  healthInsuranceCompany: string;
-  pensionInsuranceEmployee: string;
-  pensionInsuranceCompany: string;
-  employmentInsuranceEmployee: string;
-  employmentInsuranceCompany: string;
-  totalEmployee: string;
-  totalCompany: string;
+// 判定結果のインターフェース
+interface InsuranceEligibility {
+  healthInsurance: { eligible: boolean; reason: string };
+  pensionInsurance: { eligible: boolean; reason: string };
+  careInsurance?: { eligible: boolean; reason: string };
 }
 
 interface EmployeeInsuranceData {
@@ -39,31 +37,14 @@ interface EmployeeInsuranceData {
   officeNumber: string;
   employeeName: string;
   attribute: string;
-  currentMonth: InsuranceFeeData;
+  currentMonth: MonthlyInsuranceFee;
+  healthInsuranceGrade?: number;
+  pensionInsuranceGrade?: number;
 }
 
-// 社会保険加入判定結果の型定義
-interface InsuranceEligibility {
-  healthInsurance: {
-    eligible: boolean;
-    reason: string;
-    notes?: string;
-  };
-  pensionInsurance: {
-    eligible: boolean;
-    reason: string;
-    notes?: string;
-  };
-  employmentInsurance: {
-    eligible: boolean;
-    reason: string;
-    notes?: string;
-  };
-  specialCases: {
-    multipleWorkplaces: boolean;
-    shortTimeWorker: boolean;
-    socialSecurityAgreement: boolean;
-  };
+// ユーザーに判定結果を追加した拡張インターフェース
+interface UserWithJudgment extends User {
+  judgmentResult?: InsuranceEligibility | null;
 }
 
 @Component({
@@ -86,6 +67,7 @@ interface InsuranceEligibility {
 export class HomeComponent implements OnInit {
   currentUser: UserProfileWithRole | null = null;
   isAdmin = false;
+  private firestore = getFirestore();
 
   // 年次切り替え用
   selectedYear: number = new Date().getFullYear();
@@ -106,26 +88,20 @@ export class HomeComponent implements OnInit {
     { value: 12, display: '12月' },
   ];
 
-  // 社会保険加入判定結果
-  insuranceEligibility: InsuranceEligibility | null = null;
-
   // 現在のユーザーの保険料データ
-  currentUserInsurance: InsuranceFeeData = {
-    year: 0,
-    month: 0,
-    monthDisplay: '',
+  currentUserInsurance: MonthlyInsuranceFee = {
     healthInsuranceEmployee: '0',
     healthInsuranceCompany: '0',
     pensionInsuranceEmployee: '0',
     pensionInsuranceCompany: '0',
-    employmentInsuranceEmployee: '0',
-    employmentInsuranceCompany: '0',
+    careInsuranceEmployee: '0',
+    careInsuranceCompany: '0',
     totalEmployee: '0',
     totalCompany: '0',
   };
 
   // 月別データ（過去6ヶ月分）
-  monthlyData: InsuranceFeeData[] = [];
+  monthlyData: MonthlyInsuranceFee[] = [];
 
   // 全従業員データ
   allEmployeesData: EmployeeInsuranceData[] = [];
@@ -146,6 +122,8 @@ export class HomeComponent implements OnInit {
     'officeNumber',
     'employeeName',
     'attribute',
+    'healthInsuranceGrade',
+    'pensionInsuranceGrade',
     'healthInsuranceEmployee',
     'healthInsuranceCompany',
     'pensionInsuranceEmployee',
@@ -156,7 +134,8 @@ export class HomeComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
-    private userService: UserService
+    private userService: UserService,
+    private insuranceCalculationService: InsuranceCalculationService
   ) {}
 
   async ngOnInit() {
@@ -174,20 +153,35 @@ export class HomeComponent implements OnInit {
       // 同じ会社の従業員データを取得
       const employees = await this.userService.getUsersByCompanyId(companyId);
 
+      // 従業員番号でソート
+      employees.sort((a, b) =>
+        (a.employeeNumber || '').localeCompare(b.employeeNumber || '', undefined, { numeric: true })
+      );
+
+      // 各ユーザーの判定結果を取得
+      await this.loadJudgmentResults(employees as UserWithJudgment[]);
+
       if (this.isAdmin) {
         // 管理者：全従業員のデータを表示
-        this.allEmployeesData = employees.map((employee) =>
-          this.convertToEmployeeInsuranceData(employee)
+        this.allEmployeesData = await Promise.all(
+          (employees as UserWithJudgment[]).map((employee) =>
+            this.convertToEmployeeInsuranceData(employee)
+          )
         );
       } else {
         // 従業員：自分のデータのみ表示
-        const currentUserData = employees.find((emp) => emp.uid === this.currentUser?.uid);
+        const currentUserData = employees.find(
+          (emp) => emp.uid === this.currentUser?.uid
+        ) as UserWithJudgment;
         if (currentUserData) {
-          this.allEmployeesData = [this.convertToEmployeeInsuranceData(currentUserData)];
+          this.allEmployeesData = [await this.convertToEmployeeInsuranceData(currentUserData)];
           // 個人保険料データも更新
-          this.currentUserInsurance = this.createInsuranceFeeData(currentUserData);
-          // 社会保険加入判定を実行
-          this.insuranceEligibility = this.checkEligibility(currentUserData);
+          const employeeData = this.allEmployeesData.find(
+            (e) => e.employeeNumber === currentUserData.employeeNumber
+          );
+          if (employeeData) {
+            this.currentUserInsurance = employeeData.currentMonth;
+          }
           // 月別データを再生成
           this.monthlyData = this.generateMonthlyData(currentUserData);
         }
@@ -206,38 +200,69 @@ export class HomeComponent implements OnInit {
     }
   }
 
+  // 判定結果を読み込むメソッド
+  private async loadJudgmentResults(users: UserWithJudgment[]): Promise<void> {
+    for (const user of users) {
+      const docRef = doc(this.firestore, 'insuranceJudgments', user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        user.judgmentResult = docSnap.data()['judgmentResult'] as InsuranceEligibility;
+      } else {
+        user.judgmentResult = null;
+      }
+    }
+  }
+
   // User型からEmployeeInsuranceData型への変換
-  private convertToEmployeeInsuranceData(user: User): EmployeeInsuranceData {
+  private async convertToEmployeeInsuranceData(
+    user: UserWithJudgment
+  ): Promise<EmployeeInsuranceData> {
+    const judgmentStatus = this.getJudgmentStatus(user);
+    const insuranceFees = await this.insuranceCalculationService.calculateForMonth(
+      user,
+      this.selectedYear,
+      this.selectedMonth
+    );
+
     return {
       employeeNumber: user.employeeNumber || '-',
       officeNumber: user.branchNumber || '-',
       employeeName: `${user.lastName || ''} ${user.firstName || ''}`.trim(),
-      attribute: '-', // TODO: 実際の属性データを設定
-      currentMonth: this.createInsuranceFeeData(user),
+      attribute: judgmentStatus,
+      currentMonth: insuranceFees,
+      healthInsuranceGrade: insuranceFees.healthInsuranceGrade,
+      pensionInsuranceGrade: insuranceFees.pensionInsuranceGrade,
     };
+  }
+
+  // 判定状況を取得
+  private getJudgmentStatus(user: UserWithJudgment): string {
+    if (user.judgmentResult === null || user.judgmentResult === undefined) {
+      return '未実施';
+    }
+
+    const { healthInsurance, pensionInsurance, careInsurance } = user.judgmentResult;
+
+    if (healthInsurance.eligible || pensionInsurance.eligible || careInsurance?.eligible) {
+      return '対象';
+    }
+
+    return '対象外';
   }
 
   // 個人用の月別データ生成（過去6ヶ月分）
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private generateMonthlyData(_user: User): InsuranceFeeData[] {
-    const monthlyData: InsuranceFeeData[] = [];
-    const currentDate = new Date();
+  private generateMonthlyData(_user: User): MonthlyInsuranceFee[] {
+    const monthlyData: MonthlyInsuranceFee[] = [];
 
     for (let i = 0; i < 6; i++) {
-      const targetDate = new Date(this.selectedYear, currentDate.getMonth() - i, 1);
-      const year = targetDate.getFullYear();
-      const month = targetDate.getMonth() + 1;
-
       monthlyData.push({
-        year: year,
-        month: month,
-        monthDisplay: `${year}年${month}月`,
         healthInsuranceEmployee: '0', // TODO: 実際の計算ロジック実装
         healthInsuranceCompany: '0',
         pensionInsuranceEmployee: '0',
         pensionInsuranceCompany: '0',
-        employmentInsuranceEmployee: '0',
-        employmentInsuranceCompany: '0',
+        careInsuranceEmployee: '0',
+        careInsuranceCompany: '0',
         totalEmployee: '0',
         totalCompany: '0',
       });
@@ -248,26 +273,18 @@ export class HomeComponent implements OnInit {
 
   // 管理者用の月別データ生成（全従業員の合計）
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private generateMonthlyDataForAdmin(_employees: User[]): InsuranceFeeData[] {
-    const monthlyData: InsuranceFeeData[] = [];
-    const currentDate = new Date();
+  private generateMonthlyDataForAdmin(_employees: User[]): MonthlyInsuranceFee[] {
+    const monthlyData: MonthlyInsuranceFee[] = [];
 
     for (let i = 0; i < 6; i++) {
-      const targetDate = new Date(this.selectedYear, currentDate.getMonth() - i, 1);
-      const year = targetDate.getFullYear();
-      const month = targetDate.getMonth() + 1;
-
       // TODO: 各従業員の保険料を計算して合計
       monthlyData.push({
-        year: year,
-        month: month,
-        monthDisplay: `${year}年${month}月`,
         healthInsuranceEmployee: '0', // TODO: 全従業員の合計計算
         healthInsuranceCompany: '0',
         pensionInsuranceEmployee: '0',
         pensionInsuranceCompany: '0',
-        employmentInsuranceEmployee: '0',
-        employmentInsuranceCompany: '0',
+        careInsuranceEmployee: '0',
+        careInsuranceCompany: '0',
         totalEmployee: '0',
         totalCompany: '0',
       });
@@ -276,54 +293,27 @@ export class HomeComponent implements OnInit {
     return monthlyData;
   }
 
-  // 保険料データの作成（現在は0、後で計算ロジック実装）
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private createInsuranceFeeData(_user: User): InsuranceFeeData {
-    // TODO: 実際の保険料計算ロジックをここに実装
-    const year = this.selectedYear;
-    const month = this.selectedMonth;
-
-    return {
-      year: year,
-      month: month,
-      monthDisplay: `${year}年${month}月`,
-      healthInsuranceEmployee: '0', // 後で計算ロジック実装
-      healthInsuranceCompany: '0', // 後で計算ロジック実装
-      pensionInsuranceEmployee: '0', // 後で計算ロジック実装
-      pensionInsuranceCompany: '0', // 後で計算ロジック実装
-      employmentInsuranceEmployee: '0',
-      employmentInsuranceCompany: '0',
-      totalEmployee: '0', // 後で計算ロジック実装
-      totalCompany: '0', // 後で計算ロジック実装
-    };
-  }
-
   // 数値をカンマ区切りで表示
   formatNumber(num: string): string {
-    return Number(num).toLocaleString();
+    if (!num || num === '0') return '0';
+    // 小数点以下を考慮しない整数のフォーマット
+    return new Intl.NumberFormat('ja-JP').format(Math.floor(Number(num)));
   }
 
-  // 保険料合計を計算（文字列計算）
   calculateInsuranceTotal(healthEmployee: string, pensionEmployee: string): string {
-    return (BigInt(healthEmployee) + BigInt(pensionEmployee)).toString();
+    return SocialInsuranceCalculator.addAmounts(healthEmployee, pensionEmployee);
   }
 
-  // 会社全体の合計を計算
   getTotalCompanyExpense(): string {
-    let total = 0n;
-    this.allEmployeesData.forEach((employee) => {
-      total += BigInt(employee.currentMonth.totalCompany);
-    });
-    return total.toString();
+    return this.allEmployeesData.reduce((acc, curr) => {
+      return SocialInsuranceCalculator.addAmounts(acc, curr.currentMonth.totalCompany);
+    }, '0');
   }
 
-  // 従業員全体の合計を計算
   getTotalEmployeeDeduction(): string {
-    let total = 0n;
-    this.allEmployeesData.forEach((employee) => {
-      total += BigInt(employee.currentMonth.totalEmployee);
-    });
-    return total.toString();
+    return this.allEmployeesData.reduce((acc, curr) => {
+      return SocialInsuranceCalculator.addAmounts(acc, curr.currentMonth.totalEmployee);
+    }, '0');
   }
 
   // 年次切り替え時の処理
@@ -339,29 +329,42 @@ export class HomeComponent implements OnInit {
   // データ更新処理（年月変更時共通）
   private async refreshData() {
     try {
-      // 会社IDを取得
       const companyId = await this.authService.getCurrentUserCompanyId();
       if (!companyId) return;
 
-      // 同じ会社の従業員データを取得
       const employees = await this.userService.getUsersByCompanyId(companyId);
+
+      // 従業員番号でソート
+      employees.sort((a, b) =>
+        (a.employeeNumber || '').localeCompare(b.employeeNumber || '', undefined, { numeric: true })
+      );
+
+      // 判定結果を再読み込み
+      await this.loadJudgmentResults(employees as UserWithJudgment[]);
 
       if (this.isAdmin) {
         // 管理者：全従業員のデータを表示
-        this.allEmployeesData = employees.map((employee) =>
-          this.convertToEmployeeInsuranceData(employee)
+        this.allEmployeesData = await Promise.all(
+          (employees as UserWithJudgment[]).map((employee) =>
+            this.convertToEmployeeInsuranceData(employee)
+          )
         );
         // 管理者の月別データを再生成
         this.monthlyData = this.generateMonthlyDataForAdmin(employees);
       } else {
         // 従業員：自分のデータのみ表示
-        const currentUserData = employees.find((emp) => emp.uid === this.currentUser?.uid);
+        const currentUserData = employees.find(
+          (emp) => emp.uid === this.currentUser?.uid
+        ) as UserWithJudgment;
         if (currentUserData) {
-          this.allEmployeesData = [this.convertToEmployeeInsuranceData(currentUserData)];
+          this.allEmployeesData = [await this.convertToEmployeeInsuranceData(currentUserData)];
           // 個人保険料データも更新
-          this.currentUserInsurance = this.createInsuranceFeeData(currentUserData);
-          // 社会保険加入判定を実行
-          this.insuranceEligibility = this.checkEligibility(currentUserData);
+          const employeeData = this.allEmployeesData.find(
+            (e) => e.employeeNumber === currentUserData.employeeNumber
+          );
+          if (employeeData) {
+            this.currentUserInsurance = employeeData.currentMonth;
+          }
           // 月別データを再生成
           this.monthlyData = this.generateMonthlyData(currentUserData);
         }
@@ -369,30 +372,5 @@ export class HomeComponent implements OnInit {
     } catch (error) {
       console.error('データ更新エラー:', error);
     }
-  }
-
-  // 社会保険加入判定を実行
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private checkEligibility(_user: User): InsuranceEligibility {
-    // TODO: 実際の判定ロジックをここに実装
-    return {
-      healthInsurance: {
-        eligible: true,
-        reason: '判定不可',
-      },
-      pensionInsurance: {
-        eligible: true,
-        reason: '判定不可',
-      },
-      employmentInsurance: {
-        eligible: true,
-        reason: '判定不可',
-      },
-      specialCases: {
-        multipleWorkplaces: false,
-        shortTimeWorker: false,
-        socialSecurityAgreement: false,
-      },
-    };
   }
 }

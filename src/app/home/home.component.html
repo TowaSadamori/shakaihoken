@@ -152,9 +152,10 @@
 
   <!-- 管理者向け：全従業員保険料表示 -->
   <section *ngIf="isAdmin" class="admin-section">
-    <h2>全従業員の社会保険料</h2>
+    <!-- <h2>全従業員の社会保険料</h2> -->
 
     <!-- 会社負担合計カード -->
+    <!--
     <mat-card class="summary-card">
       <mat-card-header>
         <mat-card-title>会社負担額サマリー</mat-card-title>
@@ -173,10 +174,11 @@
         </div>
         <div class="summary-total">
           <span class="summary-label">会社負担分総額</span>
-          <span class="summary-amount">{{ formatNumber(getTotalCompanyExpense()) }}円</span>
+          <span class.summary-amount">{{ formatNumber(getTotalCompanyExpense()) }}円</span>
         </div>
       </mat-card-content>
     </mat-card>
+    -->
 
     <!-- 全従業員一覧テーブル -->
     <mat-card class="employees-card">
@@ -204,6 +206,20 @@
             <ng-container matColumnDef="attribute">
               <th mat-header-cell *matHeaderCellDef>属性</th>
               <td mat-cell *matCellDef="let employee">{{ employee.attribute }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="healthInsuranceGrade">
+              <th mat-header-cell *matHeaderCellDef>健康保険料/介護保険料 等級</th>
+              <td mat-cell *matCellDef="let employee">
+                {{ employee.healthInsuranceGrade || '-' }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="pensionInsuranceGrade">
+              <th mat-header-cell *matHeaderCellDef>厚生年金保険料 等級</th>
+              <td mat-cell *matCellDef="let employee">
+                {{ employee.pensionInsuranceGrade || '-' }}
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="healthInsuranceEmployee">
