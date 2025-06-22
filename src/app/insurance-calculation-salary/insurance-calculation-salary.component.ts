@@ -309,7 +309,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
 
           // 健康保険料の計算と設定
           const healthGradeInfo = rateData.insuranceTable.find(
-            (g) => g.grade == String(applicableGrade!.healthInsuranceGrade)
+            (g) => parseInt(g.grade.split(' ')[0], 10) == applicableGrade!.healthInsuranceGrade
           );
           if (healthGradeInfo) {
             // 介護保険の有無に関わらず、まず基本的な健康保険料を設定
