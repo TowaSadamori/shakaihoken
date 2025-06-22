@@ -121,7 +121,20 @@ export class HomeComponent implements OnInit {
   ];
 
   // テーブル表示用の列定義（動的に設定）
-  displayedColumnsAdmin: string[] = [];
+  displayedColumnsAdmin: string[] = [
+    'employeeNumber',
+    'officeNumber',
+    'employeeName',
+    'attribute',
+    'healthInsuranceGrade',
+    'pensionInsuranceGrade',
+    'healthInsuranceEmployee',
+    'healthInsuranceCompany',
+    'pensionInsuranceEmployee',
+    'pensionInsuranceCompany',
+    'totalEmployee',
+    'totalCompany',
+  ];
 
   // 月表示用の列定義
   displayedColumnsAdminMonth: string[] = [
@@ -162,6 +175,7 @@ export class HomeComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    this.setDisplayedColumns();
     try {
       // 現在のユーザー情報を取得
       this.currentUser = await this.authService.getCurrentUserProfileWithRole();
@@ -341,7 +355,6 @@ export class HomeComponent implements OnInit {
 
   // 年次切り替え時の処理
   async onYearChange() {
-    this.setDisplayedColumns();
     await this.refreshData();
   }
 
