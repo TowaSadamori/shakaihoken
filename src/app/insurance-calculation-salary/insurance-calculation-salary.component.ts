@@ -32,6 +32,7 @@ interface GradeJudgmentRecord {
   endDate?: Date;
   healthInsuranceGrade: number;
   pensionInsuranceGrade: number;
+  judgmentReason?: string;
 }
 
 // 保険料率・テーブルのインターフェース
@@ -58,14 +59,14 @@ interface InsuranceRateData {
 interface MonthlyCalculationResult {
   month: number;
   year: number;
-  healthInsuranceGrade: number | string;
-  healthInsuranceFeeEmployee: number | string;
-  healthInsuranceFeeCompany: number | string;
-  careInsuranceFeeEmployee: number | string;
-  careInsuranceFeeCompany: number | string;
-  pensionInsuranceGrade: number | string;
-  pensionInsuranceFeeEmployee: number | string;
-  pensionInsuranceFeeCompany: number | string;
+  healthInsuranceGrade: number | string | null;
+  healthInsuranceFeeEmployee: number | null;
+  healthInsuranceFeeCompany: number | null;
+  careInsuranceFeeEmployee: number | null;
+  careInsuranceFeeCompany: number | null;
+  pensionInsuranceGrade: number | string | null;
+  pensionInsuranceFeeEmployee: number | null;
+  pensionInsuranceFeeCompany: number | null;
 }
 
 @Component({
@@ -216,12 +217,12 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
         year: year,
         healthInsuranceGrade: this.targetYear ? '判定中...' : '年度未選択',
         pensionInsuranceGrade: this.targetYear ? '判定中...' : '年度未選択',
-        healthInsuranceFeeEmployee: '-',
-        healthInsuranceFeeCompany: '-',
-        careInsuranceFeeEmployee: '-',
-        careInsuranceFeeCompany: '-',
-        pensionInsuranceFeeEmployee: '-',
-        pensionInsuranceFeeCompany: '-',
+        healthInsuranceFeeEmployee: null,
+        healthInsuranceFeeCompany: null,
+        careInsuranceFeeEmployee: null,
+        careInsuranceFeeCompany: null,
+        pensionInsuranceFeeEmployee: null,
+        pensionInsuranceFeeCompany: null,
       };
     });
 
@@ -288,61 +289,79 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
         const result: MonthlyCalculationResult = {
           month,
           year,
-          healthInsuranceGrade: applicableGrade ? applicableGrade.healthInsuranceGrade : '履歴なし',
-          pensionInsuranceGrade: applicableGrade
-            ? applicableGrade.pensionInsuranceGrade
-            : '履歴なし',
-          healthInsuranceFeeEmployee: '-',
-          healthInsuranceFeeCompany: '-',
-          careInsuranceFeeEmployee: '-',
-          careInsuranceFeeCompany: '-',
-          pensionInsuranceFeeEmployee: '-',
-          pensionInsuranceFeeCompany: '-',
+          healthInsuranceGrade: '-',
+          pensionInsuranceGrade: '-',
+          healthInsuranceFeeEmployee: null,
+          healthInsuranceFeeCompany: null,
+          careInsuranceFeeEmployee: null,
+          careInsuranceFeeCompany: null,
+          pensionInsuranceFeeEmployee: null,
+          pensionInsuranceFeeCompany: null,
         };
 
-        if (applicableGrade && this.employeeInfo) {
-          // 介護保険の対象か判定
-          const ageOnFirstDayOfMonth = this.calculateAgeAtDate(
-            new Date(this.employeeInfo.birthDate),
-            firstDayOfMonth
-          );
-          const isCareInsuranceApplicable = ageOnFirstDayOfMonth >= 40 && ageOnFirstDayOfMonth < 65;
+        if (applicableGrade) {
+          // 産休・育休の判定
+          if (applicableGrade.judgmentReason === 'maternity_leave') {
+            result.healthInsuranceGrade = '産休';
+            result.pensionInsuranceGrade = '産休';
+          } else if (applicableGrade.judgmentReason === 'childcare_leave') {
+            result.healthInsuranceGrade = '育休';
+            result.pensionInsuranceGrade = '育休';
+          } else {
+            // 通常の等級を設定
+            result.healthInsuranceGrade = applicableGrade.healthInsuranceGrade;
+            result.pensionInsuranceGrade = applicableGrade.pensionInsuranceGrade;
 
-          // 健康保険料の計算と設定
-          const healthGradeInfo = rateData.insuranceTable.find(
-            (g) => parseInt(g.grade.split(' ')[0], 10) == applicableGrade!.healthInsuranceGrade
-          );
-          if (healthGradeInfo) {
-            // 介護保険の有無に関わらず、まず基本的な健康保険料を設定
-            result.healthInsuranceFeeEmployee = this.formatCurrency(healthGradeInfo.nonNursingHalf);
-            result.healthInsuranceFeeCompany = this.formatCurrency(healthGradeInfo.nonNursingHalf);
-
-            // 介護保険対象者の場合のみ、介護保険料を加算（または健康保険料を上書き）
-            if (isCareInsuranceApplicable) {
-              // 注意: rateDataのnursingHalfは「介護保険料込みの半額」を意味すると想定
-              // そのため、健康保険料＋介護保険料の合計額で健康保険料を上書きする
-              result.healthInsuranceFeeEmployee = this.formatCurrency(healthGradeInfo.nursingHalf);
-              result.healthInsuranceFeeCompany = this.formatCurrency(healthGradeInfo.nursingHalf);
-
-              // 介護保険料の内訳を計算して設定
-              const careFee = SocialInsuranceCalculator.subtract(
-                healthGradeInfo.nursingHalf,
-                healthGradeInfo.nonNursingHalf
+            if (this.employeeInfo) {
+              // 保険料計算
+              const ageOnFirstDayOfMonth = this.calculateAgeAtDate(
+                new Date(this.employeeInfo.birthDate),
+                firstDayOfMonth
               );
-              result.careInsuranceFeeEmployee = this.formatCurrency(careFee);
-              result.careInsuranceFeeCompany = this.formatCurrency(careFee);
+              const isCareInsuranceApplicable =
+                ageOnFirstDayOfMonth >= 40 && ageOnFirstDayOfMonth < 65;
+
+              // 健康保険料
+              const healthGradeInfo = rateData.insuranceTable.find(
+                (g) => parseInt(g.grade.split(' ')[0], 10) == applicableGrade!.healthInsuranceGrade
+              );
+              if (healthGradeInfo) {
+                const nonNursingHalf = this.parseCurrency(healthGradeInfo.nonNursingHalf);
+                result.healthInsuranceFeeEmployee = nonNursingHalf;
+                result.healthInsuranceFeeCompany = nonNursingHalf;
+
+                if (isCareInsuranceApplicable) {
+                  const nursingHalf = this.parseCurrency(healthGradeInfo.nursingHalf);
+                  result.healthInsuranceFeeEmployee = nursingHalf;
+                  result.healthInsuranceFeeCompany = nursingHalf;
+
+                  const careFee = SocialInsuranceCalculator.subtract(
+                    healthGradeInfo.nursingHalf,
+                    healthGradeInfo.nonNursingHalf
+                  );
+                  const parsedCareFee = this.parseCurrency(careFee);
+                  result.careInsuranceFeeEmployee = parsedCareFee;
+                  result.careInsuranceFeeCompany = parsedCareFee;
+                }
+              }
+
+              // 厚生年金保険料
+              const pensionGradeInfo = rateData.pensionTable.find(
+                (g) => g.grade == applicableGrade!.pensionInsuranceGrade
+              );
+              if (pensionGradeInfo) {
+                const pensionHalf = this.parseCurrency(pensionGradeInfo.pensionHalf);
+                result.pensionInsuranceFeeEmployee = pensionHalf;
+                result.pensionInsuranceFeeCompany = pensionHalf;
+              }
             }
           }
-
-          // 厚生年金保険料の計算と設定
-          const pensionGradeInfo = rateData.pensionTable.find(
-            (g) => g.grade == applicableGrade!.pensionInsuranceGrade
-          );
-          if (pensionGradeInfo) {
-            result.pensionInsuranceFeeEmployee = this.formatCurrency(pensionGradeInfo.pensionHalf);
-            result.pensionInsuranceFeeCompany = this.formatCurrency(pensionGradeInfo.pensionHalf);
-          }
+        } else {
+          // 適用される等級がない場合
+          result.healthInsuranceGrade = '履歴なし';
+          result.pensionInsuranceGrade = '履歴なし';
         }
+
         finalResults.push(result);
       }
       this.monthlyResults = finalResults;
@@ -368,6 +387,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
         endDate: data['endDate'] ? (data['endDate'] as Timestamp).toDate() : undefined,
         healthInsuranceGrade: data['healthInsuranceGrade'],
         pensionInsuranceGrade: data['pensionInsuranceGrade'],
+        judgmentReason: data['judgmentReason'] as string,
       });
     });
     return history;
@@ -403,11 +423,34 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
   }
 
   private formatCurrency(value: string | number): string {
-    if (typeof value === 'number') {
-      value = String(value);
-    }
     if (!value || value === '0' || value === '-') return '-';
     return new Intl.NumberFormat('ja-JP').format(Number(value));
+  }
+
+  private parseCurrency(value: string | number | null): number | null {
+    if (value === null || value === '-') {
+      return null;
+    }
+    if (typeof value === 'number') {
+      return value;
+    }
+    // Remove commas before parsing
+    const numericString = String(value).replace(/,/g, '');
+    const num = parseFloat(numericString);
+    return isNaN(num) ? null : num;
+  }
+
+  private parseGrade(value: string | number | null): number | null {
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === 'number') {
+      return value;
+    }
+    // 文字列の場合、数値に変換を試みる
+    const num = parseInt(String(value), 10);
+    // 変換できない場合（"産休"など）はnullを返す
+    return isNaN(num) ? null : num;
   }
 
   async saveMonthlyResults(): Promise<void> {
@@ -421,17 +464,55 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     const docPath = `companies/${companyId}/employees/${employeeNumber}/salary_calculation_results/${this.targetYear}`;
     const docRef = doc(this.firestore, docPath);
 
+    // デバッグ用：保存前のデータを確認
+    console.log('保存前のmonthlyResults:', this.monthlyResults);
+
+    // Firestoreに保存するためにデータを整形
+    const resultsForDb = this.monthlyResults.map((r) => {
+      // 値をDB保存用の文字列に変換する内部関数
+      const formatForDb = (value: string | number | null | undefined): string => {
+        if (value === null || typeof value === 'undefined' || value === '-') {
+          return '-';
+        }
+        // 数値の場合は、カンマ区切りに変換
+        if (typeof value === 'number') {
+          return new Intl.NumberFormat('ja-JP').format(value);
+        }
+        // それ以外（「産休」「35」など）はそのまま文字列に
+        return String(value);
+      };
+
+      return {
+        month: r.month,
+        year: r.year,
+        healthInsuranceGrade: formatForDb(r.healthInsuranceGrade),
+        pensionInsuranceGrade: formatForDb(r.pensionInsuranceGrade),
+        healthInsuranceFeeEmployee: formatForDb(r.healthInsuranceFeeEmployee),
+        healthInsuranceFeeCompany: formatForDb(r.healthInsuranceFeeCompany),
+        careInsuranceFeeEmployee: formatForDb(r.careInsuranceFeeEmployee),
+        careInsuranceFeeCompany: formatForDb(r.careInsuranceFeeCompany),
+        pensionInsuranceFeeEmployee: formatForDb(r.pensionInsuranceFeeEmployee),
+        pensionInsuranceFeeCompany: formatForDb(r.pensionInsuranceFeeCompany),
+      };
+    });
+
+    // デバッグ用：保存用に変換したデータを確認
+    console.log('保存用に変換したresultsForDb:', resultsForDb);
+
     const dataToSave = {
       updatedAt: new Date(),
-      results: this.monthlyResults.map((r) => ({ ...r })), // 念のためシャローコピー
+      results: resultsForDb,
     };
 
     try {
-      await setDoc(docRef, dataToSave, { merge: true });
+      console.log('Firestoreに保存中...', docPath);
+      await setDoc(docRef, dataToSave);
+      console.log('Firestoreへの保存が完了しました');
       // 保存成功のフィードバックをユーザーに表示
       alert(`${this.targetYear}年度の計算結果を保存しました。`);
     } catch (error) {
       console.error('計算結果の保存に失敗しました:', error);
+      console.error('保存しようとしたデータ:', dataToSave);
       // 保存失敗のフィードバックをユーザーに表示
       alert('エラーが発生しました。計算結果の保存に失敗しました。');
     } finally {
