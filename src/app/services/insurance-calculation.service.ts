@@ -85,18 +85,21 @@ export class InsuranceCalculationService {
       }
 
       // FirestoreのデータからMonthlyInsuranceFeeを組み立てる
-      const healthEmployee = monthData['healthInsuranceFeeEmployee'] || '0';
-      const healthCompany = monthData['healthInsuranceFeeCompany'] || '0';
+      // カンマ付き文字列を数値に変換可能な形式にサニタイズする
+      const sanitize = (val: string | undefined) => (val || '0').replace(/,/g, '');
+
+      const healthEmployee = sanitize(monthData['healthInsuranceFeeEmployee']);
+      const healthCompany = sanitize(monthData['healthInsuranceFeeCompany']);
       const careEmployee =
         monthData['careInsuranceFeeEmployee'] === '-'
           ? '0'
-          : monthData['careInsuranceFeeEmployee'] || '0';
+          : sanitize(monthData['careInsuranceFeeEmployee']);
       const careCompany =
         monthData['careInsuranceFeeCompany'] === '-'
           ? '0'
-          : monthData['careInsuranceFeeCompany'] || '0';
-      const pensionEmployee = monthData['pensionInsuranceFeeEmployee'] || '0';
-      const pensionCompany = monthData['pensionInsuranceFeeCompany'] || '0';
+          : sanitize(monthData['careInsuranceFeeCompany']);
+      const pensionEmployee = sanitize(monthData['pensionInsuranceFeeEmployee']);
+      const pensionCompany = sanitize(monthData['pensionInsuranceFeeCompany']);
 
       const healthAndCareEmployee = SocialInsuranceCalculator.addAmounts(
         healthEmployee,
