@@ -33,7 +33,11 @@ export class EmployeeSalaryBonusComponent implements OnInit {
 
   constructor(private router: Router) {}
 
-  async ngOnInit() {
+  ngOnInit() {
+    this.fetchEmployees();
+  }
+
+  async fetchEmployees() {
     const db = getFirestore();
     const auth = getAuth();
     const user = auth.currentUser;
@@ -84,7 +88,7 @@ export class EmployeeSalaryBonusComponent implements OnInit {
   }
 
   goHome() {
-    this.router.navigate(['/']);
+    this.router.navigate(['/employee-procedures']);
   }
 
   navigateToGradeJudgment(employeeNumber: string) {
