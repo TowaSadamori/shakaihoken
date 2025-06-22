@@ -10,30 +10,6 @@
   </div>
 </div>
 <div class="employee-status-list">
-  <div class="status-header">
-    <h3>従業員の社会保険料状況</h3>
-    <div class="period-selector">
-      <select class="year-select">
-        <option value="2025">2025年</option>
-        <option value="2024">2024年</option>
-        <option value="2023">2023年</option>
-      </select>
-      <select class="month-select">
-        <option value="1">1月</option>
-        <option value="2">2月</option>
-        <option value="3">3月</option>
-        <option value="4">4月</option>
-        <option value="5">5月</option>
-        <option value="6">6月</option>
-        <option value="7">7月</option>
-        <option value="8">8月</option>
-        <option value="9">9月</option>
-        <option value="10">10月</option>
-        <option value="11">11月</option>
-        <option value="12">12月</option>
-      </select>
-    </div>
-  </div>
   <table class="status-table">
     <thead>
       <tr>
@@ -48,10 +24,8 @@
         <th>社会保険判定ボタン</th>
         <!-- <th>カンパニーID</th> -->
         <th>判定状況</th>
-        <th>等級（健康保険料・介護保険料）</th>
         <th>健康保険</th>
         <th>介護保険</th>
-        <th>等級（厚生年金保険料）</th>
         <th>厚生年金保険</th>
       </tr>
     </thead>
@@ -78,10 +52,8 @@
         </td>
         <!-- <td>{{ user.companyId }}</td> -->
         <td>{{ getJudgmentStatus(user) }}</td>
-        <td>-</td>
         <td>{{ getHealthInsuranceStatus(user) }}</td>
         <td>{{ getCareInsuranceStatus(user) }}</td>
-        <td>-</td>
         <td>{{ getPensionInsuranceStatus(user) }}</td>
       </tr>
     </tbody>
