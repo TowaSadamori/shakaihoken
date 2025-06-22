@@ -15,107 +15,161 @@
     <!-- 事業所基本情報関連 -->
     <div class="button-section">
       <h3>事業所基本情報</h3>
-      <button
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/new-application-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee
+            ? ['/employer-procedures/new-application-notification', selectedOfficeId]
+            : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         健康保険・厚生年金保険 新規適用届
-      </button>
-      <button
+      </a>
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/abolition-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee ? ['/employer-procedures/abolition-notification', selectedOfficeId] : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         健康保険・厚生年金保険 適用事業所全喪届
-      </button>
-      <button
+      </a>
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/voluntary-application-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee
+            ? ['/employer-procedures/voluntary-application-notification', selectedOfficeId]
+            : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         健康保険・厚生年金保険 任意適用申請書／任意適用取消申請書
-      </button>
-      <button
+      </a>
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/name-address-change-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee
+            ? ['/employer-procedures/name-address-change-notification', selectedOfficeId]
+            : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         健康保険・厚生年金保険 適用事業所 名称／所在地変更（訂正）届
-      </button>
-      <button
+      </a>
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/representative-change-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee
+            ? ['/employer-procedures/representative-change-notification', selectedOfficeId]
+            : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         健康保険・厚生年金保険 事業所関係変更（訂正）届
-      </button>
+      </a>
     </div>
 
     <!-- 保険料関連 -->
     <div class="button-section">
       <h3>保険料</h3>
-      <button
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/account-transfer-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee
+            ? ['/employer-procedures/account-transfer-notification', selectedOfficeId]
+            : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         健康保険・厚生年金保険 保険料口座振替納付（変更）申出書
-      </button>
+      </a>
     </div>
 
     <!-- 報酬関連 -->
     <div class="button-section">
       <h3>報酬関連</h3>
-      <button
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/bonus-payment-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee ? ['/employer-procedures/bonus-payment-notification', selectedOfficeId] : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         被保険者賞与支払届（70歳以上被用者賞与支払届）
-      </button>
-      <button
+      </a>
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/no-bonus-report', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee ? ['/employer-procedures/no-bonus-report', selectedOfficeId] : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         賞与不支給報告書
-      </button>
-      <button
+      </a>
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/standard-remuneration-report', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee
+            ? ['/employer-procedures/standard-remuneration-report', selectedOfficeId]
+            : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         算定基礎届
-      </button>
+      </a>
       <!-- [routerLink]="['/employer-procedures/wage-summary-report', selectedOfficeId]" -->
-      <button
+      <a
         mat-raised-button
         color="primary"
         class="procedure-btn"
-        [routerLink]="['/employer-procedures/monthly-change-notification', selectedOfficeId]"
-        [disabled]="!selectedOfficeId"
+        [routerLink]="
+          !isEmployee
+            ? ['/employer-procedures/monthly-change-notification', selectedOfficeId]
+            : null
+        "
+        [class.disabled]="isEmployee || !selectedOfficeId"
+        [attr.aria-disabled]="isEmployee || !selectedOfficeId"
+        [tabindex]="isEmployee || !selectedOfficeId ? -1 : 0"
       >
         月額変更届（随時改定）
-      </button>
+      </a>
     </div>
   </div>
 </div>

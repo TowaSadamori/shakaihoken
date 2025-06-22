@@ -2,12 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { getFirestore, collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { AuthService } from '../services/auth.service';
+import { UserService, User } from '../services/user.service';
 
-interface Employee {
-  employeeNumber: string;
-  name: string;
-  officeNumber: string;
+interface Employee extends User {
   officeAddress: string;
 }
 
@@ -16,7 +14,7 @@ interface Employee {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './employee-salary-bonus.component.html',
-  styleUrl: './employee-salary-bonus.component.scss',
+  styleUrls: ['./employee-salary-bonus.component.scss'],
 })
 export class EmployeeSalaryBonusComponent implements OnInit {
   displayedColumns = [
@@ -31,60 +29,61 @@ export class EmployeeSalaryBonusComponent implements OnInit {
 
   employees: Employee[] = [];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    private userService: UserService
+  ) {}
 
-  ngOnInit() {
-    this.fetchEmployees();
+  async ngOnInit() {
+    await this.fetchEmployees();
   }
 
   async fetchEmployees() {
     const db = getFirestore();
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) return;
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    if (!userDoc.exists()) return;
-    const userData = userDoc.data();
-    const companyId = userData['companyId'];
-    if (!companyId) return;
-
-    // usersコレクションからcompanyIdが一致する従業員を取得
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('companyId', '==', companyId));
-    const querySnapshot = await getDocs(q);
-    const officeCache: Record<string, string> = {};
-    const employees: Employee[] = [];
-    for (const docSnap of querySnapshot.docs) {
-      const data = docSnap.data();
-      const officeNumber = data['branchNumber'] ? String(data['branchNumber']) : '';
-      let officeAddress = '';
-      if (officeNumber) {
-        if (officeCache[officeNumber]) {
-          officeAddress = officeCache[officeNumber];
-        } else {
-          // officesコレクションからaddressを取得
-          const officeQuery = query(
-            collection(db, 'offices'),
-            where('branchNumber', '==', Number(officeNumber)),
-            where('companyId', '==', companyId)
-          );
-          const officeSnapshot = await getDocs(officeQuery);
-          if (!officeSnapshot.empty) {
-            const officeData = officeSnapshot.docs[0].data();
-            officeAddress = officeData['addressPrefecture'] || '';
-            officeCache[officeNumber] = officeAddress;
-          }
-        }
-      }
-      employees.push({
-        employeeNumber: data['employeeNumber'] || '',
-        name: (data['lastName'] || '') + ' ' + (data['firstName'] || ''),
-        officeNumber: officeNumber,
-        officeAddress: officeAddress,
-      });
+    const currentUser = await this.authService.getCurrentUserProfileWithRole();
+    if (!currentUser) {
+      this.employees = [];
+      return;
     }
-    // 従業員番号で昇順ソート
-    this.employees = employees.sort((a, b) => (a.employeeNumber > b.employeeNumber ? 1 : -1));
+
+    const companyId = await this.authService.getCurrentUserCompanyId();
+    if (!companyId) {
+      this.employees = [];
+      return;
+    }
+
+    if (currentUser.role === 'admin') {
+      const usersSnapshot = await getDocs(
+        query(collection(db, 'users'), where('companyId', '==', companyId))
+      );
+      const officePromises = usersSnapshot.docs.map(async (userDoc) => {
+        const user = userDoc.data() as User;
+        const officeSnap = await getDoc(
+          doc(db, `companies/${companyId}/offices/${user.branchNumber}`)
+        );
+        return {
+          ...user,
+          officeAddress: officeSnap.exists() ? officeSnap.data()['addressPrefecture'] : 'N/A',
+        };
+      });
+      this.employees = (await Promise.all(officePromises)) as Employee[];
+    } else {
+      const user = await this.userService.getUserByUid(currentUser.uid);
+      if (user) {
+        const officeSnap = await getDoc(
+          doc(db, `companies/${companyId}/offices/${user.branchNumber}`)
+        );
+        this.employees = [
+          {
+            ...user,
+            officeAddress: officeSnap.exists() ? officeSnap.data()['addressPrefecture'] : 'N/A',
+          },
+        ];
+      } else {
+        this.employees = [];
+      }
+    }
   }
 
   goHome() {

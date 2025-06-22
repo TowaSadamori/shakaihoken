@@ -3,6 +3,7 @@ import { RouterModule, Router } from '@angular/router';
 import { MatSelectModule } from '@angular/material/select';
 import { OfficeService } from '../services/office.service';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-employer-procedures-placeholder',
@@ -14,13 +15,18 @@ import { CommonModule } from '@angular/common';
 export class EmployerProceduresPlaceholderComponent implements OnInit {
   offices: { id: string; [key: string]: unknown }[] = [];
   selectedOfficeId: string | null = null;
+  isEmployee = false;
 
   constructor(
     private router: Router,
-    private officeService: OfficeService
+    private officeService: OfficeService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit(): Promise<void> {
+    const user = await this.authService.getCurrentUserProfileWithRole();
+    this.isEmployee = user?.role === 'employee_user';
+
     this.offices = await this.officeService.getOfficesForCurrentUser();
     if (this.offices.length > 0) {
       this.selectedOfficeId = this.offices[0].id;

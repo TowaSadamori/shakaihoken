@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { UserService, User } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -17,19 +17,38 @@ export class InsuredPersonFormComponent implements OnInit {
 
   constructor(
     private userService: UserService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {}
 
   async ngOnInit() {
-    this.companyId = await this.authService.getCurrentUserCompanyId();
-    if (this.companyId) {
-      const users = await this.userService.getUsersByCompanyId(this.companyId);
-      // employeeNumber順に昇順ソート
-      this.users = users.sort((a, b) => {
-        const numA = Number(a.employeeNumber) || 0;
-        const numB = Number(b.employeeNumber) || 0;
-        return numA - numB;
-      });
+    const companyId = await this.authService.getCurrentUserCompanyId();
+    if (!companyId) return;
+
+    const currentUser = await this.authService.getCurrentUserProfileWithRole();
+    if (!currentUser) return;
+
+    if (currentUser.role === 'admin') {
+      const allUsers = await this.userService.getAllUsers();
+      this.users = allUsers
+        .filter((user) => user.companyId === companyId)
+        .sort((a, b) =>
+          (a.employeeNumber || '').localeCompare(b.employeeNumber || '', undefined, {
+            numeric: true,
+          })
+        );
+    } else {
+      const user = await this.userService.getUserByUid(currentUser.uid);
+      if (user) {
+        this.users = [user];
+      } else {
+        this.users = [];
+      }
     }
+  }
+
+  // 従業員本人の詳細ページへ
+  goToInsuredPersonDetail(uid: string) {
+    this.router.navigate(['/employee-procedures/insured-person-detail', uid]);
   }
 }
