@@ -120,7 +120,11 @@ export class HomeComponent implements OnInit {
     'totalCompany',
   ];
 
-  displayedColumnsAdmin: string[] = [
+  // テーブル表示用の列定義（動的に設定）
+  displayedColumnsAdmin: string[] = [];
+
+  // 月表示用の列定義
+  displayedColumnsAdminMonth: string[] = [
     'employeeNumber',
     'officeNumber',
     'employeeName',
@@ -133,6 +137,19 @@ export class HomeComponent implements OnInit {
     'pensionInsuranceCompany',
     'totalEmployee',
     'totalCompany',
+  ];
+
+  // 賞与表示用の列定義
+  displayedColumnsAdminBonus: string[] = [
+    'employeeNumber',
+    'employeeName',
+    'paymentAmount',
+    'standardBonusAmount',
+    'healthInsuranceRate',
+    'healthInsuranceEmployee',
+    'pensionInsuranceRate',
+    'pensionInsuranceEmployee',
+    'totalEmployee',
   ];
 
   constructor(
@@ -321,12 +338,23 @@ export class HomeComponent implements OnInit {
 
   // 年次切り替え時の処理
   async onYearChange() {
+    this.setDisplayedColumns();
     await this.refreshData();
   }
 
   // 月選択変更時の処理
   async onMonthChange() {
+    this.setDisplayedColumns();
     await this.refreshData();
+  }
+
+  // 表示する列を動的に設定するメソッド
+  private setDisplayedColumns() {
+    if (this.selectedMonth >= 13) {
+      this.displayedColumnsAdmin = this.displayedColumnsAdminBonus;
+    } else {
+      this.displayedColumnsAdmin = this.displayedColumnsAdminMonth;
+    }
   }
 
   // データ更新処理（年月変更時共通）

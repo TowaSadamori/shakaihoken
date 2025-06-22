@@ -166,6 +166,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     this.bonusDataList = [];
 
     try {
+      // 1. 賞与データを取得・計算
       const results = await this.bonusCalculationService.getCalculatedBonusHistory(
         this.employeeId,
         this.targetYear,
@@ -173,16 +174,25 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       );
 
       this.bonusDataList = results;
-      this.updateLimitNotes();
-      this.createPivotedTable(); // ピボットテーブルを生成
 
+      // 2. 計算結果をFirestoreに保存
       if (results.length > 0) {
-        this.importStatusMessage = `✅ ${results.length}件の賞与データを取得・計算しました。`;
+        await this.bonusCalculationService.saveBonusCalculationResults(
+          results,
+          this.employeeId,
+          this.targetYear,
+          this.employeeInfo.companyId
+        );
+        this.importStatusMessage = `✅ ${results.length}件の賞与データを取得・計算し、保存しました。`;
       } else {
         this.importStatusMessage = '対象年度の賞与データはありません。';
       }
+
+      // 3. 画面表示を更新
+      this.updateLimitNotes();
+      this.createPivotedTable();
     } catch (error) {
-      console.error('賞与データの取得・計算エラー:', error);
+      console.error('賞与データの取得・計算・保存エラー:', error);
       this.errorMessage = '賞与データの処理中にエラーが発生しました。';
     } finally {
       this.isLoading = false;

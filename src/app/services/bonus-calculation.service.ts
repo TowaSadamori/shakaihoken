@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { Decimal } from 'decimal.js';
 
@@ -61,6 +61,46 @@ export class BonusCalculationService {
 
   constructor() {
     // Firebase初期化は既にapp.config.tsで行われている
+  }
+
+  /**
+   * 計算済みの賞与データをFirestoreに保存する
+   * @param results 計算結果データ
+   * @param employeeNumber 従業員番号
+   * @param fiscalYear 対象年度
+   * @param companyId 会社ID
+   */
+  public async saveBonusCalculationResults(
+    results: CalculatedBonusHistoryItem[],
+    employeeNumber: string,
+    fiscalYear: bigint,
+    companyId: string
+  ): Promise<void> {
+    if (!companyId || !employeeNumber) {
+      console.error('会社IDまたは従業員番号がありません。保存を中止します。');
+      return;
+    }
+
+    const docPath = `companies/${companyId}/employees/${employeeNumber}/bonus_calculation_results/${fiscalYear}`;
+    const docRef = doc(this.firestore, docPath);
+
+    // BigIntを文字列に変換してFirestoreに保存できる形式にする
+    const dataToSave = {
+      updatedAt: new Date(),
+      results: JSON.parse(
+        JSON.stringify(results, (_key, value) =>
+          typeof value === 'bigint' ? value.toString() : value
+        )
+      ),
+    };
+
+    try {
+      await setDoc(docRef, dataToSave, { merge: true });
+      console.log(`賞与計算結果を保存しました: ${docPath}`);
+    } catch (error) {
+      console.error('賞与計算結果の保存に失敗しました:', error);
+      throw error; // エラーを呼び出し元に再スローする
+    }
   }
 
   /**
