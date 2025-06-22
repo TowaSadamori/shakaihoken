@@ -735,6 +735,62 @@ export class RegularDeterminationAddComponent implements OnInit {
     }
   }
 
+  async judgeAndSave(): Promise<void> {
+    // まず等級を計算
+    await this.calculateGrade();
+
+    if (!this.judgmentResult) {
+      return;
+    }
+
+    // 保存処理を実行（ページ遷移なし）
+    if (!this.employeeId || !this.isFormValid()) {
+      this.errorMessage = '保存に必要な情報が不足しています。';
+      return;
+    }
+
+    this.isSaving = true;
+    this.errorMessage = '';
+
+    const docId = this.savedGradeData?.id || `${this.employeeId}_regular`;
+
+    const gradeData: SavedGradeData = {
+      id: docId,
+      employeeId: this.employeeId,
+      targetYear: this.targetYear,
+      monthlyPayments: this.monthlyPayments,
+      averageAmount: this.averageAmount,
+      applicableYear: this.applicableYear,
+      applicableMonth: this.applicableMonth,
+      judgmentResult: this.judgmentResult,
+      createdAt: this.savedGradeData?.createdAt || new Date(),
+      updatedAt: new Date(),
+      judgmentType: 'regular',
+    };
+
+    if (this.endYear && this.endMonth) {
+      gradeData.endYear = this.endYear;
+      gradeData.endMonth = this.endMonth;
+    }
+
+    try {
+      const docRef = doc(this.firestore, 'employee_grades', docId);
+      const dataForFirestore = this.deepConvertBigIntToString(gradeData);
+      await setDoc(docRef, dataForFirestore);
+
+      await this.saveToGradeJudgmentHistory(gradeData);
+
+      // 保存成功後、コンポーネントの状態を更新
+      this.savedGradeData = gradeData;
+      alert('定時決定データが正常に保存されました。');
+    } catch (error) {
+      console.error('保存エラー:', error);
+      this.errorMessage = `データの保存中にエラーが発生しました: ${error}`;
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
   private findGradeByAmountFromStandardTable(amount: string): GradeJudgmentResult {
     // 健康保険の等級を決定
     const healthGrade = this.findGradeFromHealthInsuranceTable(amount);
@@ -911,54 +967,6 @@ export class RegularDeterminationAddComponent implements OnInit {
     }
   }
 
-  async saveGradeData(): Promise<void> {
-    if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
-      this.errorMessage = '保存に必要な情報が不足しています。';
-      return;
-    }
-    this.isSaving = true;
-    this.errorMessage = '';
-
-    const docId = this.savedGradeData?.id || `${this.employeeId}_regular`;
-
-    const gradeData: SavedGradeData = {
-      id: docId,
-      employeeId: this.employeeId,
-      targetYear: this.targetYear,
-      monthlyPayments: this.monthlyPayments,
-      averageAmount: this.averageAmount,
-      applicableYear: this.applicableYear,
-      applicableMonth: this.applicableMonth,
-      judgmentResult: this.judgmentResult,
-      createdAt: this.savedGradeData?.createdAt || new Date(),
-      updatedAt: new Date(),
-      judgmentType: 'regular',
-    };
-
-    if (this.endYear && this.endMonth) {
-      gradeData.endYear = this.endYear;
-      gradeData.endMonth = this.endMonth;
-    }
-
-    try {
-      const docRef = doc(this.firestore, 'employee_grades', docId);
-      const dataForFirestore = this.deepConvertBigIntToString(gradeData);
-      await setDoc(docRef, dataForFirestore);
-
-      await this.saveToGradeJudgmentHistory(gradeData);
-
-      // 保存成功後、コンポーネントの状態を更新
-      this.savedGradeData = gradeData;
-      alert('定時決定データが保存されました');
-      this.router.navigate(['/grade-judgment', this.employeeId]);
-    } catch (error) {
-      console.error('保存エラー:', error);
-      this.errorMessage = `データの保存中にエラーが発生しました: ${error}`;
-    } finally {
-      this.isSaving = false;
-    }
-  }
-
   async saveToGradeJudgmentHistory(gradeData: SavedGradeData): Promise<void> {
     if (!this.employeeId) {
       return;
@@ -978,7 +986,6 @@ export class RegularDeterminationAddComponent implements OnInit {
         effectiveDate: effectiveDate,
         healthInsuranceGrade: gradeData.judgmentResult.healthInsuranceGrade,
         pensionInsuranceGrade: gradeData.judgmentResult.pensionInsuranceGrade,
-        careInsuranceGrade: gradeData.judgmentResult.careInsuranceGrade,
         standardMonthlyAmount: gradeData.averageAmount,
         reason: '定時決定による等級判定',
         inputData: {
@@ -989,6 +996,11 @@ export class RegularDeterminationAddComponent implements OnInit {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+
+      // careInsuranceGradeは値がある場合のみ設定
+      if (gradeData.judgmentResult.careInsuranceGrade !== undefined) {
+        historyRecord['careInsuranceGrade'] = gradeData.judgmentResult.careInsuranceGrade;
+      }
 
       // endDateは値がある場合のみ設定
       if (this.endYear && this.endMonth) {
@@ -1115,7 +1127,7 @@ export class RegularDeterminationAddComponent implements OnInit {
    * @returns BigIntが文字列に変換された新しいオブジェクト
    */
   private deepConvertBigIntToString(obj: unknown): unknown {
-    if (obj === null || typeof obj !== 'object') {
+    if (obj === null || obj === undefined || typeof obj !== 'object') {
       return obj;
     }
 
@@ -1131,6 +1143,10 @@ export class RegularDeterminationAddComponent implements OnInit {
     for (const key in obj as Record<string, unknown>) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const value = (obj as Record<string, unknown>)[key];
+        // undefinedの値は除外する
+        if (value === undefined) {
+          continue;
+        }
         if (typeof value === 'bigint') {
           newObj[key] = value.toString();
         } else if (typeof value === 'object') {

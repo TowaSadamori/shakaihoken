@@ -172,10 +172,10 @@
       <button
         type="button"
         class="judgment-btn"
-        (click)="calculateGrade()"
-        [disabled]="!isFormValid()"
+        (click)="judgeAndSave()"
+        [disabled]="!isFormValid() || isSaving"
       >
-        判定
+        {{ isSaving ? '保存中...' : '判定して保存' }}
       </button>
     </div>
   </div>
@@ -309,27 +309,10 @@
 
     <!-- アクションボタン -->
     <div class="button-section">
-      <button
-        type="button"
-        class="save-btn"
-        (click)="saveGradeData()"
-        [disabled]="!isSaveValid() || isSaving"
-        *ngIf="!savedGradeData"
-      >
-        <span *ngIf="isSaving">保存中...</span>
-        <span *ngIf="!isSaving">保存</span>
-      </button>
-
-      <button
-        type="button"
-        class="delete-btn"
-        (click)="deleteGradeData()"
-        [disabled]="isSaving"
-        *ngIf="savedGradeData"
-      >
-        <span *ngIf="isSaving">削除中...</span>
-        <span *ngIf="!isSaving">削除</span>
-      </button>
+      <div class="save-status" *ngIf="savedGradeData">
+        <span class="save-icon">✅</span>
+        <span class="save-text">保存済み ({{ getFormattedDate(savedGradeData.updatedAt) }})</span>
+      </div>
     </div>
   </div>
 </div>
