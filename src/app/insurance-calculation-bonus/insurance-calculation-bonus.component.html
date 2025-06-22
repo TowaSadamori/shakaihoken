@@ -63,6 +63,17 @@
         <div class="card">
           <header class="card-header">
             <p class="card-header-title">賞与社会保険料計算結果</p>
+            <!-- 保存ボタンをタイトル横に配置 -->
+            <div class="card-header-save-btn">
+              <button
+                class="save-btn-header"
+                (click)="saveBonusResults()"
+                [disabled]="isLoading || !bonusDataList.length"
+              >
+                <span *ngIf="isLoading">保存中...</span>
+                <span *ngIf="!isLoading">💾 データベースに保存</span>
+              </button>
+            </div>
           </header>
           <div class="card-content">
             <!-- ピボットテーブル -->
@@ -82,17 +93,50 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let row of pivotedTable.rows" class="data-row">
+                  <tr *ngFor="let row of pivotedTable.rows; let rowIndex = index" class="data-row">
                     <td [innerHTML]="row.header"></td>
                     <ng-container *ngFor="let col of pivotedTable.columns; let i = index">
                       <td *ngIf="!col.isSeparator" [class.is-numeric]="col.isNumeric">
-                        {{ row.values[i] }}
+                        <!-- 育休産休プルダウン列の場合 -->
+                        <select
+                          *ngIf="
+                            row.values &&
+                            i < row.values.length &&
+                            row.values[i] &&
+                            row.values[i]!.toString().startsWith('checkbox_')
+                          "
+                          [value]="getLeaveType(rowIndex)"
+                          (change)="onLeaveStatusChange($event, rowIndex)"
+                          class="leave-select"
+                        >
+                          <option value="none">なし</option>
+                          <option value="maternity">産休</option>
+                          <option value="childcare">育休</option>
+                        </select>
+                        <!-- 通常の値の場合 -->
+                        <span
+                          *ngIf="
+                            row.values &&
+                            i < row.values.length &&
+                            row.values[i] &&
+                            !row.values[i]!.toString().startsWith('checkbox_')
+                          "
+                        >
+                          {{ row.values[i] }}
+                        </span>
                       </td>
                       <td *ngIf="col.isSeparator" class="separator-col"></td>
                     </ng-container>
                   </tr>
                 </tbody>
               </table>
+
+              <div *ngIf="errorMessage" class="notification is-danger mt-4">
+                <p>
+                  <strong>エラー</strong>
+                </p>
+                <p>{{ errorMessage }}</p>
+              </div>
             </div>
 
             <ng-template #noData>
@@ -106,13 +150,6 @@
                 <p>{{ importStatusMessage || 'データがありません。' }}</p>
               </div>
             </ng-template>
-
-            <div *ngIf="errorMessage" class="notification is-danger mt-4">
-              <p>
-                <strong>エラー</strong>
-              </p>
-              <p>{{ errorMessage }}</p>
-            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  getDoc,
+  deleteDoc,
+} from 'firebase/firestore';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, Location } from '@angular/common';
 import {
@@ -8,6 +16,7 @@ import {
   CalculatedBonusHistoryItem,
 } from '../services/bonus-calculation.service';
 import { OfficeService } from '../services/office.service';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface EmployeeInfo {
   name: string;
@@ -65,6 +74,56 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   limitNotes: string[] = [];
 
   private firestore = getFirestore();
+
+  // 育休産休プルダウンの状態を管理
+  updateLeaveStatus(index: number, leaveType: string): void {
+    if (this.bonusDataList && this.bonusDataList[index]) {
+      this.bonusDataList[index].leaveType = leaveType;
+      // プルダウンの変更に応じて計算結果を更新
+      this.updateCalculationForLeave(index);
+      this.createPivotedTable();
+    }
+  }
+
+  onLeaveStatusChange(event: Event, index: number): void {
+    const target = event.target as HTMLSelectElement;
+    this.updateLeaveStatus(index, target.value);
+  }
+
+  // 安全に休業タイプを取得するヘルパーメソッド
+  getLeaveType(index: number): string {
+    return this.bonusDataList && this.bonusDataList[index]
+      ? this.bonusDataList[index].leaveType || 'none'
+      : 'none';
+  }
+
+  private updateCalculationForLeave(index: number): void {
+    const item = this.bonusDataList && this.bonusDataList[index];
+    if (!item) return;
+
+    console.log(`🔄 保険料計算更新: index=${index}, leaveType=${item.leaveType}`);
+
+    if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {
+      // 産休・育休の場合は保険料を0にする
+      console.log(`💤 休業適用: ${item.leaveType} - 保険料を0に設定`);
+      item.calculationResult.healthInsurance = { employeeBurden: '0', companyBurden: '0' };
+      item.calculationResult.pensionInsurance = { employeeBurden: '0', companyBurden: '0' };
+      if (item.calculationResult.careInsurance) {
+        item.calculationResult.careInsurance = { employeeBurden: '0', companyBurden: '0' };
+      }
+    } else {
+      // 通常の計算に戻す（再計算が必要）
+      console.log(`💼 通常勤務: 保険料を再計算`);
+      this.recalculateItemPremiums(index);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async recalculateItemPremiums(_index: number): Promise<void> {
+    // 必要に応じて保険料の再計算を実装
+    // 現在は簡略化のため、データを再読み込み
+    await this.loadBonusData();
+  }
 
   constructor(
     private router: Router,
@@ -173,9 +232,43 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         this.employeeInfo
       );
 
-      this.bonusDataList = results;
+      // 2. 保存された育休産休データを読み込み
+      const savedData = await this.loadSavedBonusData();
 
-      // 2. 計算結果をFirestoreに保存
+      // 3. leaveTypeを初期化（保存されたデータがあれば復元）
+      this.bonusDataList = results.map((item, index) => {
+        // 型を明示的にキャストしてleaveTypeプロパティを確実に追加
+        const bonusItem = item as CalculatedBonusHistoryItem & { leaveType: string };
+
+        bonusItem.leaveType =
+          savedData &&
+          typeof savedData === 'object' &&
+          savedData !== null &&
+          'bonusResults' in savedData &&
+          Array.isArray(savedData.bonusResults) &&
+          savedData.bonusResults[index] &&
+          typeof savedData.bonusResults[index] === 'object' &&
+          savedData.bonusResults[index] !== null &&
+          'leaveType' in savedData.bonusResults[index]
+            ? String(savedData.bonusResults[index].leaveType) || 'none'
+            : 'none';
+
+        return bonusItem;
+      });
+
+      // 4. 保存されたleaveTypeに基づいて保険料を再計算
+      this.bonusDataList.forEach((item, index) => {
+        if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {
+          console.log(`📋 読み込み時休業適用: index=${index}, leaveType=${item.leaveType}`);
+          item.calculationResult.healthInsurance = { employeeBurden: '0', companyBurden: '0' };
+          item.calculationResult.pensionInsurance = { employeeBurden: '0', companyBurden: '0' };
+          if (item.calculationResult.careInsurance) {
+            item.calculationResult.careInsurance = { employeeBurden: '0', companyBurden: '0' };
+          }
+        }
+      });
+
+      // 5. 計算結果をFirestoreに保存
       if (results.length > 0) {
         await this.bonusCalculationService.saveBonusCalculationResults(
           results,
@@ -188,7 +281,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         this.importStatusMessage = '対象年度の賞与データはありません。';
       }
 
-      // 3. 画面表示を更新
+      // 6. 画面表示を更新
       this.updateLimitNotes();
       this.createPivotedTable();
     } catch (error) {
@@ -196,6 +289,30 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       this.errorMessage = '賞与データの処理中にエラーが発生しました。';
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  /**
+   * 保存された賞与データを読み込み
+   */
+  private async loadSavedBonusData(): Promise<unknown> {
+    try {
+      if (!this.employeeInfo) return null;
+
+      const docRef = doc(
+        this.firestore,
+        'bonusCalculationResults',
+        `${this.employeeInfo.employeeNumber}_${this.targetYear}`
+      );
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        return docSnap.data();
+      }
+      return null;
+    } catch (error) {
+      console.warn('保存されたデータの読み込みに失敗:', error);
+      return null;
     }
   }
 
@@ -216,6 +333,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     }
 
     const columns: PivotColumn[] = [
+      { header: '育休産休', isNumeric: false, isSeparator: false },
       { header: '支給額', isNumeric: true, isSeparator: false },
       { header: '標準賞与額', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
@@ -245,6 +363,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
     const rows: PivotRow[] = this.bonusDataList.map((item, index) => {
       const values = [
+        `checkbox_${index}`, // チェックボックス用のプレースホルダー
         this.formatAmount(item.amount),
         this.formatAmount(item.calculationResult.standardBonusAmount),
         '', // Separator
@@ -320,7 +439,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (isNaN(num)) {
       return amount;
     }
-    // toLocaleStringは整数と小数をうまく扱います
     return num.toLocaleString('ja-JP', {
       maximumFractionDigits: 2,
     });
@@ -328,7 +446,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
   formatPercentage(rate: string | undefined): string {
     if (!rate) return '-';
-    // すでに '%' がついている場合はそのまま返す
     if (rate.includes('%')) {
       return rate;
     }
@@ -343,18 +460,12 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     return `${fiscalYear.toString()}年度`;
   }
 
-  /**
-   * 現在の会計年度を取得
-   */
   private getFiscalYear(date: Date): bigint {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     return BigInt(month >= 4 ? year : year - 1);
   }
 
-  /**
-   * 年度変更
-   */
   async changeYear(delta: number) {
     this.targetYear = this.targetYear + BigInt(delta);
     await this.router.navigate([], {
@@ -365,23 +476,14 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     await this.loadBonusData();
   }
 
-  /**
-   * 前年度へ
-   */
   async previousYear() {
     await this.changeYear(-1);
   }
 
-  /**
-   * 次年度へ
-   */
   async nextYear() {
     await this.changeYear(1);
   }
 
-  /**
-   * 現在年度へ
-   */
   async currentYear() {
     this.targetYear = this.getFiscalYear(new Date());
     await this.router.navigate([], {
@@ -390,5 +492,148 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       queryParamsHandling: 'merge',
     });
     await this.loadBonusData();
+  }
+
+  async saveBonusResults(): Promise<void> {
+    if (!this.employeeInfo || !this.bonusDataList.length) {
+      this.errorMessage = '保存するデータがありません。';
+      return;
+    }
+
+    try {
+      this.isLoading = true;
+      this.errorMessage = '';
+
+      // デバッグ: 保存前のleaveTypeをログ出力
+      console.log(
+        '保存前のleaveType状態:',
+        this.bonusDataList.map((item, index) => ({
+          index,
+          leaveType: item.leaveType,
+          paymentDate: item.paymentDate,
+          hasLeaveTypeProperty: 'leaveType' in item,
+          itemKeys: Object.keys(item),
+        }))
+      );
+
+      const saveData = {
+        employeeId: this.employeeInfo.employeeNumber,
+        targetYear: Number(this.targetYear),
+        bonusResults: this.bonusDataList.map((item) => {
+          // 育休産休の場合は保険料を0にして保存
+          let calculationResult = { ...item.calculationResult };
+
+          if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {
+            calculationResult = {
+              ...calculationResult,
+              healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+              pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+              careInsurance: calculationResult.careInsurance
+                ? { employeeBurden: '0', companyBurden: '0' }
+                : calculationResult.careInsurance,
+            };
+          }
+
+          return this.cleanDataForFirestore({
+            type: item.type,
+            amount: item.amount,
+            month: Number(item.month),
+            year: Number(item.year),
+            paymentDate: item.paymentDate || '',
+            leaveType: item.leaveType || 'none',
+            originalKey: item.originalKey || '',
+            fiscalYear: Number(item.fiscalYear || this.targetYear),
+            calculationResult: calculationResult,
+          });
+        }),
+        updatedAt: new Date(),
+        updatedBy: 'system',
+      };
+
+      // デバッグ: 保存データをログ出力
+      console.log('Firestore保存データ:', saveData);
+
+      const docRef = doc(
+        this.firestore,
+        'bonusCalculationResults',
+        `${this.employeeInfo.employeeNumber}_${this.targetYear}`
+      );
+
+      console.log(
+        '保存先パス:',
+        `bonusCalculationResults/${this.employeeInfo.employeeNumber}_${this.targetYear}`
+      );
+      console.log('保存前の詳細データ:', JSON.stringify(saveData, null, 2));
+
+      // 既存ドキュメントを削除してから新規作成（完全な置き換えを保証）
+      try {
+        await deleteDoc(docRef);
+        console.log('🗑️ 既存ドキュメント削除完了');
+      } catch (deleteError) {
+        console.log('ℹ️ 削除対象ドキュメントが存在しないか、削除できませんでした:', deleteError);
+      }
+
+      // 新規ドキュメントとして作成
+      await setDoc(docRef, this.cleanDataForFirestore(saveData));
+
+      console.log('✅ Firestore保存完了');
+
+      // 保存確認のため、データを再読み込み
+      const verifyDoc = await getDoc(docRef);
+      if (verifyDoc.exists()) {
+        const savedData = verifyDoc.data();
+        console.log('📋 保存確認データ:', savedData);
+        console.log(
+          '📋 保存されたleaveType:',
+          savedData['bonusResults']?.map((item: unknown, index: number) => ({
+            index,
+            leaveType:
+              typeof item === 'object' && item !== null && 'leaveType' in item
+                ? item.leaveType
+                : 'unknown',
+            paymentDate:
+              typeof item === 'object' && item !== null && 'paymentDate' in item
+                ? item.paymentDate
+                : 'unknown',
+          }))
+        );
+      } else {
+        console.error('❌ 保存確認失敗: ドキュメントが見つかりません');
+      }
+
+      alert('賞与計算結果を正常に保存しました。');
+    } catch (error) {
+      console.error('保存エラー:', error);
+      this.errorMessage = '保存中にエラーが発生しました。もう一度お試しください。';
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  // Firestore保存用にデータをクリーンアップ（undefined値を除去）
+  private cleanDataForFirestore(obj: unknown): unknown {
+    if (obj === null || obj === undefined) {
+      return null;
+    }
+
+    if (obj instanceof Date) {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.cleanDataForFirestore(item));
+    }
+
+    if (typeof obj === 'object' && obj !== null) {
+      const cleaned: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          cleaned[key] = this.cleanDataForFirestore(value);
+        }
+      }
+      return cleaned;
+    }
+
+    return obj;
   }
 }

@@ -553,8 +553,8 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   goBack(): void {
-    // 従業員の給与賞与詳細画面に戻る
-    this.router.navigate(['/employee-salary-bonus/detail', this.employeeId]);
+    // 給与賞与情報従業員一覧画面に戻る
+    this.router.navigate(['/employee-salary-bonus']);
   }
 
   navigateToManualAdd(): void {

@@ -19,6 +19,8 @@ export interface BonusHistoryItem {
   originalKey: string;
   fiscalYear?: bigint;
   paymentDate?: string;
+  isOnLeave?: boolean; // 育休産休フラグ
+  leaveType?: string; // 休業タイプ: 'none', 'maternity', 'childcare'
 }
 
 // --- 新しいインターフェース ---
