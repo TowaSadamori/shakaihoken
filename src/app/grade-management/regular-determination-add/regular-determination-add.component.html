@@ -1,7 +1,10 @@
 <div class="regular-determination-add-container">
   <div class="header-section">
     <button class="back-btn" (click)="goBack()">← 戻る</button>
-    <h1 class="page-title">定時決定で等級追加</h1>
+    <h1 class="page-title">
+      <span *ngIf="!isEditMode">定時決定で等級追加</span>
+      <span *ngIf="isEditMode">定時決定等級の編集</span>
+    </h1>
   </div>
 
   <!-- 従業員情報 -->
@@ -64,14 +67,6 @@
             title="給与データから自動取得"
           >
             📊 給与データ取得
-          </button>
-          <button
-            type="button"
-            class="create-test-data-btn"
-            (click)="createTestSalaryData()"
-            title="テスト用給与データを作成"
-          >
-            🔧 テストデータ作成
           </button>
         </div>
         <small class="help-text"
@@ -175,7 +170,8 @@
         (click)="judgeAndSave()"
         [disabled]="!isFormValid() || isSaving"
       >
-        {{ isSaving ? '保存中...' : '判定して保存' }}
+        <span *ngIf="!isEditMode">{{ isSaving ? '保存中...' : '判定して保存' }}</span>
+        <span *ngIf="isEditMode">{{ isSaving ? '更新中...' : '判定して更新' }}</span>
       </button>
     </div>
   </div>
@@ -309,10 +305,22 @@
 
     <!-- アクションボタン -->
     <div class="button-section">
-      <div class="save-status" *ngIf="savedGradeData">
+      <div class="save-status" *ngIf="savedGradeData && !isEditMode">
         <span class="save-icon">✅</span>
         <span class="save-text">保存済み ({{ getFormattedDate(savedGradeData.updatedAt) }})</span>
       </div>
+
+      <!-- 編集モードでの削除ボタン -->
+      <button
+        type="button"
+        class="delete-btn"
+        (click)="deleteGradeData()"
+        [disabled]="isSaving"
+        *ngIf="isEditMode"
+      >
+        <span *ngIf="isSaving">削除中...</span>
+        <span *ngIf="!isSaving">削除</span>
+      </button>
     </div>
   </div>
 </div>
