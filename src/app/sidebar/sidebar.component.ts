@@ -35,6 +35,8 @@ export class SidebarComponent implements OnChanges {
     { label: 'ホーム', path: '/', icon: 'home' },
     { label: '従業員手続き', path: '/employee-procedures', icon: 'person' },
     { label: '給与賞与情報', path: '/employee-salary-bonus' },
+    { label: '被保険者の個人情報', path: '/insured-person-information' },
+    { label: 'その他申請', path: '/other-applications' },
     { label: '事業所手続き', path: '/employer-procedures', icon: 'business' },
     { label: '事業所一覧', path: '/company-register' },
     { label: '設定', path: '/settings', icon: 'settings' },
