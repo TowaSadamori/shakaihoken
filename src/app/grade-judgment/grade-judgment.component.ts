@@ -554,21 +554,26 @@ export class GradeJudgmentComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      let docRef;
-      const judgmentType = recordToDelete.judgmentType;
-
-      if (judgmentType === 'manual' || judgmentType === 'regular') {
-        // 'employee_grades'コレクションから削除
-        docRef = doc(this.firestore, 'employee_grades', recordId);
-      } else {
-        // 'gradeJudgments/{employeeId}/judgments' サブコレクションから削除
-        docRef = doc(this.firestore, 'gradeJudgments', this.employeeId, 'judgments', recordId);
+      //    判定タイプに応じて削除対象を決定する必要がある
+      //    このサンプルでは`employee_grades`の`regular`と`revision`のみ対応
+      if (recordToDelete.judgmentType === 'regular') {
+        const mainDocRef = doc(this.firestore, 'employee_grades', `${this.employeeId}_regular`);
+        await deleteDoc(mainDocRef);
+      } else if (recordToDelete.judgmentType === 'revision') {
+        // 随時改定は別のコレクションに保存されている場合
+        const mainDocRef = doc(
+          this.firestore,
+          'employee_revisions',
+          `${this.employeeId}_revision` // IDの命名規則は要確認
+        );
+        await deleteDoc(mainDocRef);
+      } else if (recordToDelete.judgmentType === 'manual') {
+        const mainDocRef = doc(this.firestore, 'employee_grades', `${this.employeeId}_manual`);
+        await deleteDoc(mainDocRef);
       }
 
-      await deleteDoc(docRef);
-
-      // 履歴を再読み込みして表示を更新
-      await this.loadJudgmentHistory();
+      // UIから削除
+      this.judgmentRecords = this.judgmentRecords.filter((r) => r.id !== recordId);
       alert('履歴を削除しました。');
     } catch (error) {
       console.error('等級履歴の削除エラー:', error);
