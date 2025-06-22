@@ -96,8 +96,30 @@
               <span *ngIf="record.endDate"> ～ {{ formatDate(record.endDate) }}</span>
               <span *ngIf="!record.endDate"> ～ 継続中</span>
             </td>
-            <td class="grade">{{ record.healthInsuranceGrade }}等級</td>
-            <td class="grade">{{ record.pensionInsuranceGrade }}等級</td>
+            <td class="grade">
+              <span *ngIf="record.judgmentReason === 'maternity_leave'">産休</span>
+              <span *ngIf="record.judgmentReason === 'childcare_leave'">育休</span>
+              <span
+                *ngIf="
+                  record.healthInsuranceGrade &&
+                  record.judgmentReason !== 'maternity_leave' &&
+                  record.judgmentReason !== 'childcare_leave'
+                "
+                >{{ record.healthInsuranceGrade }}等級</span
+              >
+            </td>
+            <td class="grade">
+              <span *ngIf="record.judgmentReason === 'maternity_leave'">産休</span>
+              <span *ngIf="record.judgmentReason === 'childcare_leave'">育休</span>
+              <span
+                *ngIf="
+                  record.pensionInsuranceGrade &&
+                  record.judgmentReason !== 'maternity_leave' &&
+                  record.judgmentReason !== 'childcare_leave'
+                "
+                >{{ record.pensionInsuranceGrade }}等級</span
+              >
+            </td>
             <td class="actions">
               <button class="btn btn-secondary btn-sm" (click)="editJudgment(record)">編集</button>
               <button class="btn btn-danger btn-sm" (click)="deleteJudgment(record.id)">

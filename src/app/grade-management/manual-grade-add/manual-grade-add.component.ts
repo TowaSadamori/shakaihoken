@@ -44,12 +44,14 @@ interface InsuranceTableItem {
 }
 
 interface GradeJudgmentResult {
-  healthInsuranceGrade: bigint;
-  healthInsuranceStandardSalary: string;
-  pensionInsuranceGrade: bigint;
-  pensionInsuranceStandardSalary: string;
+  healthInsuranceGrade?: bigint;
+  healthInsuranceStandardSalary?: string;
+  pensionInsuranceGrade?: bigint;
+  pensionInsuranceStandardSalary?: string;
   careInsuranceGrade?: bigint;
   careInsuranceStandardSalary?: string;
+  isMaternityLeave?: boolean;
+  isChildcareLeave?: boolean;
 }
 
 interface SavedGradeData {
@@ -100,6 +102,7 @@ export class ManualGradeAddComponent implements OnInit {
   errorMessage = '';
 
   // フォーム用プロパティ
+  judgmentReason = '';
   monthlyAmount: string | null = null;
   applicableYear: bigint | null = null;
   applicableMonth: bigint | null = null;
@@ -134,6 +137,8 @@ export class ManualGradeAddComponent implements OnInit {
   isEditMode = false;
   private firestore = getFirestore();
 
+  confirmedReason: string | null = null;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -144,12 +149,18 @@ export class ManualGradeAddComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.employeeId = this.route.snapshot.paramMap.get('employeeId');
     this.recordId = this.route.snapshot.paramMap.get('recordId');
+    // history.stateからjudgmentReasonを取得
+    const reasonFromState = history.state?.judgmentReason;
     this.isEditMode = !!this.recordId;
 
     if (this.employeeId) {
       await this.loadEmployeeInfo();
       if (this.isEditMode && this.recordId) {
         await this.loadExistingManualGradeData(this.recordId);
+        // stateから渡された理由で上書き
+        if (reasonFromState) {
+          this.judgmentReason = reasonFromState;
+        }
       }
     }
     this.initializeYears();
@@ -293,8 +304,22 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   async calculateGrade(): Promise<void> {
-    // リアルタイム判定と同じロジックを使用
-    this.calculateGradeFromAmount();
+    if (
+      this.judgmentReason === 'new_employee' ||
+      this.judgmentReason === 'other' ||
+      !this.judgmentReason
+    ) {
+      // リアルタイム判定と同じロジックを使用
+      this.calculateGradeFromAmount();
+    } else if (this.judgmentReason === 'maternity_leave') {
+      this.judgmentResult = { isMaternityLeave: true };
+    } else if (this.judgmentReason === 'childcare_leave') {
+      this.judgmentResult = { isChildcareLeave: true };
+    } else {
+      // 他の選択肢の場合は一旦リセット
+      this.judgmentResult = null;
+      console.log(`判定ロジックが未実装の理由: ${this.judgmentReason}`);
+    }
   }
 
   private convertPrefectureForFirestore(prefecture: string): string {
@@ -867,10 +892,11 @@ export class ManualGradeAddComponent implements OnInit {
         judgmentType: 'manual' as const,
         judgmentDate: new Date(),
         effectiveDate: effectiveDate,
-        healthInsuranceGrade: this.judgmentResult.healthInsuranceGrade,
-        pensionInsuranceGrade: this.judgmentResult.pensionInsuranceGrade,
+        healthInsuranceGrade: this.judgmentResult.healthInsuranceGrade ?? null,
+        pensionInsuranceGrade: this.judgmentResult.pensionInsuranceGrade ?? null,
         standardMonthlyAmount: this.monthlyAmount,
         reason: '手入力による等級決定',
+        judgmentReason: this.judgmentReason || null,
         inputData: {
           monthlyAmount: this.monthlyAmount,
         },
@@ -885,6 +911,8 @@ export class ManualGradeAddComponent implements OnInit {
       // 介護保険等級がある場合は設定
       if (this.judgmentResult.careInsuranceGrade !== undefined) {
         historyRecord['careInsuranceGrade'] = this.judgmentResult.careInsuranceGrade;
+      } else {
+        historyRecord['careInsuranceGrade'] = null;
       }
 
       const historyCollectionRef = collection(

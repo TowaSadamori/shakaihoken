@@ -53,6 +53,18 @@
     <h3>等級判定情報入力</h3>
 
     <div class="form-content">
+      <!-- 等級判定理由 -->
+      <div class="form-group">
+        <label for="judgmentReason">等級判定理由</label>
+        <select id="judgmentReason" name="judgmentReason" [(ngModel)]="judgmentReason">
+          <option value="">選択してください</option>
+          <option value="new_employee">新入社員</option>
+          <option value="maternity_leave">産前産後休業</option>
+          <option value="childcare_leave">育児休業</option>
+          <option value="other">その他</option>
+        </select>
+      </div>
+
       <!-- 月額報酬入力 -->
       <div class="form-group">
         <label for="monthlyAmount">月額報酬 *</label>
@@ -143,22 +155,19 @@
           健康保険
         </div>
         <div class="insurance-info">
-          <div class="info-item">
-            <span class="info-label">等級:</span>
-            <span class="info-value">{{ judgmentResult.healthInsuranceGrade }}級</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">月額:</span>
-            <span class="info-value"
-              >{{ judgmentResult.healthInsuranceStandardSalary | number }}円</span
-            >
-          </div>
-          <div class="info-item">
-            <span class="info-label">期間:</span>
-            <span class="info-value">
-              <span *ngIf="!endYear || !endMonth">継続</span>
-              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
-            </span>
+          <div *ngIf="judgmentResult.isMaternityLeave" class="leave-display">等級・月額: 産休</div>
+          <div *ngIf="judgmentResult.isChildcareLeave" class="leave-display">等級・月額: 育休</div>
+          <div *ngIf="!judgmentResult.isMaternityLeave && !judgmentResult.isChildcareLeave">
+            <div class="info-item">
+              <span class="info-label">等級:</span>
+              <span class="info-value">{{ judgmentResult.healthInsuranceGrade }}級</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">月額:</span>
+              <span class="info-value"
+                >{{ judgmentResult.healthInsuranceStandardSalary | number }}円</span
+              >
+            </div>
           </div>
         </div>
       </div>
@@ -170,22 +179,19 @@
           厚生年金保険
         </div>
         <div class="insurance-info">
-          <div class="info-item">
-            <span class="info-label">等級:</span>
-            <span class="info-value">{{ judgmentResult.pensionInsuranceGrade }}級</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">月額:</span>
-            <span class="info-value"
-              >{{ judgmentResult.pensionInsuranceStandardSalary | number }}円</span
-            >
-          </div>
-          <div class="info-item">
-            <span class="info-label">期間:</span>
-            <span class="info-value">
-              <span *ngIf="!endYear || !endMonth">継続</span>
-              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
-            </span>
+          <div *ngIf="judgmentResult.isMaternityLeave" class="leave-display">等級・月額: 産休</div>
+          <div *ngIf="judgmentResult.isChildcareLeave" class="leave-display">等級・月額: 育休</div>
+          <div *ngIf="!judgmentResult.isMaternityLeave && !judgmentResult.isChildcareLeave">
+            <div class="info-item">
+              <span class="info-label">等級:</span>
+              <span class="info-value">{{ judgmentResult.pensionInsuranceGrade }}級</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">月額:</span>
+              <span class="info-value"
+                >{{ judgmentResult.pensionInsuranceStandardSalary | number }}円</span
+              >
+            </div>
           </div>
         </div>
       </div>
@@ -196,29 +202,30 @@
           <span class="insurance-icon">🤝</span>
           介護保険
         </div>
-        <div class="insurance-info" *ngIf="judgmentResult.careInsuranceGrade">
-          <div class="info-item">
-            <span class="info-label">等級:</span>
-            <span class="info-value">{{ judgmentResult.careInsuranceGrade }}級</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">月額:</span>
-            <span class="info-value"
-              >{{ judgmentResult.careInsuranceStandardSalary | number }}円</span
-            >
-          </div>
-          <div class="info-item">
-            <span class="info-label">期間:</span>
-            <span class="info-value">
-              <span *ngIf="!endYear || !endMonth">継続</span>
-              <span *ngIf="endYear && endMonth">{{ endYear }}年{{ endMonth }}月まで</span>
-            </span>
-          </div>
-        </div>
-        <div class="insurance-info not-applicable" *ngIf="!judgmentResult.careInsuranceGrade">
-          <div class="info-item">
-            <span class="info-value not-applicable-text">対象外（40歳未満）</span>
-          </div>
+        <div class="insurance-info">
+          <div *ngIf="judgmentResult.isMaternityLeave" class="leave-display">等級・月額: 産休</div>
+          <div *ngIf="judgmentResult.isChildcareLeave" class="leave-display">等級・月額: 育休</div>
+          <ng-container
+            *ngIf="!judgmentResult.isMaternityLeave && !judgmentResult.isChildcareLeave"
+          >
+            <div *ngIf="judgmentResult.careInsuranceGrade">
+              <div class="info-item">
+                <span class="info-label">等級:</span>
+                <span class="info-value">{{ judgmentResult.careInsuranceGrade }}級</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">月額:</span>
+                <span class="info-value"
+                  >{{ judgmentResult.careInsuranceStandardSalary | number }}円</span
+                >
+              </div>
+            </div>
+            <div class="not-applicable" *ngIf="!judgmentResult.careInsuranceGrade">
+              <div class="info-item">
+                <span class="info-value not-applicable-text">対象外（40歳未満）</span>
+              </div>
+            </div>
+          </ng-container>
         </div>
       </div>
 

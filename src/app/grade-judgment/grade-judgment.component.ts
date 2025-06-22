@@ -46,6 +46,7 @@ interface GradeJudgmentRecord {
   careInsuranceGrade?: bigint;
   standardMonthlyAmount: string;
   reason: string;
+  judgmentReason?: string;
   inputData: {
     averageMonthly?: string;
     totalBonus?: string;
@@ -64,6 +65,7 @@ interface JudgmentDialogData {
   pensionInsuranceGrade: bigint;
   careInsuranceGrade?: bigint;
   reason: string;
+  judgmentReason?: string;
   inputData: {
     averageMonthly?: string;
     totalBonus?: string;
@@ -241,6 +243,7 @@ export class GradeJudgmentComponent implements OnInit {
           careInsuranceGrade: data['careInsuranceGrade'],
           standardMonthlyAmount: data['standardMonthlyAmount'],
           reason: data['reason'],
+          judgmentReason: data['judgmentReason'],
           inputData: data['inputData'],
           createdAt: this.convertToDate(data['createdAt']),
           updatedAt: this.convertToDate(data['updatedAt']),
@@ -405,6 +408,7 @@ export class GradeJudgmentComponent implements OnInit {
         pensionInsuranceGrade: this.dialogData.pensionInsuranceGrade,
         standardMonthlyAmount: this.dialogData.standardMonthlyAmount,
         reason: this.dialogData.reason,
+        judgmentReason: this.dialogData.judgmentReason,
         inputData: this.dialogData.inputData,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -490,6 +494,7 @@ export class GradeJudgmentComponent implements OnInit {
       pensionInsuranceGrade: 0n,
       careInsuranceGrade: undefined,
       reason: '',
+      judgmentReason: undefined,
       inputData: {},
     };
   }
@@ -567,26 +572,27 @@ export class GradeJudgmentComponent implements OnInit {
   editJudgment(record: GradeJudgmentRecord): void {
     if (!this.employeeId) return;
 
-    let path = '';
-    // 'revision' の場合は gradeJudgments のドキュメントIDを、
-    // それ以外は employee_grades のドキュメントIDを使用する想定
-    const recordId = record.id;
-
-    switch (record.judgmentType) {
-      case 'regular':
-        path = `/regular-determination-add/${this.employeeId}/${recordId}`;
-        break;
-      case 'manual':
-        path = `/manual-grade-add/${this.employeeId}/${recordId}`;
-        break;
-      case 'revision':
-        path = `/revision-add/${this.employeeId}/${recordId}`;
-        break;
-      default:
-        console.warn('未対応の判定タイプ:', record.judgmentType);
-        return;
+    if (record.judgmentType === 'manual' && record.id) {
+      // 手入力の場合は専用画面に遷移
+      this.router.navigate(['/manual-grade-add', this.employeeId, record.id], {
+        state: { judgmentReason: record.judgmentReason || null },
+      });
+    } else if (record.judgmentType === 'regular' || record.judgmentType === 'revision') {
+      let path = '';
+      switch (record.judgmentType) {
+        case 'regular':
+          path = '/regular-determination-add';
+          break;
+        case 'revision':
+          path = '/revision-add';
+          break;
+        default:
+          console.warn('未対応の判定タイプ:', record.judgmentType);
+          return;
+      }
+      this.router.navigate([path, this.employeeId, record.id]);
+    } else {
+      console.warn('未対応の判定タイプ:', record.judgmentType);
     }
-
-    this.router.navigate([path]);
   }
 }
