@@ -130,6 +130,8 @@ export class ManualGradeAddComponent implements OnInit {
   ];
 
   private employeeId: string | null = null;
+  private recordId: string | null = null;
+  isEditMode = false;
   private firestore = getFirestore();
 
   constructor(
@@ -140,13 +142,18 @@ export class ManualGradeAddComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    this.route.paramMap.subscribe((params) => {
-      this.employeeId = params.get('employeeId');
-      if (this.employeeId) {
-        this.loadEmployeeInfo();
-        this.loadExistingGradeData();
+    this.employeeId = this.route.snapshot.paramMap.get('employeeId');
+    this.recordId = this.route.snapshot.paramMap.get('recordId');
+    this.isEditMode = !!this.recordId;
+
+    if (this.employeeId) {
+      await this.loadEmployeeInfo();
+      if (this.isEditMode && this.recordId) {
+        await this.loadExistingManualGradeData(this.recordId);
+      } else {
+        await this.loadExistingGradeData();
       }
-    });
+    }
     this.initializeYears();
   }
 
@@ -537,6 +544,102 @@ export class ManualGradeAddComponent implements OnInit {
     return this.findGradeByAmountFromStandardTable(amount);
   }
 
+  private getStandardSalaryByGrade(insuranceType: 'health' | 'pension', grade: number): string {
+    if (insuranceType === 'health') {
+      const healthInsuranceTable = [
+        { grade: 1, standardSalary: '58000' },
+        { grade: 2, standardSalary: '68000' },
+        { grade: 3, standardSalary: '78000' },
+        { grade: 4, standardSalary: '88000' },
+        { grade: 5, standardSalary: '98000' },
+        { grade: 6, standardSalary: '104000' },
+        { grade: 7, standardSalary: '110000' },
+        { grade: 8, standardSalary: '118000' },
+        { grade: 9, standardSalary: '126000' },
+        { grade: 10, standardSalary: '134000' },
+        { grade: 11, standardSalary: '142000' },
+        { grade: 12, standardSalary: '150000' },
+        { grade: 13, standardSalary: '160000' },
+        { grade: 14, standardSalary: '170000' },
+        { grade: 15, standardSalary: '180000' },
+        { grade: 16, standardSalary: '190000' },
+        { grade: 17, standardSalary: '200000' },
+        { grade: 18, standardSalary: '220000' },
+        { grade: 19, standardSalary: '240000' },
+        { grade: 20, standardSalary: '260000' },
+        { grade: 21, standardSalary: '280000' },
+        { grade: 22, standardSalary: '300000' },
+        { grade: 23, standardSalary: '320000' },
+        { grade: 24, standardSalary: '340000' },
+        { grade: 25, standardSalary: '360000' },
+        { grade: 26, standardSalary: '380000' },
+        { grade: 27, standardSalary: '410000' },
+        { grade: 28, standardSalary: '440000' },
+        { grade: 29, standardSalary: '470000' },
+        { grade: 30, standardSalary: '500000' },
+        { grade: 31, standardSalary: '530000' },
+        { grade: 32, standardSalary: '560000' },
+        { grade: 33, standardSalary: '590000' },
+        { grade: 34, standardSalary: '620000' },
+        { grade: 35, standardSalary: '650000' },
+        { grade: 36, standardSalary: '680000' },
+        { grade: 37, standardSalary: '710000' },
+        { grade: 38, standardSalary: '750000' },
+        { grade: 39, standardSalary: '790000' },
+        { grade: 40, standardSalary: '830000' },
+        { grade: 41, standardSalary: '880000' },
+        { grade: 42, standardSalary: '930000' },
+        { grade: 43, standardSalary: '980000' },
+        { grade: 44, standardSalary: '1030000' },
+        { grade: 45, standardSalary: '1090000' },
+        { grade: 46, standardSalary: '1150000' },
+        { grade: 47, standardSalary: '1210000' },
+        { grade: 48, standardSalary: '1270000' },
+        { grade: 49, standardSalary: '1330000' },
+        { grade: 50, standardSalary: '1390000' },
+      ];
+      const found = healthInsuranceTable.find((item) => item.grade === grade);
+      return found ? found.standardSalary : '0';
+    } else {
+      const pensionInsuranceTable = [
+        { grade: 1, standardSalary: '88000' },
+        { grade: 2, standardSalary: '98000' },
+        { grade: 3, standardSalary: '104000' },
+        { grade: 4, standardSalary: '110000' },
+        { grade: 5, standardSalary: '118000' },
+        { grade: 6, standardSalary: '126000' },
+        { grade: 7, standardSalary: '134000' },
+        { grade: 8, standardSalary: '142000' },
+        { grade: 9, standardSalary: '150000' },
+        { grade: 10, standardSalary: '160000' },
+        { grade: 11, standardSalary: '170000' },
+        { grade: 12, standardSalary: '180000' },
+        { grade: 13, standardSalary: '190000' },
+        { grade: 14, standardSalary: '200000' },
+        { grade: 15, standardSalary: '220000' },
+        { grade: 16, standardSalary: '240000' },
+        { grade: 17, standardSalary: '260000' },
+        { grade: 18, standardSalary: '280000' },
+        { grade: 19, standardSalary: '300000' },
+        { grade: 20, standardSalary: '320000' },
+        { grade: 21, standardSalary: '340000' },
+        { grade: 22, standardSalary: '360000' },
+        { grade: 23, standardSalary: '380000' },
+        { grade: 24, standardSalary: '410000' },
+        { grade: 25, standardSalary: '440000' },
+        { grade: 26, standardSalary: '470000' },
+        { grade: 27, standardSalary: '500000' },
+        { grade: 28, standardSalary: '530000' },
+        { grade: 29, standardSalary: '560000' },
+        { grade: 30, standardSalary: '590000' },
+        { grade: 31, standardSalary: '620000' },
+        { grade: 32, standardSalary: '650000' },
+      ];
+      const found = pensionInsuranceTable.find((item) => item.grade === grade);
+      return found ? found.standardSalary : '0';
+    }
+  }
+
   private async loadExistingGradeData(): Promise<void> {
     if (!this.employeeId) return;
     try {
@@ -584,6 +687,87 @@ export class ManualGradeAddComponent implements OnInit {
     } catch (error) {
       console.error('既存の手入力データ読み込みエラー:', error);
       this.errorMessage = '既存の手入力データの読み込みに失敗しました。';
+    }
+  }
+
+  private async loadExistingManualGradeData(recordId: string): Promise<void> {
+    if (!this.employeeId) return;
+    this.isLoading = true;
+    try {
+      const docRef = doc(this.firestore, `gradeJudgments/${this.employeeId}/judgments`, recordId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+
+        // 手入力データの場合、inputDataから元の入力値を取得
+        if (data['inputData']) {
+          this.monthlyAmount = data['inputData'].monthlyAmount || null;
+        } else {
+          // inputDataがない場合は、standardMonthlyAmountを使用
+          this.monthlyAmount = data['standardMonthlyAmount'] || null;
+        }
+
+        // 適用期間を読み込み
+        const effectiveDate = (data['effectiveDate'] as Timestamp).toDate();
+        this.applicableYear = BigInt(effectiveDate.getFullYear());
+        this.applicableMonth = BigInt(effectiveDate.getMonth() + 1);
+
+        // 終了日がある場合は読み込み
+        if (data['endDate']) {
+          const endDate = (data['endDate'] as Timestamp).toDate();
+          this.endYear = BigInt(endDate.getFullYear());
+          this.endMonth = BigInt(endDate.getMonth() + 1);
+        }
+
+        // 等級情報を読み込み（標準報酬月額は等級から再計算）
+        const healthGrade =
+          typeof data['healthInsuranceGrade'] === 'string'
+            ? BigInt(data['healthInsuranceGrade'])
+            : BigInt(data['healthInsuranceGrade']);
+        const pensionGrade =
+          typeof data['pensionInsuranceGrade'] === 'string'
+            ? BigInt(data['pensionInsuranceGrade'])
+            : BigInt(data['pensionInsuranceGrade']);
+        const careGrade = data['careInsuranceGrade']
+          ? typeof data['careInsuranceGrade'] === 'string'
+            ? BigInt(data['careInsuranceGrade'])
+            : BigInt(data['careInsuranceGrade'])
+          : undefined;
+
+        this.judgmentResult = {
+          healthInsuranceGrade: healthGrade,
+          healthInsuranceStandardSalary: this.getStandardSalaryByGrade(
+            'health',
+            Number(healthGrade)
+          ),
+          pensionInsuranceGrade: pensionGrade,
+          pensionInsuranceStandardSalary: this.getStandardSalaryByGrade(
+            'pension',
+            Number(pensionGrade)
+          ),
+          careInsuranceGrade: careGrade,
+          careInsuranceStandardSalary: careGrade
+            ? this.getStandardSalaryByGrade('health', Number(careGrade))
+            : undefined,
+        };
+
+        console.log('読み込んだ手入力データ:', {
+          monthlyAmount: this.monthlyAmount,
+          applicableYear: this.applicableYear,
+          applicableMonth: this.applicableMonth,
+          endYear: this.endYear,
+          endMonth: this.endMonth,
+          judgmentResult: this.judgmentResult,
+        });
+      } else {
+        this.errorMessage = '指定された手入力データが見つかりません。';
+      }
+    } catch (error) {
+      console.error('既存手入力データ読み込みエラー:', error);
+      this.errorMessage = 'データの読み込み中にエラーが発生しました。';
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -689,11 +873,19 @@ export class ManualGradeAddComponent implements OnInit {
         pensionInsuranceGrade: this.judgmentResult.pensionInsuranceGrade,
         standardMonthlyAmount: this.monthlyAmount,
         reason: '手入力による等級決定',
-        createdAt: new Date(),
+        inputData: {
+          monthlyAmount: this.monthlyAmount,
+        },
         updatedAt: new Date(),
       };
 
-      if (this.judgmentResult.careInsuranceGrade) {
+      // 終了日がある場合は設定
+      if (this.endYear && this.endMonth) {
+        historyRecord['endDate'] = new Date(Number(this.endYear), Number(this.endMonth) - 1, 1);
+      }
+
+      // 介護保険等級がある場合は設定
+      if (this.judgmentResult.careInsuranceGrade !== undefined) {
         historyRecord['careInsuranceGrade'] = this.judgmentResult.careInsuranceGrade;
       }
 
@@ -703,9 +895,21 @@ export class ManualGradeAddComponent implements OnInit {
         this.employeeId,
         'judgments'
       );
-      const newDocRef = doc(historyCollectionRef);
-      const convertedRecord = this.deepConvertBigIntToString(historyRecord);
-      await setDoc(newDocRef, convertedRecord);
+
+      if (this.isEditMode && this.recordId) {
+        // 編集モード：既存レコードを更新
+        const existingDocRef = doc(historyCollectionRef, this.recordId);
+        // createdAtは保持し、updatedAtのみ更新
+        historyRecord['createdAt'] = new Date(); // 実際の実装では既存のcreatedAtを保持すべき
+        const convertedRecord = this.deepConvertBigIntToString(historyRecord);
+        await setDoc(existingDocRef, convertedRecord);
+      } else {
+        // 新規作成モード：新しいレコードを作成
+        historyRecord['createdAt'] = new Date();
+        const newDocRef = doc(historyCollectionRef);
+        const convertedRecord = this.deepConvertBigIntToString(historyRecord);
+        await setDoc(newDocRef, convertedRecord);
+      }
     } catch (error) {
       console.error('等級履歴への保存エラー:', error);
       throw new Error('等級履歴への保存に失敗しました。');
@@ -713,44 +917,72 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   async deleteGradeData(): Promise<void> {
-    if (!this.savedGradeData?.id) {
-      // 保存データがない場合は画面上の表示のみクリア
-      this.judgmentResult = null;
-      this.monthlyAmount = null;
-      this.applicableYear = null;
-      this.applicableMonth = null;
-      this.endYear = null;
-      this.endMonth = null;
-      return;
-    }
+    if (this.isEditMode && this.recordId) {
+      // 編集モードの場合は履歴から削除
+      if (!confirm('この手入力履歴を削除しますか？この操作は元に戻せません。')) {
+        return;
+      }
 
-    this.isSaving = true;
-    this.errorMessage = '';
+      this.isSaving = true;
+      this.errorMessage = '';
 
-    try {
-      // Firestoreからデータを削除
-      const docRef = doc(this.firestore, 'employee_grades', this.savedGradeData.id);
-      await deleteDoc(docRef);
+      try {
+        const docRef = doc(
+          this.firestore,
+          `gradeJudgments/${this.employeeId}/judgments`,
+          this.recordId
+        );
+        await deleteDoc(docRef);
 
-      // 画面の表示をクリア
-      this.judgmentResult = null;
-      this.monthlyAmount = null;
-      this.applicableYear = null;
-      this.applicableMonth = null;
-      this.endYear = null;
-      this.endMonth = null;
-      this.savedGradeData = null;
+        alert('手入力データを削除しました');
+        this.router.navigate(['/grade-judgment', this.employeeId]);
+      } catch (error) {
+        console.error('削除エラー:', error);
+        this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
+      } finally {
+        this.isSaving = false;
+      }
+    } else {
+      // 通常モードの場合
+      if (!this.savedGradeData?.id) {
+        // 保存データがない場合は画面上の表示のみクリア
+        this.judgmentResult = null;
+        this.monthlyAmount = null;
+        this.applicableYear = null;
+        this.applicableMonth = null;
+        this.endYear = null;
+        this.endMonth = null;
+        return;
+      }
 
-      // 成功メッセージを表示
-      this.errorMessage = 'データが削除されました';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
-    } catch (error) {
-      console.error('削除エラー:', error);
-      this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
-    } finally {
-      this.isSaving = false;
+      this.isSaving = true;
+      this.errorMessage = '';
+
+      try {
+        // Firestoreからデータを削除
+        const docRef = doc(this.firestore, 'employee_grades', this.savedGradeData.id);
+        await deleteDoc(docRef);
+
+        // 画面の表示をクリア
+        this.judgmentResult = null;
+        this.monthlyAmount = null;
+        this.applicableYear = null;
+        this.applicableMonth = null;
+        this.endYear = null;
+        this.endMonth = null;
+        this.savedGradeData = null;
+
+        // 成功メッセージを表示
+        this.errorMessage = 'データが削除されました';
+        setTimeout(() => {
+          this.errorMessage = '';
+        }, 3000);
+      } catch (error) {
+        console.error('削除エラー:', error);
+        this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
+      } finally {
+        this.isSaving = false;
+      }
     }
   }
 

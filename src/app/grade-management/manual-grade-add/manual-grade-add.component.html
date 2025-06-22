@@ -1,7 +1,10 @@
 <div class="manual-grade-add-container">
   <div class="header-section">
     <button class="back-btn" (click)="goBack()">← 戻る</button>
-    <h1 class="page-title">手入力で等級追加</h1>
+    <h1 class="page-title">
+      <span *ngIf="!isEditMode">手入力で等級追加</span>
+      <span *ngIf="isEditMode">手入力等級の編集</span>
+    </h1>
   </div>
 
   <!-- 従業員情報 -->
@@ -235,10 +238,15 @@
         class="save-btn"
         (click)="saveGradeData()"
         [disabled]="!isSaveValid() || isSaving"
-        *ngIf="!savedGradeData"
       >
-        <span *ngIf="isSaving">保存中...</span>
-        <span *ngIf="!isSaving">保存</span>
+        <span *ngIf="isSaving">
+          <span *ngIf="isEditMode">更新中...</span>
+          <span *ngIf="!isEditMode">保存中...</span>
+        </span>
+        <span *ngIf="!isSaving">
+          <span *ngIf="isEditMode">更新</span>
+          <span *ngIf="!isEditMode">保存</span>
+        </span>
       </button>
 
       <button
@@ -246,7 +254,7 @@
         class="delete-btn"
         (click)="deleteGradeData()"
         [disabled]="isSaving"
-        *ngIf="savedGradeData"
+        *ngIf="isEditMode || savedGradeData"
       >
         <span *ngIf="isSaving">削除中...</span>
         <span *ngIf="!isSaving">削除</span>
