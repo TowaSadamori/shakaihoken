@@ -150,8 +150,6 @@ export class ManualGradeAddComponent implements OnInit {
       await this.loadEmployeeInfo();
       if (this.isEditMode && this.recordId) {
         await this.loadExistingManualGradeData(this.recordId);
-      } else {
-        await this.loadExistingGradeData();
       }
     }
     this.initializeYears();
@@ -927,18 +925,42 @@ export class ManualGradeAddComponent implements OnInit {
       this.errorMessage = '';
 
       try {
-        const docRef = doc(
+        console.log('削除開始:', { employeeId: this.employeeId, recordId: this.recordId });
+
+        // 1. 履歴コレクションから削除（メイン画面と同じロジック）
+        const historyDocRef = doc(
           this.firestore,
           `gradeJudgments/${this.employeeId}/judgments`,
           this.recordId
         );
-        await deleteDoc(docRef);
+        console.log('履歴削除:', historyDocRef.path);
+        await deleteDoc(historyDocRef);
 
+        // 2. employee_gradesコレクションからも削除
+        const gradeDocId = `${this.employeeId}_manual`;
+        const gradeDocRef = doc(this.firestore, 'employee_grades', gradeDocId);
+        console.log('employee_grades削除:', gradeDocRef.path);
+
+        try {
+          const gradeDocSnap = await getDoc(gradeDocRef);
+          if (gradeDocSnap.exists()) {
+            await deleteDoc(gradeDocRef);
+            console.log('employee_gradesからも削除しました');
+          } else {
+            console.log('employee_gradesにドキュメントが存在しませんでした');
+          }
+        } catch (gradeDeleteError) {
+          console.warn('employee_gradesからの削除でエラー:', gradeDeleteError);
+          // 履歴削除は成功しているので、続行
+        }
+
+        console.log('削除処理完了');
         alert('手入力データを削除しました');
         this.router.navigate(['/grade-judgment', this.employeeId]);
       } catch (error) {
         console.error('削除エラー:', error);
-        this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
+        this.errorMessage = `削除に失敗しました: ${error}`;
+        alert(this.errorMessage);
       } finally {
         this.isSaving = false;
       }

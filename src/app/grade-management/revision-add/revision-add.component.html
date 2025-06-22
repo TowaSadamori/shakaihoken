@@ -387,7 +387,7 @@
     </div>
 
     <!-- 保存ボタン -->
-    <div class="form-button-section">
+    <div class="form-button-section" *ngIf="!isEditMode">
       <button type="button" class="save-btn" (click)="saveRevisionData()" [disabled]="isSaving">
         {{ isSaving ? '保存中...' : 'この内容で保存する' }}
       </button>

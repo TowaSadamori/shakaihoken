@@ -6,7 +6,6 @@ import {
   getFirestore,
   collection,
   doc,
-  getDoc,
   getDocs,
   addDoc,
   updateDoc,
@@ -220,7 +219,7 @@ export class GradeJudgmentComponent implements OnInit {
     try {
       this.judgmentRecords = [];
 
-      // 等級判定履歴コレクションからデータを読み込み
+      // 等級判定履歴コレクションからデータを読み込み（統一された履歴管理）
       const q = query(
         collection(this.firestore, 'gradeJudgments', this.employeeId, 'judgments'),
         orderBy('effectiveDate', 'desc')
@@ -248,73 +247,8 @@ export class GradeJudgmentComponent implements OnInit {
         });
       });
 
-      // employee_gradesコレクションから手入力と定時決定データを読み込み
-      const gradeTypes = [
-        { type: 'manual', docId: `${this.employeeId}_manual` },
-        { type: 'regular', docId: `${this.employeeId}_regular` },
-      ];
-
-      for (const gradeType of gradeTypes) {
-        const employeeGradeDocRef = doc(this.firestore, 'employee_grades', gradeType.docId);
-        const employeeGradeDoc = await getDoc(employeeGradeDocRef);
-
-        if (employeeGradeDoc.exists()) {
-          const data = employeeGradeDoc.data();
-
-          // 適用開始日を作成
-          const effectiveDate = new Date(data['applicableYear'], data['applicableMonth'] - 1, 1);
-
-          // 適用終了日を作成（ある場合のみ）
-          let endDate: Date | undefined;
-          if (data['endYear'] && data['endMonth']) {
-            endDate = new Date(data['endYear'], data['endMonth'] - 1, 1);
-          }
-
-          // 判定結果から等級を取得
-          const judgmentResult = data['judgmentResult'];
-
-          // 標準報酬月額を取得（手入力の場合はmonthlyAmount、定時決定の場合はaverageAmount）
-          const standardMonthlyAmount =
-            gradeType.type === 'manual' ? data['monthlyAmount'] : data['averageAmount'];
-
-          // 判定理由を設定
-          const reason =
-            gradeType.type === 'manual' ? '手入力による等級判定' : '定時決定による等級判定';
-
-          // 入力データを設定
-          const inputData =
-            gradeType.type === 'manual'
-              ? { manualAmount: data['monthlyAmount'] }
-              : {
-                  targetYear: data['targetYear'],
-                  monthlyPayments: data['monthlyPayments'],
-                  averageAmount: data['averageAmount'],
-                };
-
-          const gradeRecord: GradeJudgmentRecord = {
-            id: employeeGradeDoc.id,
-            employeeId: this.employeeId,
-            judgmentType: gradeType.type as 'manual' | 'regular',
-            judgmentDate: this.convertToDate(data['updatedAt']),
-            effectiveDate: effectiveDate,
-            endDate: endDate,
-            healthInsuranceGrade: judgmentResult['healthInsuranceGrade'],
-            pensionInsuranceGrade: judgmentResult['pensionInsuranceGrade'],
-            careInsuranceGrade: judgmentResult['careInsuranceGrade'],
-            standardMonthlyAmount: standardMonthlyAmount,
-            reason: reason,
-            inputData: inputData,
-            createdAt: this.convertToDate(data['createdAt']),
-            updatedAt: this.convertToDate(data['updatedAt']),
-          };
-
-          this.judgmentRecords.push(gradeRecord);
-        }
-      }
-
       // 効力発生日の降順でソート
       this.judgmentRecords.sort((a, b) => {
-        // 安全なソート: effectiveDateがDateオブジェクトでない可能性があるため、チェックを行う
         const timeA = a.effectiveDate instanceof Date ? a.effectiveDate.getTime() : 0;
         const timeB = b.effectiveDate instanceof Date ? b.effectiveDate.getTime() : 0;
         return timeB - timeA;
@@ -323,47 +257,7 @@ export class GradeJudgmentComponent implements OnInit {
       console.log('等級判定履歴を読み込みました:', this.judgmentRecords);
     } catch (error) {
       console.error('等級判定履歴取得エラー:', error);
-      // テスト用のサンプルデータを設定
-      this.judgmentRecords = [
-        {
-          id: 'sample-1',
-          employeeId: this.employeeId!,
-          judgmentType: 'manual',
-          judgmentDate: new Date('2024-01-15'),
-          effectiveDate: new Date('2024-02-01'),
-          endDate: new Date('2024-12-31'),
-          healthInsuranceGrade: 18n,
-          pensionInsuranceGrade: 18n,
-          careInsuranceGrade: 18n,
-          standardMonthlyAmount: '280000',
-          reason: '手入力による等級決定',
-          inputData: {
-            manualAmount: '280000',
-          },
-          createdAt: new Date('2024-01-15'),
-          updatedAt: new Date('2024-01-15'),
-        },
-        {
-          id: 'sample-2',
-          employeeId: this.employeeId!,
-          judgmentType: 'regular',
-          judgmentDate: new Date('2024-04-01'),
-          effectiveDate: new Date('2024-04-01'),
-          endDate: new Date('2025-03-31'),
-          healthInsuranceGrade: 19n,
-          pensionInsuranceGrade: 19n,
-          careInsuranceGrade: 19n,
-          standardMonthlyAmount: '300000',
-          reason: '定時決定による等級改定',
-          inputData: {
-            averageMonthly: '300000',
-            totalBonus: '900000',
-            annualTotal: '4500000',
-          },
-          createdAt: new Date('2024-04-01'),
-          updatedAt: new Date('2024-04-01'),
-        },
-      ];
+      this.errorMessage = '履歴の読み込みに失敗しました。';
     }
   }
 
@@ -554,26 +448,20 @@ export class GradeJudgmentComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      //    判定タイプに応じて削除対象を決定する必要がある
-      //    このサンプルでは`employee_grades`の`regular`と`revision`のみ対応
-      if (recordToDelete.judgmentType === 'regular') {
-        const mainDocRef = doc(this.firestore, 'employee_grades', `${this.employeeId}_regular`);
-        await deleteDoc(mainDocRef);
-      } else if (recordToDelete.judgmentType === 'revision') {
-        // 随時改定は別のコレクションに保存されている場合
-        const mainDocRef = doc(
-          this.firestore,
-          'employee_revisions',
-          `${this.employeeId}_revision` // IDの命名規則は要確認
-        );
-        await deleteDoc(mainDocRef);
-      } else if (recordToDelete.judgmentType === 'manual') {
-        const mainDocRef = doc(this.firestore, 'employee_grades', `${this.employeeId}_manual`);
-        await deleteDoc(mainDocRef);
-      }
+      console.log('削除開始:', { recordId, judgmentType: recordToDelete.judgmentType });
 
-      // UIから削除
+      // 1. 履歴コレクションから削除（共通）
+      const historyDocRef = doc(
+        this.firestore,
+        `gradeJudgments/${this.employeeId}/judgments`,
+        recordId
+      );
+      console.log('履歴削除:', historyDocRef.path);
+      await deleteDoc(historyDocRef);
+
+      // 2. UIから削除
       this.judgmentRecords = this.judgmentRecords.filter((r) => r.id !== recordId);
+      console.log('削除完了');
       alert('履歴を削除しました。');
     } catch (error) {
       console.error('等級履歴の削除エラー:', error);
@@ -688,16 +576,17 @@ export class GradeJudgmentComponent implements OnInit {
       case 'regular':
         path = `/regular-determination-add/${this.employeeId}/${recordId}`;
         break;
-      case 'revision':
-        path = `/revision-add/${this.employeeId}/${recordId}`;
-        break;
       case 'manual':
         path = `/manual-grade-add/${this.employeeId}/${recordId}`;
         break;
+      case 'revision':
+        path = `/revision-add/${this.employeeId}/${recordId}`;
+        break;
       default:
-        console.error('未対応の判定方法です:', record.judgmentType);
+        console.warn('未対応の判定タイプ:', record.judgmentType);
         return;
     }
+
     this.router.navigate([path]);
   }
 }

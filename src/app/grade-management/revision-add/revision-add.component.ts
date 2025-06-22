@@ -740,18 +740,23 @@ export class RevisionAddComponent implements OnInit {
     this.errorMessage = '';
 
     try {
+      console.log('削除開始:', { employeeId: this.employeeId, recordId: this.recordId });
+
       const docRef = doc(
         this.firestore,
         `gradeJudgments/${this.employeeId}/judgments`,
         this.recordId
       );
+      console.log('履歴削除:', docRef.path);
       await deleteDoc(docRef);
 
+      console.log('削除処理完了');
       alert('随時改定データを削除しました');
       this.router.navigate(['/grade-judgment', this.employeeId]);
     } catch (error) {
       console.error('削除エラー:', error);
-      this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
+      this.errorMessage = `削除に失敗しました: ${error}`;
+      alert(this.errorMessage);
     } finally {
       this.isSaving = false;
     }
