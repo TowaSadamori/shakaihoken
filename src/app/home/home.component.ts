@@ -402,11 +402,17 @@ export class HomeComponent implements OnInit {
 
     // 合計の再計算
     currentMonthData.totalEmployee = SocialInsuranceCalculator.addAmounts(
-      currentMonthData.healthInsuranceEmployee,
+      SocialInsuranceCalculator.addAmounts(
+        currentMonthData.healthInsuranceEmployee,
+        currentMonthData.careInsuranceEmployee
+      ),
       currentMonthData.pensionInsuranceEmployee
     );
     currentMonthData.totalCompany = SocialInsuranceCalculator.addAmounts(
-      currentMonthData.healthInsuranceCompany,
+      SocialInsuranceCalculator.addAmounts(
+        currentMonthData.healthInsuranceCompany,
+        currentMonthData.careInsuranceCompany
+      ),
       currentMonthData.pensionInsuranceCompany
     );
 
@@ -517,8 +523,16 @@ export class HomeComponent implements OnInit {
     return decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
   }
 
-  calculateInsuranceTotal(healthEmployee: string, pensionEmployee: string): string {
-    return SocialInsuranceCalculator.addAmounts(healthEmployee, pensionEmployee);
+  calculateInsuranceTotal(
+    healthEmployee: string,
+    careEmployee: string,
+    pensionEmployee: string
+  ): string {
+    // 3つを単純合計（どちらか一方が0円なので二重計上にならない）
+    return SocialInsuranceCalculator.addAmounts(
+      SocialInsuranceCalculator.addAmounts(healthEmployee, careEmployee),
+      pensionEmployee
+    );
   }
 
   getTotalCompanyExpense(): string {

@@ -359,20 +359,20 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
               );
               if (healthGradeInfo) {
                 const nonNursingHalf = healthGradeInfo.nonNursingHalf;
-                result.healthInsuranceFeeEmployee = nonNursingHalf;
-                result.healthInsuranceFeeCompany = nonNursingHalf;
+                const nursingHalf = healthGradeInfo.nursingHalf;
 
                 if (isCareInsuranceApplicable) {
-                  const nursingHalf = healthGradeInfo.nursingHalf;
-                  result.healthInsuranceFeeEmployee = nursingHalf;
-                  result.healthInsuranceFeeCompany = nursingHalf;
-
-                  const careFee = SocialInsuranceCalculator.subtract(
-                    healthGradeInfo.nursingHalf,
-                    healthGradeInfo.nonNursingHalf
-                  );
-                  result.careInsuranceFeeEmployee = careFee;
-                  result.careInsuranceFeeCompany = careFee;
+                  // 介護保険対象者：介護保険料の欄にnursingHalfをセット、健康保険料は空
+                  result.healthInsuranceFeeEmployee = null;
+                  result.healthInsuranceFeeCompany = null;
+                  result.careInsuranceFeeEmployee = nursingHalf;
+                  result.careInsuranceFeeCompany = nursingHalf;
+                } else {
+                  // 非対象者：健康保険料の欄にnonNursingHalfをセット、介護保険料は空
+                  result.healthInsuranceFeeEmployee = nonNursingHalf;
+                  result.healthInsuranceFeeCompany = nonNursingHalf;
+                  result.careInsuranceFeeEmployee = null;
+                  result.careInsuranceFeeCompany = null;
                 }
               }
 
