@@ -490,8 +490,14 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   }
 
   async saveBonusResults(): Promise<void> {
+    console.log('🔧 saveBonusResults() 開始');
+    console.log('🔧 employeeInfo:', this.employeeInfo);
+    console.log('🔧 bonusDataList.length:', this.bonusDataList?.length);
+    console.log('🔧 uid:', this.uid);
+
     if (!this.employeeInfo || !this.bonusDataList.length || !this.uid) {
       this.errorMessage = '保存するデータがありません。';
+      console.log('🔧 保存データ不足でリターン');
       return;
     }
 
