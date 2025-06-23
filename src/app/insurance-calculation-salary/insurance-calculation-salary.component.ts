@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { OfficeService } from '../services/office.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
+import { AuthService } from '../services/auth.service';
 
 interface EmployeeInfo {
   name: string;
@@ -60,13 +61,27 @@ interface MonthlyCalculationResult {
   month: number;
   year: number;
   healthInsuranceGrade: number | string | null;
-  healthInsuranceFeeEmployee: number | null;
-  healthInsuranceFeeCompany: number | null;
-  careInsuranceFeeEmployee: number | null;
-  careInsuranceFeeCompany: number | null;
+  healthInsuranceFeeEmployee: string | null;
+  healthInsuranceFeeCompany: string | null;
+  careInsuranceFeeEmployee: string | null;
+  careInsuranceFeeCompany: string | null;
   pensionInsuranceGrade: number | string | null;
-  pensionInsuranceFeeEmployee: number | null;
-  pensionInsuranceFeeCompany: number | null;
+  pensionInsuranceFeeEmployee: string | null;
+  pensionInsuranceFeeCompany: string | null;
+}
+
+// DB保存用の月別計算結果のインターフェース
+interface MonthlyCalculationResultForDb {
+  month: number;
+  year: number;
+  healthInsuranceGrade: string;
+  healthInsuranceFeeEmployee: string;
+  healthInsuranceFeeCompany: string;
+  careInsuranceFeeEmployee: string;
+  careInsuranceFeeCompany: string;
+  pensionInsuranceGrade: string;
+  pensionInsuranceFeeEmployee: string;
+  pensionInsuranceFeeCompany: string;
 }
 
 @Component({
@@ -90,7 +105,8 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private officeService: OfficeService
+    private officeService: OfficeService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -111,8 +127,17 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
 
     this.isLoading = true;
     try {
+      const companyId = await this.authService.getCurrentUserCompanyId();
+      if (!companyId) {
+        throw new Error('会社IDが取得できませんでした。');
+      }
+
       const usersRef = collection(this.firestore, 'users');
-      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const q = query(
+        usersRef,
+        where('employeeNumber', '==', this.employeeId),
+        where('companyId', '==', companyId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
@@ -141,6 +166,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
         this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
       }
     } catch (error) {
+      console.error('従業員情報取得エラー:', error);
       this.errorMessage = `従業員情報の取得に失敗しました: ${error}`;
     } finally {
       this.isLoading = false;
@@ -326,12 +352,12 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
                 (g) => parseInt(g.grade.split(' ')[0], 10) == applicableGrade!.healthInsuranceGrade
               );
               if (healthGradeInfo) {
-                const nonNursingHalf = this.parseCurrency(healthGradeInfo.nonNursingHalf);
+                const nonNursingHalf = healthGradeInfo.nonNursingHalf;
                 result.healthInsuranceFeeEmployee = nonNursingHalf;
                 result.healthInsuranceFeeCompany = nonNursingHalf;
 
                 if (isCareInsuranceApplicable) {
-                  const nursingHalf = this.parseCurrency(healthGradeInfo.nursingHalf);
+                  const nursingHalf = healthGradeInfo.nursingHalf;
                   result.healthInsuranceFeeEmployee = nursingHalf;
                   result.healthInsuranceFeeCompany = nursingHalf;
 
@@ -339,9 +365,8 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
                     healthGradeInfo.nursingHalf,
                     healthGradeInfo.nonNursingHalf
                   );
-                  const parsedCareFee = this.parseCurrency(careFee);
-                  result.careInsuranceFeeEmployee = parsedCareFee;
-                  result.careInsuranceFeeCompany = parsedCareFee;
+                  result.careInsuranceFeeEmployee = careFee;
+                  result.careInsuranceFeeCompany = careFee;
                 }
               }
 
@@ -350,7 +375,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
                 (g) => g.grade == applicableGrade!.pensionInsuranceGrade
               );
               if (pensionGradeInfo) {
-                const pensionHalf = this.parseCurrency(pensionGradeInfo.pensionHalf);
+                const pensionHalf = pensionGradeInfo.pensionHalf;
                 result.pensionInsuranceFeeEmployee = pensionHalf;
                 result.pensionInsuranceFeeCompany = pensionHalf;
               }
@@ -374,10 +399,16 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
   }
 
   private async fetchGradeHistory(): Promise<GradeJudgmentRecord[]> {
-    if (!this.employeeId) return [];
+    if (!this.employeeInfo || !this.employeeId) return [];
+
+    const { companyId } = this.employeeInfo;
 
     const history: GradeJudgmentRecord[] = [];
-    const q = query(collection(this.firestore, 'gradeJudgments', this.employeeId, 'judgments'));
+    const judgmentsRef = collection(
+      this.firestore,
+      `companies/${companyId}/employees/${this.employeeId}/gradeHistory`
+    );
+    const q = query(judgmentsRef);
     const querySnapshot = await getDocs(q);
 
     querySnapshot.forEach((doc) => {
@@ -422,22 +453,10 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     return age;
   }
 
-  private formatCurrency(value: string | number): string {
-    if (!value || value === '0' || value === '-') return '-';
-    return new Intl.NumberFormat('ja-JP').format(Number(value));
-  }
-
-  private parseCurrency(value: string | number | null): number | null {
-    if (value === null || value === '-') {
-      return null;
-    }
-    if (typeof value === 'number') {
-      return value;
-    }
-    // Remove commas before parsing
-    const numericString = String(value).replace(/,/g, '');
-    const num = parseFloat(numericString);
-    return isNaN(num) ? null : num;
+  private formatCurrency(value: string | number | null): string {
+    if (value === null || value === undefined || value === '' || value === '-') return '-';
+    // SocialInsuranceCalculatorを使用してフォーマット
+    return SocialInsuranceCalculator.formatCurrency(String(value));
   }
 
   private parseGrade(value: string | number | null): number | null {
@@ -464,57 +483,51 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     const docPath = `companies/${companyId}/employees/${employeeNumber}/salary_calculation_results/${this.targetYear}`;
     const docRef = doc(this.firestore, docPath);
 
-    // デバッグ用：保存前のデータを確認
-    console.log('保存前のmonthlyResults:', this.monthlyResults);
-
     // Firestoreに保存するためにデータを整形
-    const resultsForDb = this.monthlyResults.map((r) => {
-      // 値をDB保存用の文字列に変換する内部関数
-      const formatForDb = (value: string | number | null | undefined): string => {
-        if (value === null || typeof value === 'undefined' || value === '-') {
-          return '-';
-        }
-        // 数値の場合は、カンマ区切りに変換
-        if (typeof value === 'number') {
-          return new Intl.NumberFormat('ja-JP').format(value);
-        }
-        // それ以外（「産休」「35」など）はそのまま文字列に
-        return String(value);
-      };
+    const resultsForDb = {
+      // companyIdを追加して、データの所有者を明確にする
+      companyId: companyId,
+      employeeNumber: employeeNumber,
+      year: this.targetYear,
+      // monthlyResultsの各月のデータをオブジェクトとして持つように変更
+      months: this.monthlyResults.reduce(
+        (acc, r) => {
+          // 値をDB保存用の文字列に変換する内部関数
+          const formatForDb = (value: string | number | null | undefined): string => {
+            if (value === null || typeof value === 'undefined' || value === '-') {
+              return '-';
+            }
+            if (typeof value === 'number') {
+              return new Intl.NumberFormat('ja-JP').format(value);
+            }
+            return String(value);
+          };
 
-      return {
-        month: r.month,
-        year: r.year,
-        healthInsuranceGrade: formatForDb(r.healthInsuranceGrade),
-        pensionInsuranceGrade: formatForDb(r.pensionInsuranceGrade),
-        healthInsuranceFeeEmployee: formatForDb(r.healthInsuranceFeeEmployee),
-        healthInsuranceFeeCompany: formatForDb(r.healthInsuranceFeeCompany),
-        careInsuranceFeeEmployee: formatForDb(r.careInsuranceFeeEmployee),
-        careInsuranceFeeCompany: formatForDb(r.careInsuranceFeeCompany),
-        pensionInsuranceFeeEmployee: formatForDb(r.pensionInsuranceFeeEmployee),
-        pensionInsuranceFeeCompany: formatForDb(r.pensionInsuranceFeeCompany),
-      };
-    });
-
-    // デバッグ用：保存用に変換したデータを確認
-    console.log('保存用に変換したresultsForDb:', resultsForDb);
-
-    const dataToSave = {
-      updatedAt: new Date(),
-      results: resultsForDb,
+          acc[r.month] = {
+            year: r.year,
+            month: r.month,
+            healthInsuranceGrade: formatForDb(r.healthInsuranceGrade),
+            healthInsuranceFeeEmployee: formatForDb(r.healthInsuranceFeeEmployee),
+            healthInsuranceFeeCompany: formatForDb(r.healthInsuranceFeeCompany),
+            careInsuranceFeeEmployee: formatForDb(r.careInsuranceFeeEmployee),
+            careInsuranceFeeCompany: formatForDb(r.careInsuranceFeeCompany),
+            pensionInsuranceGrade: formatForDb(r.pensionInsuranceGrade),
+            pensionInsuranceFeeEmployee: formatForDb(r.pensionInsuranceFeeEmployee),
+            pensionInsuranceFeeCompany: formatForDb(r.pensionInsuranceFeeCompany),
+          };
+          return acc;
+        },
+        {} as Record<number, MonthlyCalculationResultForDb>
+      ),
+      updatedAt: Timestamp.now(),
     };
 
     try {
-      console.log('Firestoreに保存中...', docPath);
-      await setDoc(docRef, dataToSave);
-      console.log('Firestoreへの保存が完了しました');
-      // 保存成功のフィードバックをユーザーに表示
+      await setDoc(docRef, resultsForDb, { merge: true });
       alert(`${this.targetYear}年度の計算結果を保存しました。`);
     } catch (error) {
-      console.error('計算結果の保存に失敗しました:', error);
-      console.error('保存しようとしたデータ:', dataToSave);
-      // 保存失敗のフィードバックをユーザーに表示
-      alert('エラーが発生しました。計算結果の保存に失敗しました。');
+      console.error('計算結果の保存中にエラーが発生しました:', error);
+      alert('エラーが発生しました。コンソールを確認してください。');
     } finally {
       this.isLoading = false;
     }
