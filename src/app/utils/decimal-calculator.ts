@@ -156,8 +156,8 @@ export class SocialInsuranceCalculator {
    * @returns カンマ区切り文字列
    */
   static formatCurrency(amount: string): string {
-    const cleanAmount = amount.replace(/,/g, '');
-    return new Decimal(cleanAmount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const cleanAmount = String(amount || '0').replace(/,/g, '');
+    return new Decimal(cleanAmount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
   /**
@@ -201,11 +201,11 @@ export class SocialInsuranceCalculator {
    * @returns 加算結果
    */
   static addAmounts(amount1: string, amount2: string): string {
-    const cleanAmount1 = amount1.replace(/,/g, '');
-    const cleanAmount2 = amount2.replace(/,/g, '');
+    const cleanAmount1 = String(amount1 || '0').replace(/,/g, '');
+    const cleanAmount2 = String(amount2 || '0').replace(/,/g, '');
 
-    const decimal1 = new Decimal(cleanAmount1);
-    const decimal2 = new Decimal(cleanAmount2);
+    const decimal1 = new Decimal(cleanAmount1 || '0');
+    const decimal2 = new Decimal(cleanAmount2 || '0');
     return decimal1.add(decimal2).toString();
   }
 

@@ -255,13 +255,9 @@ export class HomeComponent implements OnInit {
   // 判定結果を読み込むメソッド
   private async loadJudgmentResults(users: UserWithJudgment[]): Promise<void> {
     for (const user of users) {
-      const docRef = doc(this.firestore, 'insuranceJudgments', user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        user.judgmentResult = docSnap.data()['judgmentResult'] as InsuranceEligibility;
-      } else {
-        user.judgmentResult = null;
-      }
+      // ここで非同期に判定結果を取得
+      // user.judgmentResult = await this.insuranceCalculationService.judge(user);
+      user.judgmentResult = null; // 現状はnull
     }
   }
 
@@ -269,37 +265,110 @@ export class HomeComponent implements OnInit {
   private async convertToEmployeeInsuranceData(
     user: UserWithJudgment
   ): Promise<EmployeeInsuranceData> {
-    const judgmentStatus = this.getJudgmentStatus(user);
-    const insuranceFees = await this.insuranceCalculationService.calculateForMonth(
-      user,
-      this.selectedYear,
-      this.selectedMonth
-    );
+    let healthInsuranceGrade: number | string = '-';
+    let pensionInsuranceGrade: number | string = '-';
+    let currentMonthData: MonthlyInsuranceFee = {
+      healthInsuranceEmployee: '0',
+      healthInsuranceCompany: '0',
+      pensionInsuranceEmployee: '0',
+      pensionInsuranceCompany: '0',
+      careInsuranceEmployee: '0',
+      careInsuranceCompany: '0',
+      totalEmployee: '0',
+      totalCompany: '0',
+    };
+
+    const companyId = await this.authService.getCurrentUserCompanyId();
+    if (companyId && user.uid) {
+      const docPath = `companies/${companyId}/employees/${user.uid}/salary_calculation_results/${this.selectedYear}`;
+      const docRef = doc(this.firestore, docPath);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const yearData = docSnap.data();
+        const monthCalculation = yearData['months']?.[this.selectedMonth];
+        if (monthCalculation) {
+          console.log('monthCalculation data for user ' + user.uid, monthCalculation);
+          healthInsuranceGrade = monthCalculation.healthInsuranceGrade;
+          pensionInsuranceGrade = monthCalculation.pensionInsuranceGrade;
+
+          const healthFeeEmployee = this.safeGetAmount(monthCalculation.healthInsuranceFeeEmployee);
+          const pensionFeeEmployee = this.safeGetAmount(
+            monthCalculation.pensionInsuranceFeeEmployee
+          );
+          const careFeeEmployee = this.safeGetAmount(monthCalculation.careInsuranceFeeEmployee);
+          const healthFeeCompany = this.safeGetAmount(monthCalculation.healthInsuranceFeeCompany);
+          const pensionFeeCompany = this.safeGetAmount(monthCalculation.pensionInsuranceFeeCompany);
+          const careFeeCompany = this.safeGetAmount(monthCalculation.careInsuranceFeeCompany);
+
+          const totalEmployee = SocialInsuranceCalculator.addAmounts(
+            healthFeeEmployee,
+            SocialInsuranceCalculator.addAmounts(pensionFeeEmployee, careFeeEmployee)
+          );
+          const totalCompany = SocialInsuranceCalculator.addAmounts(
+            healthFeeCompany,
+            SocialInsuranceCalculator.addAmounts(pensionFeeCompany, careFeeCompany)
+          );
+
+          currentMonthData = {
+            healthInsuranceEmployee: healthFeeEmployee,
+            healthInsuranceCompany: healthFeeCompany,
+            pensionInsuranceEmployee: pensionFeeEmployee,
+            pensionInsuranceCompany: pensionFeeCompany,
+            careInsuranceEmployee: careFeeEmployee,
+            careInsuranceCompany: careFeeCompany,
+            totalEmployee: totalEmployee,
+            totalCompany: totalCompany,
+          };
+        }
+      }
+    }
 
     return {
-      employeeNumber: user.employeeNumber || '-',
-      officeNumber: user.branchNumber || '-',
+      employeeNumber: user.employeeNumber || '',
+      officeNumber: user.branchNumber || '',
       employeeName: `${user.lastName || ''} ${user.firstName || ''}`.trim(),
-      attribute: judgmentStatus,
-      currentMonth: insuranceFees,
-      healthInsuranceGrade: insuranceFees.healthInsuranceGrade,
-      pensionInsuranceGrade: insuranceFees.pensionInsuranceGrade,
+      attribute: this.getJudgmentStatus(user),
+      currentMonth: currentMonthData,
+      healthInsuranceGrade,
+      pensionInsuranceGrade,
     };
   }
 
   // 判定状況を取得
   private getJudgmentStatus(user: UserWithJudgment): string {
-    if (user.judgmentResult === null || user.judgmentResult === undefined) {
+    const result = user.judgmentResult;
+    if (!result) {
       return '未実施';
     }
 
-    const { healthInsurance, pensionInsurance, careInsurance } = user.judgmentResult;
+    const { healthInsurance, pensionInsurance, careInsurance } = result;
 
     if (healthInsurance.eligible || pensionInsurance.eligible || careInsurance?.eligible) {
       return '対象';
     }
 
     return '対象外';
+  }
+
+  // 金額を安全に取得するヘルパー関数
+  private safeGetAmount(value: any): string {
+    if (value === null || typeof value === 'undefined') {
+      return '0';
+    }
+
+    const strValue = String(value).replace(/,/g, '').trim();
+
+    // 値が空、ハイフン、または無効な数値の場合は '0' を返す
+    if (strValue === '' || strValue === '-' || isNaN(parseFloat(strValue))) {
+      // 予期しない値の場合のみ警告
+      if (strValue !== '' && strValue !== '-' && !/^\d+(\.\d+)?$/.test(strValue)) {
+        console.warn('Unexpected value for amount, treating as 0:', value);
+      }
+      return '0';
+    }
+
+    return strValue;
   }
 
   // 個人用の月別データ生成（過去6ヶ月分）
@@ -346,10 +415,15 @@ export class HomeComponent implements OnInit {
   }
 
   // 数値をカンマ区切りで表示
-  formatNumber(num: string): string {
-    if (!num || num === '0') return '0';
-    // 小数点以下を考慮しない整数のフォーマット
-    return new Intl.NumberFormat('ja-JP').format(Math.floor(Number(num)));
+  formatNumber(num: string | number | undefined): string {
+    if (num === null || typeof num === 'undefined' || num === '') return '0';
+    const strNum = String(num);
+
+    const parts = strNum.split('.');
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const decimalPart = parts[1];
+
+    return decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
   }
 
   calculateInsuranceTotal(healthEmployee: string, pensionEmployee: string): string {
