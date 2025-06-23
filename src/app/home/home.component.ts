@@ -40,6 +40,13 @@ interface EmployeeInsuranceData {
   currentMonth: MonthlyInsuranceFee;
   healthInsuranceGrade?: number | string;
   pensionInsuranceGrade?: number | string;
+  leaveStatus?: string;
+  // 賞与データ用
+  paymentAmount?: string;
+  standardBonusAmount?: string;
+  healthInsuranceRate?: string;
+  careInsuranceRate?: string;
+  pensionInsuranceRate?: string;
 }
 
 // ユーザーに判定結果を追加した拡張インターフェース
@@ -157,7 +164,6 @@ export class HomeComponent implements OnInit {
     'employeeNumber',
     'employeeName',
     'leaveStatus',
-    'paymentAmount',
     'standardBonusAmount',
     'healthInsuranceRate',
     'healthInsuranceEmployee',
@@ -277,50 +283,116 @@ export class HomeComponent implements OnInit {
       totalEmployee: '0',
       totalCompany: '0',
     };
+    // 賞与・休業用の変数を初期化
+    let paymentAmount: string | undefined;
+    let standardBonusAmount: string | undefined;
+    let healthInsuranceRate: string | undefined;
+    let careInsuranceRate: string | undefined;
+    let pensionInsuranceRate: string | undefined;
+    let leaveStatus: string | undefined;
 
     const companyId = await this.authService.getCurrentUserCompanyId();
     if (companyId && user.uid) {
-      const docPath = `companies/${companyId}/employees/${user.uid}/salary_calculation_results/${this.selectedYear}`;
+      // 月次データか賞与データかでパスを切り替え
+      const collectionName =
+        this.selectedMonth >= 13 ? 'bonus_calculation_results' : 'salary_calculation_results';
+      const docPath = `companies/${companyId}/employees/${user.uid}/${collectionName}/${this.selectedYear}`;
       const docRef = doc(this.firestore, docPath);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const yearData = docSnap.data();
-        const monthCalculation = yearData['months']?.[this.selectedMonth];
-        if (monthCalculation) {
-          console.log('monthCalculation data for user ' + user.uid, monthCalculation);
-          healthInsuranceGrade = monthCalculation.healthInsuranceGrade;
-          pensionInsuranceGrade = monthCalculation.pensionInsuranceGrade;
 
-          const healthFeeEmployee = this.safeGetAmount(monthCalculation.healthInsuranceFeeEmployee);
-          const pensionFeeEmployee = this.safeGetAmount(
-            monthCalculation.pensionInsuranceFeeEmployee
-          );
-          const careFeeEmployee = this.safeGetAmount(monthCalculation.careInsuranceFeeEmployee);
-          const healthFeeCompany = this.safeGetAmount(monthCalculation.healthInsuranceFeeCompany);
-          const pensionFeeCompany = this.safeGetAmount(monthCalculation.pensionInsuranceFeeCompany);
-          const careFeeCompany = this.safeGetAmount(monthCalculation.careInsuranceFeeCompany);
+        // 月次データか賞与データかを判定
+        if (this.selectedMonth >= 1 && this.selectedMonth <= 12) {
+          // 月次データの処理
+          const monthCalculation = yearData['months']?.[this.selectedMonth];
+          if (monthCalculation) {
+            healthInsuranceGrade = monthCalculation.healthInsuranceGrade;
+            pensionInsuranceGrade = monthCalculation.pensionInsuranceGrade;
 
-          const totalEmployee = SocialInsuranceCalculator.addAmounts(
-            healthFeeEmployee,
-            SocialInsuranceCalculator.addAmounts(pensionFeeEmployee, careFeeEmployee)
-          );
-          const totalCompany = SocialInsuranceCalculator.addAmounts(
-            healthFeeCompany,
-            SocialInsuranceCalculator.addAmounts(pensionFeeCompany, careFeeCompany)
-          );
+            const healthFeeEmployee = this.safeGetAmount(
+              monthCalculation.healthInsuranceFeeEmployee
+            );
+            const pensionFeeEmployee = this.safeGetAmount(
+              monthCalculation.pensionInsuranceFeeEmployee
+            );
+            const careFeeEmployee = this.safeGetAmount(monthCalculation.careInsuranceFeeEmployee);
+            const healthFeeCompany = this.safeGetAmount(monthCalculation.healthInsuranceFeeCompany);
+            const pensionFeeCompany = this.safeGetAmount(
+              monthCalculation.pensionInsuranceFeeCompany
+            );
+            const careFeeCompany = this.safeGetAmount(monthCalculation.careInsuranceFeeCompany);
 
-          currentMonthData = {
-            healthInsuranceEmployee: healthFeeEmployee,
-            healthInsuranceCompany: healthFeeCompany,
-            pensionInsuranceEmployee: pensionFeeEmployee,
-            pensionInsuranceCompany: pensionFeeCompany,
-            careInsuranceEmployee: careFeeEmployee,
-            careInsuranceCompany: careFeeCompany,
-            totalEmployee: totalEmployee,
-            totalCompany: totalCompany,
-          };
+            const totalEmployee = SocialInsuranceCalculator.addAmounts(
+              healthFeeEmployee,
+              SocialInsuranceCalculator.addAmounts(pensionFeeEmployee, careFeeEmployee)
+            );
+            const totalCompany = SocialInsuranceCalculator.addAmounts(
+              healthFeeCompany,
+              SocialInsuranceCalculator.addAmounts(pensionFeeCompany, careFeeCompany)
+            );
+
+            currentMonthData = {
+              healthInsuranceEmployee: healthFeeEmployee,
+              healthInsuranceCompany: healthFeeCompany,
+              pensionInsuranceEmployee: pensionFeeEmployee,
+              pensionInsuranceCompany: pensionFeeCompany,
+              careInsuranceEmployee: careFeeEmployee,
+              careInsuranceCompany: careFeeCompany,
+              totalEmployee: totalEmployee,
+              totalCompany: totalCompany,
+            };
+          }
+          leaveStatus = this.getLeaveStatus(user.employeeNumber || '');
+        } else if (this.selectedMonth >= 13) {
+          // 賞与データの処理
+          const bonusIndex = this.selectedMonth - 13; // 13 -> 0, 14 -> 1, ...
+          const bonusResults = yearData['bonusResults'];
+          if (bonusResults && bonusResults[bonusIndex]) {
+            const bonusData = bonusResults[bonusIndex];
+            const result = bonusData.calculationResult;
+            healthInsuranceGrade = '-'; // 賞与に等級はない
+            pensionInsuranceGrade = '-';
+
+            const healthFeeEmployee = this.safeGetAmount(result.healthInsurance.employeeBurden);
+            const healthFeeCompany = this.safeGetAmount(result.healthInsurance.companyBurden);
+            const pensionFeeEmployee = this.safeGetAmount(result.pensionInsurance.employeeBurden);
+            const pensionFeeCompany = this.safeGetAmount(result.pensionInsurance.companyBurden);
+            const careFeeEmployee = this.safeGetAmount(result.careInsurance?.employeeBurden);
+            const careFeeCompany = this.safeGetAmount(result.careInsurance?.companyBurden);
+
+            const totalEmployee = SocialInsuranceCalculator.addAmounts(
+              healthFeeEmployee,
+              SocialInsuranceCalculator.addAmounts(pensionFeeEmployee, careFeeEmployee)
+            );
+            const totalCompany = SocialInsuranceCalculator.addAmounts(
+              healthFeeCompany,
+              SocialInsuranceCalculator.addAmounts(pensionFeeCompany, careFeeCompany)
+            );
+
+            currentMonthData = {
+              healthInsuranceEmployee: healthFeeEmployee,
+              healthInsuranceCompany: healthFeeCompany,
+              pensionInsuranceEmployee: pensionFeeEmployee,
+              pensionInsuranceCompany: pensionFeeCompany,
+              careInsuranceEmployee: careFeeEmployee,
+              careInsuranceCompany: careFeeCompany,
+              totalEmployee: totalEmployee,
+              totalCompany: totalCompany,
+            };
+
+            // 賞与データをセット
+            standardBonusAmount = result.standardBonusAmount;
+            healthInsuranceRate = result.healthInsuranceRate;
+            careInsuranceRate = result.careInsuranceRate;
+            pensionInsuranceRate = result.pensionInsuranceRate;
+            leaveStatus = bonusData.leaveType;
+          }
         }
+      } else {
+        // ドキュメントが存在しない場合は月次のステータスをデフォルトとする
+        leaveStatus = this.getLeaveStatus(user.employeeNumber || '');
       }
     }
 
@@ -332,6 +404,12 @@ export class HomeComponent implements OnInit {
       currentMonth: currentMonthData,
       healthInsuranceGrade,
       pensionInsuranceGrade,
+      leaveStatus: leaveStatus,
+      paymentAmount: paymentAmount,
+      standardBonusAmount: standardBonusAmount,
+      healthInsuranceRate: healthInsuranceRate,
+      careInsuranceRate: careInsuranceRate,
+      pensionInsuranceRate: pensionInsuranceRate,
     };
   }
 
@@ -444,11 +522,13 @@ export class HomeComponent implements OnInit {
 
   // 年次切り替え時の処理
   onYearChange() {
+    this.setDisplayedColumns();
     this.refreshData();
   }
 
   // 月選択変更時の処理
   onMonthChange() {
+    this.setDisplayedColumns();
     this.refreshData();
   }
 
@@ -475,6 +555,7 @@ export class HomeComponent implements OnInit {
 
   // データ更新処理（年月変更時共通）
   private async refreshData() {
+    this.setDisplayedColumns();
     try {
       const companyId = await this.authService.getCurrentUserCompanyId();
       if (!companyId) return;
@@ -571,16 +652,19 @@ export class HomeComponent implements OnInit {
   }
 
   // 従業員の産休育休状態をラベル形式で取得
-  getLeaveStatusLabel(employeeNumber: string): string {
-    const status = this.getLeaveStatus(employeeNumber);
+  getLeaveStatusLabel(status: string | undefined | null): string {
+    if (!status) {
+      return '未設定';
+    }
     switch (status) {
+      case 'none':
+        return '未設定';
       case 'maternity':
         return '産休';
       case 'childcare':
         return '育休';
-      case 'none':
       default:
-        return 'なし';
+        return '未設定';
     }
   }
 
