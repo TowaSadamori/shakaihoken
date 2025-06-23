@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { OfficeService } from '../services/office.service';
+import { AuthService } from '../services/auth.service';
 
 interface EmployeeInfo {
   name: string;
@@ -37,7 +38,8 @@ export class InsuranceCalculationComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private officeService: OfficeService
+    private officeService: OfficeService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -82,10 +84,23 @@ export class InsuranceCalculationComponent implements OnInit {
 
     this.isLoading = true;
     try {
-      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
+      const companyId = await this.authService.getCurrentUserCompanyId();
+      if (!companyId) {
+        throw new Error('会社IDが取得できませんでした。');
+      }
+
+      console.log(
+        '従業員情報を読み込み中 (employeeNumber, companyId):',
+        this.employeeId,
+        companyId
+      );
 
       const usersRef = collection(this.firestore, 'users');
-      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const q = query(
+        usersRef,
+        where('employeeNumber', '==', this.employeeId),
+        where('companyId', '==', companyId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
