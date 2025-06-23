@@ -19,6 +19,7 @@ import { OfficeService } from '../../services/office.service';
 import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 
 interface EmployeeInfo {
+  uid: string;
   name: string;
   employeeNumber: string;
   birthDate: string;
@@ -136,6 +137,7 @@ export class ManualGradeAddComponent implements OnInit {
   private recordId: string | null = null;
   isEditMode = false;
   private firestore = getFirestore();
+  private companyId: string | null = null;
 
   confirmedReason: string | null = null;
 
@@ -149,15 +151,19 @@ export class ManualGradeAddComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.employeeId = this.route.snapshot.paramMap.get('employeeId');
     this.recordId = this.route.snapshot.paramMap.get('recordId');
-    // history.stateからjudgmentReasonを取得
     const reasonFromState = history.state?.judgmentReason;
     this.isEditMode = !!this.recordId;
 
     if (this.employeeId) {
+      this.companyId = await this.authService.getCurrentUserCompanyId();
+      if (!this.companyId) {
+        this.errorMessage = '会社IDが取得できませんでした。';
+        return;
+      }
+
       await this.loadEmployeeInfo();
       if (this.isEditMode && this.recordId) {
         await this.loadExistingManualGradeData(this.recordId);
-        // stateから渡された理由で上書き
         if (reasonFromState) {
           this.judgmentReason = reasonFromState;
         }
@@ -174,53 +180,47 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   private async loadEmployeeInfo(): Promise<void> {
-    if (!this.employeeId) return;
+    if (!this.employeeId || !this.companyId) return;
 
     this.isLoading = true;
     try {
-      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
+      console.log(
+        '従業員情報を読み込み中 (employeeNumber, companyId):',
+        this.employeeId,
+        this.companyId
+      );
 
-      // employeeNumberで検索（等級判定画面と同じ方法）
       const usersRef = collection(this.firestore, 'users');
-      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const q = query(
+        usersRef,
+        where('employeeNumber', '==', this.employeeId),
+        where('companyId', '==', this.companyId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
         console.log('Firestoreから取得した従業員データ:', userData);
 
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
-
-        // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
         const formattedBirthDate = birthDate.toISOString().split('T')[0];
-
-        // 事業所情報から addressPrefecture を取得
         let addressPrefecture = userData['addressPrefecture'] || '';
 
-        // ユーザーデータに addressPrefecture がない場合、事業所データから取得
         if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
           try {
-            console.log('=== 事業所データ取得開始 ===');
-            console.log('対象companyId:', userData['companyId']);
-            console.log('対象branchNumber:', userData['branchNumber']);
-
             addressPrefecture = await this.officeService.findOfficeAddressPrefecture(
               userData['companyId'],
               userData['branchNumber']
             );
-
-            if (addressPrefecture) {
-              console.log('✅ 事業所所在地取得成功:', addressPrefecture);
-            } else {
-              console.warn('⚠️ 事業所所在地が見つかりませんでした');
-            }
           } catch (officeError) {
-            console.error('❌ 事業所データ取得エラー:', officeError);
+            console.error('事業所データ取得エラー:', officeError);
           }
         }
 
         this.employeeInfo = {
+          uid: userDoc.id,
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
           birthDate: formattedBirthDate,
@@ -714,16 +714,21 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   private async loadExistingManualGradeData(recordId: string): Promise<void> {
-    if (!this.employeeId) return;
+    if (!this.employeeId || !this.companyId) return;
     this.isLoading = true;
     try {
-      const docRef = doc(this.firestore, `gradeJudgments/${this.employeeId}/judgments`, recordId);
-      const docSnap = await getDoc(docRef);
+      const judgmentsRef = collection(this.firestore, 'gradeJudgments');
+      const q = query(
+        judgmentsRef,
+        where('companyId', '==', this.companyId),
+        where('employeeId', '==', this.employeeId)
+      );
+      const querySnapshot = await getDocs(q);
+      const docSnap = querySnapshot.docs.find((d) => d.id === recordId);
 
-      if (docSnap.exists()) {
+      if (docSnap && docSnap.exists()) {
         const data = docSnap.data();
 
-        // 手入力データの場合、inputDataから元の入力値を取得
         if (data['inputData']) {
           this.monthlyAmount = data['inputData'].monthlyAmount || null;
         } else {
@@ -880,6 +885,12 @@ export class ManualGradeAddComponent implements OnInit {
       return;
     }
 
+    // employeeInfoとuidの存在をチェック
+    if (!this.employeeInfo?.uid) {
+      this.errorMessage = '従業員のユニークIDが取得できませんでした。';
+      return;
+    }
+
     try {
       const effectiveDate = new Date(
         Number(this.applicableYear!),
@@ -888,6 +899,8 @@ export class ManualGradeAddComponent implements OnInit {
       );
 
       const historyRecord: Record<string, unknown> = {
+        uid: this.employeeInfo.uid,
+        companyId: this.companyId,
         employeeId: this.employeeId,
         judgmentType: 'manual' as const,
         judgmentDate: new Date(),
@@ -915,30 +928,29 @@ export class ManualGradeAddComponent implements OnInit {
         historyRecord['careInsuranceGrade'] = null;
       }
 
-      const historyCollectionRef = collection(
-        this.firestore,
-        'gradeJudgments',
-        this.employeeId,
-        'judgments'
-      );
+      const historyCollectionRef = collection(this.firestore, 'gradeJudgments');
 
       if (this.isEditMode && this.recordId) {
-        // 編集モード：既存レコードを更新
         const existingDocRef = doc(historyCollectionRef, this.recordId);
-        // createdAtは保持し、updatedAtのみ更新
-        historyRecord['createdAt'] = new Date(); // 実際の実装では既存のcreatedAtを保持すべき
+        const docSnap = await getDoc(existingDocRef);
+        if (!docSnap.exists() || docSnap.data()['companyId'] !== this.companyId) {
+          throw new Error('更新権限のない、または存在しないドキュメントです。');
+        }
+        historyRecord['updatedAt'] = new Date();
         const convertedRecord = this.deepConvertBigIntToString(historyRecord);
-        await setDoc(existingDocRef, convertedRecord);
+        await setDoc(existingDocRef, convertedRecord, { merge: true });
       } else {
-        // 新規作成モード：新しいレコードを作成
         historyRecord['createdAt'] = new Date();
+        historyRecord['updatedAt'] = new Date();
         const newDocRef = doc(historyCollectionRef);
         const convertedRecord = this.deepConvertBigIntToString(historyRecord);
         await setDoc(newDocRef, convertedRecord);
+        this.recordId = newDocRef.id;
+        this.isEditMode = true;
       }
     } catch (error) {
       console.error('等級履歴への保存エラー:', error);
-      throw new Error('等級履歴への保存に失敗しました。');
+      this.errorMessage = '等級履歴への保存に失敗しました。';
     }
   }
 
@@ -956,11 +968,11 @@ export class ManualGradeAddComponent implements OnInit {
         console.log('削除開始:', { employeeId: this.employeeId, recordId: this.recordId });
 
         // 1. 履歴コレクションから削除（メイン画面と同じロジック）
-        const historyDocRef = doc(
-          this.firestore,
-          `gradeJudgments/${this.employeeId}/judgments`,
-          this.recordId
-        );
+        const historyDocRef = doc(this.firestore, `gradeJudgments`, this.recordId);
+        const docSnap = await getDoc(historyDocRef);
+        if (!docSnap.exists() || docSnap.data()['companyId'] !== this.companyId) {
+          throw new Error('削除権限のない、または存在しないドキュメントです。');
+        }
         console.log('履歴削除:', historyDocRef.path);
         await deleteDoc(historyDocRef);
 
@@ -1042,17 +1054,13 @@ export class ManualGradeAddComponent implements OnInit {
    * @param obj 変換するオブジェクト
    * @returns BigIntが文字列に変換された新しいオブジェクト
    */
-  private deepConvertBigIntToString(obj: unknown): unknown {
+  private deepConvertBigIntToString(obj: unknown): Record<string, unknown> {
     if (obj === null || typeof obj !== 'object') {
-      return obj;
+      return obj as Record<string, unknown>;
     }
 
     if (obj instanceof Date) {
-      return obj;
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map((item) => this.deepConvertBigIntToString(item));
+      return obj as unknown as Record<string, unknown>;
     }
 
     const newObj: Record<string, unknown> = {};

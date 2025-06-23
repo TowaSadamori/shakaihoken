@@ -14,13 +14,13 @@ import {
   orderBy,
   Timestamp,
   where,
-  getDoc,
 } from 'firebase/firestore';
 import { OfficeService } from '../services/office.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { AuthService } from '../services/auth.service';
 
 interface EmployeeInfo {
+  uid: string;
   name: string;
   employeeNumber: string;
   birthDate: string;
@@ -112,91 +112,18 @@ export class GradeJudgmentComponent implements OnInit {
       this.errorMessage = '従業員番号がURLに含まれていません';
       return;
     }
-
-    const currentUserId = this.authService.getCurrentUserId();
-    if (currentUserId) {
-      const userDocRef = doc(this.firestore, 'users', currentUserId);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        this.companyId = userDocSnap.data()['companyId'];
-      }
-    }
-
-    if (this.employeeId && this.companyId) {
-      const usersRef = collection(this.firestore, 'users');
-      const q = query(
-        usersRef,
-        where('employeeNumber', '==', this.employeeId),
-        where('companyId', '==', this.companyId)
-      );
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        console.log('Firestoreから取得した従業員データ:', userData);
-
-        const birthDate = new Date(userData['birthDate']);
-        const age = this.calculateAge(birthDate);
-
-        // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
-        const formattedBirthDate = birthDate.toISOString().split('T')[0];
-
-        // 事業所情報から addressPrefecture を取得
-        let addressPrefecture = userData['addressPrefecture'] || '';
-
-        // ユーザーデータに addressPrefecture がない場合、事業所データから取得
-        if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
-          try {
-            console.log('=== 事業所データ取得開始 ===');
-            console.log('対象companyId:', userData['companyId']);
-            console.log('対象branchNumber:', userData['branchNumber']);
-
-            addressPrefecture = await this.officeService.findOfficeAddressPrefecture(
-              userData['companyId'],
-              userData['branchNumber']
-            );
-
-            if (addressPrefecture) {
-              console.log('✅ 事業所所在地取得成功:', addressPrefecture);
-            } else {
-              console.warn('⚠️ 事業所所在地が見つかりませんでした');
-            }
-          } catch (officeError) {
-            console.error('❌ 事業所データ取得エラー:', officeError);
-          }
-        }
-
-        this.employeeInfo = {
-          name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
-          employeeNumber: userData['employeeNumber'] || '',
-          birthDate: formattedBirthDate,
-          age: age,
-          companyId: userData['companyId'] || '',
-          branchNumber: userData['branchNumber'] || '',
-          addressPrefecture: addressPrefecture,
-        };
-
-        console.log('設定された従業員情報:', this.employeeInfo);
-      } else {
-        console.error(`従業員番号 ${this.employeeId} のデータがFirestoreに存在しません`);
-        this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
-        this.employeeInfo = null;
-      }
-    } else {
-      console.error('会社IDが取得できません');
-      this.errorMessage = '会社IDが取得できません';
-      this.employeeInfo = null;
-    }
-
     await this.loadData();
   }
 
   async loadData(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
-
     try {
+      this.companyId = await this.authService.getCurrentUserCompanyId();
+      if (!this.companyId) {
+        throw new Error('会社IDが取得できませんでした。');
+      }
+
       await Promise.all([
         this.loadEmployeeInfo(),
         this.loadSalaryData(),
@@ -204,92 +131,64 @@ export class GradeJudgmentComponent implements OnInit {
       ]);
     } catch (error) {
       console.error('データ読み込みエラー:', error);
-      this.errorMessage = 'データの読み込みに失敗しました';
+      if (error instanceof Error) {
+        this.errorMessage = error.message;
+      } else {
+        this.errorMessage = 'データの読み込みに失敗しました';
+      }
     } finally {
       this.isLoading = false;
     }
   }
 
   private async loadEmployeeInfo(): Promise<void> {
-    if (!this.employeeId) {
-      this.errorMessage = '従業員IDが指定されていません';
+    if (!this.employeeId || !this.companyId) {
+      this.errorMessage = '従業員IDまたは会社IDが指定されていません';
       return;
     }
 
-    this.isLoading = true;
-    try {
-      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
+    const usersRef = collection(this.firestore, 'users');
+    const q = query(
+      usersRef,
+      where('employeeNumber', '==', this.employeeId),
+      where('companyId', '==', this.companyId)
+    );
+    const querySnapshot = await getDocs(q);
 
-      if (this.companyId) {
-        const usersRef = collection(this.firestore, 'users');
-        const q = query(
-          usersRef,
-          where('employeeNumber', '==', this.employeeId),
-          where('companyId', '==', this.companyId)
-        );
-        const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      console.log('Firestoreから取得した従業員データ:', userData);
 
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0];
-          const userData = userDoc.data();
-          console.log('Firestoreから取得した従業員データ:', userData);
+      const birthDate = new Date(userData['birthDate']);
+      const age = this.calculateAge(birthDate);
+      const formattedBirthDate = birthDate.toISOString().split('T')[0];
+      let addressPrefecture = userData['addressPrefecture'] || '';
 
-          const birthDate = new Date(userData['birthDate']);
-          const age = this.calculateAge(birthDate);
-
-          // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
-          const formattedBirthDate = birthDate.toISOString().split('T')[0];
-
-          // 事業所情報から addressPrefecture を取得
-          let addressPrefecture = userData['addressPrefecture'] || '';
-
-          // ユーザーデータに addressPrefecture がない場合、事業所データから取得
-          if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
-            try {
-              console.log('=== 事業所データ取得開始 ===');
-              console.log('対象companyId:', userData['companyId']);
-              console.log('対象branchNumber:', userData['branchNumber']);
-
-              addressPrefecture = await this.officeService.findOfficeAddressPrefecture(
-                userData['companyId'],
-                userData['branchNumber']
-              );
-
-              if (addressPrefecture) {
-                console.log('✅ 事業所所在地取得成功:', addressPrefecture);
-              } else {
-                console.warn('⚠️ 事業所所在地が見つかりませんでした');
-              }
-            } catch (officeError) {
-              console.error('❌ 事業所データ取得エラー:', officeError);
-            }
-          }
-
-          this.employeeInfo = {
-            name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
-            employeeNumber: userData['employeeNumber'] || '',
-            birthDate: formattedBirthDate,
-            age: age,
-            companyId: userData['companyId'] || '',
-            branchNumber: userData['branchNumber'] || '',
-            addressPrefecture: addressPrefecture,
-          };
-
-          console.log('設定された従業員情報:', this.employeeInfo);
-        } else {
-          console.error(`従業員番号 ${this.employeeId} のデータがFirestoreに存在しません`);
-          this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
-          this.employeeInfo = null;
+      if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
+        try {
+          addressPrefecture = await this.officeService.findOfficeAddressPrefecture(
+            userData['companyId'],
+            userData['branchNumber']
+          );
+        } catch (officeError) {
+          console.error('事業所データ取得エラー:', officeError);
         }
-      } else {
-        console.error('会社IDが取得できません');
-        this.errorMessage = '会社IDが取得できません';
-        this.employeeInfo = null;
       }
-    } catch (error) {
-      console.error('従業員情報取得エラー:', error);
-      this.errorMessage = `従業員情報の取得に失敗しました: ${error}`;
-      this.employeeInfo = null;
+
+      this.employeeInfo = {
+        uid: userDoc.id,
+        name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
+        employeeNumber: userData['employeeNumber'] || '',
+        birthDate: formattedBirthDate,
+        age: age,
+        companyId: userData['companyId'] || '',
+        branchNumber: userData['branchNumber'] || '',
+        addressPrefecture: addressPrefecture,
+      };
+      console.log('設定された従業員情報:', this.employeeInfo);
+    } else {
+      throw new Error(`従業員番号: ${this.employeeId} の情報が見つかりません`);
     }
   }
 
@@ -306,19 +205,17 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   private async loadJudgmentHistory(): Promise<void> {
-    if (!this.employeeId) return;
+    if (!this.employeeId || !this.companyId || !this.employeeInfo?.uid) return;
 
     try {
       this.judgmentRecords = [];
-
-      // 等級判定履歴コレクションからデータを読み込み（統一された履歴管理）
       const q = query(
-        collection(this.firestore, 'gradeJudgments', this.employeeId, 'judgments'),
+        collection(this.firestore, 'gradeJudgments'),
+        where('uid', '==', this.employeeInfo.uid),
+        where('companyId', '==', this.companyId),
         orderBy('effectiveDate', 'desc')
       );
-
       const querySnapshot = await getDocs(q);
-
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         this.judgmentRecords.push({
@@ -439,12 +336,11 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   private calculateStandardMonthlyAmount(averageMonthly: string): string {
-    // 標準報酬月額の計算ロジック（Decimal.jsを使用した正確な計算）
     return SocialInsuranceCalculator.roundToThousand(averageMonthly);
   }
 
   async saveJudgment(): Promise<void> {
-    if (!this.employeeId || !this.isDialogValid()) {
+    if (!this.employeeId || !this.companyId || !this.employeeInfo?.uid || !this.isDialogValid()) {
       this.errorMessage = '入力内容に不備があります。';
       return;
     }
@@ -453,32 +349,25 @@ export class GradeJudgmentComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      const judgmentsRef = collection(
-        this.firestore,
-        'gradeJudgments',
-        this.employeeId,
-        'judgments'
-      );
+      const judgmentsRef = collection(this.firestore, 'gradeJudgments');
       const newEffectiveDate = new Date(this.dialogData.effectiveDate);
 
-      // 既存の「継続中」の履歴を探してendDateを設定する
-      const q = query(judgmentsRef, where('endDate', '==', null));
+      const q = query(
+        judgmentsRef,
+        where('employeeId', '==', this.employeeId),
+        where('companyId', '==', this.companyId),
+        where('endDate', '==', null)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        // 複数の「継続中」が見つかった場合は、最も新しいeffectiveDateのものだけを更新対象とする
         const latestRecord = querySnapshot.docs
           .map((d) => ({ id: d.id, ...d.data() }) as { id: string; effectiveDate: Timestamp })
-          .sort(
-            (a, b) =>
-              (b.effectiveDate as Timestamp).toMillis() - (a.effectiveDate as Timestamp).toMillis()
-          )[0];
+          .sort((a, b) => b.effectiveDate.toMillis() - a.effectiveDate.toMillis())[0];
 
-        // 新しい等級の適用開始日の前日を計算
         const newEndDate = new Date(newEffectiveDate.getTime() - 24 * 60 * 60 * 1000);
 
-        // 新しい開始日が既存の開始日より後の場合のみ更新
-        if (newEffectiveDate > (latestRecord.effectiveDate as Timestamp).toDate()) {
+        if (newEffectiveDate > latestRecord.effectiveDate.toDate()) {
           const docToUpdateRef = doc(judgmentsRef, latestRecord.id);
           await updateDoc(docToUpdateRef, {
             endDate: Timestamp.fromDate(newEndDate),
@@ -487,13 +376,14 @@ export class GradeJudgmentComponent implements OnInit {
         }
       }
 
-      // 新しい等級履歴データを作成
       const newJudgmentData = {
+        uid: this.employeeInfo.uid,
         employeeId: this.employeeId,
+        companyId: this.companyId,
         judgmentType: this.dialogData.judgmentType,
-        judgmentDate: Timestamp.now(), // 仮。本来は判定日が入る
+        judgmentDate: Timestamp.now(),
         effectiveDate: Timestamp.fromDate(newEffectiveDate),
-        endDate: null, // 常にnullで保存
+        endDate: null,
         healthInsuranceGrade: this.dialogData.healthInsuranceGrade,
         pensionInsuranceGrade: this.dialogData.pensionInsuranceGrade,
         standardMonthlyAmount: this.dialogData.standardMonthlyAmount,
@@ -504,11 +394,10 @@ export class GradeJudgmentComponent implements OnInit {
         updatedAt: Timestamp.now(),
       };
 
-      // 新しいドキュメントを 'judgments' サブコレクションに追加
       await addDoc(judgmentsRef, newJudgmentData);
 
       this.closeDialog();
-      await this.loadJudgmentHistory(); // 履歴を再読み込みして表示を更新
+      await this.loadJudgmentHistory();
     } catch (error) {
       console.error('等級履歴の保存エラー:', error);
       this.errorMessage = '等級履歴の保存に失敗しました。';
@@ -518,8 +407,8 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   async deleteJudgment(recordId: string): Promise<void> {
-    if (!this.employeeId) {
-      this.errorMessage = '従業員IDが不明です。';
+    if (!this.employeeId || !this.companyId) {
+      this.errorMessage = '従業員IDまたは会社IDが不明です。';
       return;
     }
 
@@ -543,17 +432,10 @@ export class GradeJudgmentComponent implements OnInit {
 
     try {
       console.log('削除開始:', { recordId, judgmentType: recordToDelete.judgmentType });
-
-      // 1. 履歴コレクションから削除（共通）
-      const historyDocRef = doc(
-        this.firestore,
-        `gradeJudgments/${this.employeeId}/judgments`,
-        recordId
-      );
+      const historyDocRef = doc(this.firestore, `gradeJudgments`, recordId);
       console.log('履歴削除:', historyDocRef.path);
       await deleteDoc(historyDocRef);
 
-      // 2. UIから削除
       this.judgmentRecords = this.judgmentRecords.filter((r) => r.id !== recordId);
       console.log('削除完了');
       alert('履歴を削除しました。');
