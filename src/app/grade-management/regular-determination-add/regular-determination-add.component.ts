@@ -802,8 +802,8 @@ export class RegularDeterminationAddComponent implements OnInit {
 
         if (newRecordId) {
           alert('定時決定データが正常に保存されました。');
-          // 保存後、新しいrecordIdをURLに追加して編集モードに移行
-          this.router.navigate([newRecordId], { relativeTo: this.route });
+          // 保存後、一覧ページに戻る
+          this.router.navigate(['/grade-judgment', this.employeeId]);
         } else {
           this.errorMessage = 'データの保存中にエラーが発生しました。';
         }
@@ -1211,7 +1211,7 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   async saveToGradeJudgmentHistory(gradeData: Omit<SavedGradeData, 'id'>): Promise<string | null> {
-    if (!this.companyId || !this.employeeId) {
+    if (!this.uid || !this.companyId || !this.employeeId) {
       this.errorMessage = '従業員情報が読み込めていないため、保存できません。';
       return null;
     }
@@ -1259,7 +1259,7 @@ export class RegularDeterminationAddComponent implements OnInit {
 
       const historyRef = collection(
         this.firestore,
-        `companies/${this.companyId}/employees/${this.employeeId}/gradeHistory`
+        `companies/${this.companyId}/employees/${this.uid}/gradeHistory`
       );
       console.log('>>> [SAVE] Saving to path:', historyRef.path);
       const newDocRef = await addDoc(historyRef, this.deepConvertBigIntToString(historyRecord));

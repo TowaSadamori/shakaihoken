@@ -928,7 +928,10 @@ export class ManualGradeAddComponent implements OnInit {
         historyRecord['careInsuranceGrade'] = null;
       }
 
-      const historyCollectionRef = collection(this.firestore, 'gradeJudgments');
+      const historyCollectionRef = collection(
+        this.firestore,
+        `companies/${this.companyId}/employees/${this.employeeInfo.uid}/gradeHistory`
+      );
 
       if (this.isEditMode && this.recordId) {
         const existingDocRef = doc(historyCollectionRef, this.recordId);
