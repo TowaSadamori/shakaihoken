@@ -19,6 +19,7 @@ import {
 import { OfficeService } from '../services/office.service';
 import { doc, setDoc } from 'firebase/firestore';
 import { AuthService } from '../services/auth.service';
+import { Decimal } from 'decimal.js';
 
 interface EmployeeInfo {
   uid: string;
@@ -114,7 +115,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     console.log(`🔄 保険料計算更新: index=${index}, leaveType=${item.leaveType}`);
 
     if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {
-      // 産休・育休の場合は保険料を0にする
+      // 産休・育休の場合は保険料を0にする（免除）
       console.log(`💤 休業適用: ${item.leaveType} - 保険料を0に設定`);
       // 元の計算結果をバックアップ
       if (!item.originalCalculationResult) {
@@ -126,7 +127,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         item.calculationResult.careInsurance = { employeeBurden: '0', companyBurden: '0' };
       }
     } else {
-      // 通常の計算に戻す
+      // 「なし」の場合は通常の計算を行う
       console.log(`💼 通常勤務: 保険料をバックアップから復元`);
       this.recalculateItemPremiums(index);
     }
@@ -134,11 +135,54 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
   private async recalculateItemPremiums(index: number): Promise<void> {
     const item = this.bonusDataList && this.bonusDataList[index];
-    if (item && item.originalCalculationResult) {
-      // バックアップから元の計算結果を復元
-      item.calculationResult = { ...item.originalCalculationResult };
-      // バックアップをクリアし、プロパティを削除
-      delete item.originalCalculationResult;
+    if (!item || !this.employeeInfo) return;
+
+    try {
+      // バックアップから復元を試行
+      if (item.originalCalculationResult) {
+        item.calculationResult = { ...item.originalCalculationResult };
+        delete item.originalCalculationResult;
+        return;
+      }
+
+      // バックアップがない場合は実際に計算サービスを呼び出して再計算
+      console.log(`🔄 実際の計算サービスを呼び出して再計算: index=${index}`);
+
+      // このアイテム以前の健康保険累計額を計算
+      const cumulativeHealthBonus = this.bonusDataList
+        .slice(0, index)
+        .reduce(
+          (acc, current) =>
+            acc.add(new Decimal(current.calculationResult.applicableHealthStandardAmount)),
+          new Decimal('0')
+        )
+        .toString();
+
+      const recalculatedItem = await this.bonusCalculationService.calculateSingleBonusPremium(
+        {
+          amount: item.amount,
+          paymentDate: item.paymentDate || '',
+          month: item.month,
+          year: item.year,
+          type: item.type || 'bonus',
+          fiscalYear: item.fiscalYear,
+          originalKey: item.originalKey || '',
+        },
+        {
+          age: this.employeeInfo.age,
+          addressPrefecture: this.employeeInfo.addressPrefecture,
+          companyId: this.employeeInfo.companyId,
+          birthDate: this.employeeInfo.birthDate,
+        },
+        cumulativeHealthBonus
+      );
+
+      if (recalculatedItem) {
+        item.calculationResult = recalculatedItem.calculationResult;
+        console.log(`✅ 再計算完了:`, item.calculationResult);
+      }
+    } catch (error) {
+      console.error(`❌ 再計算エラー (index=${index}):`, error);
     }
   }
 
@@ -280,6 +324,13 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         }));
         this.importStatusMessage = '給与情報から賞与データを生成しました。';
       }
+
+      // データロード後、すべてのアイテムに対して産休育休状態に応じた計算を適用
+      // ユーザー要件: 産休・育休選択時は社会保険料を計算しない（免除）
+      this.bonusDataList.forEach((item, index) => {
+        this.updateCalculationForLeave(index);
+      });
+
       this.createPivotedTable();
     } catch (error) {
       console.error('賞与データのインポートまたは計算エラー:', error);
@@ -512,7 +563,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         employeeId: employeeNumber,
         targetYear: Number(this.targetYear),
         bonusResults: this.bonusDataList.map((item) => {
-          // 育休産休の場合は保険料を0にして保存
+          // 産休・育休の場合は保険料を0にして保存（免除）
           let calculationResult = { ...item.calculationResult };
 
           if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {

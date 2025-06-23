@@ -212,7 +212,8 @@ export class BonusCalculationService {
     bonusHistory: BonusHistoryItem[],
     rates: InsuranceRates,
     birthDate: string,
-    leavePeriods: LeavePeriod[] = []
+    leavePeriods: LeavePeriod[] = [],
+    initialCumulativeHealthBonus = '0'
   ): CalculatedBonusHistoryItem[] {
     const sortedBonuses = [...bonusHistory].sort((a, b) => {
       const dateA = new Date(a.paymentDate || 0).getTime();
@@ -224,7 +225,7 @@ export class BonusCalculationService {
       return SocialInsuranceCalculator.compare(b.amount, a.amount);
     });
 
-    let cumulativeHealthBonus = '0';
+    let cumulativeHealthBonus = initialCumulativeHealthBonus;
     const HEALTH_INSURANCE_YEARLY_CAP = '5730000';
     const PENSION_INSURANCE_MONTHLY_CAP = '1500000';
 
@@ -612,5 +613,39 @@ export class BonusCalculationService {
       age--;
     }
     return age;
+  }
+
+  /**
+   * 単一の賞与アイテムの保険料を計算する
+   * @param bonusItem 計算対象の賞与データ
+   * @param employeeInfo 従業員情報
+   * @param cumulativeHealthBonus 年間累計標準賞与額（健康保険）
+   * @returns 計算結果
+   */
+  public async calculateSingleBonusPremium(
+    bonusItem: BonusHistoryItem,
+    employeeInfo: { age: bigint; addressPrefecture: string; birthDate: string; companyId?: string },
+    cumulativeHealthBonus = '0'
+  ): Promise<CalculatedBonusHistoryItem | null> {
+    const rates = await this.getInsuranceRates(
+      bonusItem.fiscalYear || BigInt(new Date().getFullYear()),
+      employeeInfo.addressPrefecture
+    );
+
+    if (!rates) {
+      console.error('保険料率が取得できませんでした。');
+      return null;
+    }
+
+    // 単一アイテムを配列に入れて既存のロジックを再利用
+    const calculatedItems = this.calculateBonusPremiums(
+      [bonusItem],
+      rates,
+      employeeInfo.birthDate,
+      [], // 休業期間はここでは考慮しない
+      cumulativeHealthBonus
+    );
+
+    return calculatedItems.length > 0 ? calculatedItems[0] : null;
   }
 }

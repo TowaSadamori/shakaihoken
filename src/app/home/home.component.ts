@@ -303,12 +303,10 @@ export class HomeComponent implements OnInit {
       totalCompany: '0',
     };
     // 賞与・休業用の変数を初期化
-    let paymentAmount: string | undefined;
     let standardBonusAmount: string | undefined;
     let healthInsuranceRate: string | undefined;
     let careInsuranceRate: string | undefined;
     let pensionInsuranceRate: string | undefined;
-    let leaveStatus: string | undefined;
 
     // 判定ステータスを先に取得
     const judgmentStatus = this.getJudgmentStatus(user);
@@ -323,94 +321,69 @@ export class HomeComponent implements OnInit {
         currentMonth: currentMonthData,
         healthInsuranceGrade,
         pensionInsuranceGrade,
-        leaveStatus: 'none',
-        paymentAmount: paymentAmount,
-        standardBonusAmount: standardBonusAmount,
-        healthInsuranceRate: healthInsuranceRate,
-        careInsuranceRate: careInsuranceRate,
-        pensionInsuranceRate: pensionInsuranceRate,
+        leaveStatus: this.getLeaveStatus(user.employeeNumber || ''),
       };
     }
 
     const companyId = await this.authService.getCurrentUserCompanyId();
     if (companyId && user.uid) {
+      const fiscalYear = this.selectedMonth < 4 ? this.selectedYear - 1 : this.selectedYear;
       // 月次データか賞与データかでパスを切り替え
       const collectionName =
         this.selectedMonth >= 13 ? 'bonus_calculation_results' : 'salary_calculation_results';
-      const docPath = `companies/${companyId}/employees/${user.uid}/${collectionName}/${this.selectedYear}`;
+      const docPath = `companies/${companyId}/employees/${user.uid}/${collectionName}/${
+        collectionName === 'bonus_calculation_results' ? fiscalYear : this.selectedYear
+      }`;
+
       const docRef = doc(this.firestore, docPath);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const yearData = docSnap.data();
 
-        // 月次データか賞与データかを判定
         if (this.selectedMonth >= 1 && this.selectedMonth <= 12) {
-          // 月次データの処理
+          // 月次データの処理 (元のロジックを簡略化して再利用)
           const monthCalculation = yearData['months']?.[this.selectedMonth];
           if (monthCalculation) {
             healthInsuranceGrade = monthCalculation.healthInsuranceGrade;
             pensionInsuranceGrade = monthCalculation.pensionInsuranceGrade;
-
-            const healthFeeEmployee = this.safeGetAmount(
-              monthCalculation.healthInsuranceFeeEmployee
-            );
-            const pensionFeeEmployee = this.safeGetAmount(
-              monthCalculation.pensionInsuranceFeeEmployee
-            );
-            const careFeeEmployee = this.safeGetAmount(monthCalculation.careInsuranceFeeEmployee);
-            const healthFeeCompany = this.safeGetAmount(monthCalculation.healthInsuranceFeeCompany);
-            const pensionFeeCompany = this.safeGetAmount(
-              monthCalculation.pensionInsuranceFeeCompany
-            );
-            const careFeeCompany = this.safeGetAmount(monthCalculation.careInsuranceFeeCompany);
-
-            const totalEmployee = SocialInsuranceCalculator.addAmounts(
-              healthFeeEmployee,
-              SocialInsuranceCalculator.addAmounts(pensionFeeEmployee, careFeeEmployee)
-            );
-            const totalCompany = SocialInsuranceCalculator.addAmounts(
-              healthFeeCompany,
-              SocialInsuranceCalculator.addAmounts(pensionFeeCompany, careFeeCompany)
-            );
-
             currentMonthData = {
-              healthInsuranceEmployee: healthFeeEmployee,
-              healthInsuranceCompany: healthFeeCompany,
-              pensionInsuranceEmployee: pensionFeeEmployee,
-              pensionInsuranceCompany: pensionFeeCompany,
-              careInsuranceEmployee: careFeeEmployee,
-              careInsuranceCompany: careFeeCompany,
-              totalEmployee: totalEmployee,
-              totalCompany: totalCompany,
+              healthInsuranceEmployee: this.safeGetAmount(
+                monthCalculation.healthInsuranceFeeEmployee
+              ),
+              healthInsuranceCompany: this.safeGetAmount(
+                monthCalculation.healthInsuranceFeeCompany
+              ),
+              pensionInsuranceEmployee: this.safeGetAmount(
+                monthCalculation.pensionInsuranceFeeEmployee
+              ),
+              pensionInsuranceCompany: this.safeGetAmount(
+                monthCalculation.pensionInsuranceFeeCompany
+              ),
+              careInsuranceEmployee: this.safeGetAmount(monthCalculation.careInsuranceFeeEmployee),
+              careInsuranceCompany: this.safeGetAmount(monthCalculation.careInsuranceFeeCompany),
+              totalEmployee: '0', // 合計は後で計算
+              totalCompany: '0',
             };
           }
-          leaveStatus = this.getLeaveStatus(user.employeeNumber || '');
         } else if (this.selectedMonth >= 13) {
           // 賞与データの処理
-          const bonusIndex = this.selectedMonth - 13; // 13 -> 0, 14 -> 1, ...
+          const bonusIndex = this.selectedMonth - 13;
           const bonusResults = yearData['bonusResults'];
           if (bonusResults && bonusResults[bonusIndex]) {
             const bonusData = bonusResults[bonusIndex];
             const result = bonusData.calculationResult;
-            healthInsuranceGrade = '-'; // 賞与に等級はない
-            pensionInsuranceGrade = '-';
+            standardBonusAmount = result.standardBonusAmount;
+            healthInsuranceRate = result.healthInsuranceRate;
+            careInsuranceRate = result.careInsuranceRate;
+            pensionInsuranceRate = result.pensionInsuranceRate;
 
             const healthFeeEmployee = this.safeGetAmount(result.healthInsurance.employeeBurden);
-            const healthFeeCompany = this.safeGetAmount(result.healthInsurance.companyBurden);
             const pensionFeeEmployee = this.safeGetAmount(result.pensionInsurance.employeeBurden);
-            const pensionFeeCompany = this.safeGetAmount(result.pensionInsurance.companyBurden);
             const careFeeEmployee = this.safeGetAmount(result.careInsurance?.employeeBurden);
+            const healthFeeCompany = this.safeGetAmount(result.healthInsurance.companyBurden);
+            const pensionFeeCompany = this.safeGetAmount(result.pensionInsurance.companyBurden);
             const careFeeCompany = this.safeGetAmount(result.careInsurance?.companyBurden);
-
-            const totalEmployee = SocialInsuranceCalculator.addAmounts(
-              healthFeeEmployee,
-              SocialInsuranceCalculator.addAmounts(pensionFeeEmployee, careFeeEmployee)
-            );
-            const totalCompany = SocialInsuranceCalculator.addAmounts(
-              healthFeeCompany,
-              SocialInsuranceCalculator.addAmounts(pensionFeeCompany, careFeeCompany)
-            );
 
             currentMonthData = {
               healthInsuranceEmployee: healthFeeEmployee,
@@ -419,23 +392,29 @@ export class HomeComponent implements OnInit {
               pensionInsuranceCompany: pensionFeeCompany,
               careInsuranceEmployee: careFeeEmployee,
               careInsuranceCompany: careFeeCompany,
-              totalEmployee: totalEmployee,
-              totalCompany: totalCompany,
+              totalEmployee: '0', // 合計は後で計算
+              totalCompany: '0',
             };
-
-            // 賞与データをセット
-            standardBonusAmount = result.standardBonusAmount;
-            healthInsuranceRate = result.healthInsuranceRate;
-            careInsuranceRate = result.careInsuranceRate;
-            pensionInsuranceRate = result.pensionInsuranceRate;
-            leaveStatus = bonusData.leaveType;
           }
         }
-      } else {
-        // ドキュメントが存在しない場合は月次のステータスをデフォルトとする
-        leaveStatus = this.getLeaveStatus(user.employeeNumber || '');
       }
     }
+
+    // 合計の再計算
+    currentMonthData.totalEmployee = SocialInsuranceCalculator.addAmounts(
+      currentMonthData.healthInsuranceEmployee,
+      SocialInsuranceCalculator.addAmounts(
+        currentMonthData.pensionInsuranceEmployee,
+        currentMonthData.careInsuranceEmployee
+      )
+    );
+    currentMonthData.totalCompany = SocialInsuranceCalculator.addAmounts(
+      currentMonthData.healthInsuranceCompany,
+      SocialInsuranceCalculator.addAmounts(
+        currentMonthData.pensionInsuranceCompany,
+        currentMonthData.careInsuranceCompany
+      )
+    );
 
     return {
       employeeNumber: user.employeeNumber || '',
@@ -445,12 +424,11 @@ export class HomeComponent implements OnInit {
       currentMonth: currentMonthData,
       healthInsuranceGrade,
       pensionInsuranceGrade,
-      leaveStatus: leaveStatus,
-      paymentAmount: paymentAmount,
-      standardBonusAmount: standardBonusAmount,
-      healthInsuranceRate: healthInsuranceRate,
-      careInsuranceRate: careInsuranceRate,
-      pensionInsuranceRate: pensionInsuranceRate,
+      leaveStatus: this.getLeaveStatus(user.employeeNumber || ''),
+      standardBonusAmount,
+      healthInsuranceRate,
+      careInsuranceRate,
+      pensionInsuranceRate,
     };
   }
 
@@ -611,19 +589,24 @@ export class HomeComponent implements OnInit {
       // 判定結果を再読み込み
       await this.loadJudgmentResults(employees as UserWithJudgment[]);
 
-      if (this.isAdmin) {
-        // 管理者：全従業員のデータを表示
+      if (this.selectedMonth >= 13) {
+        // 賞与データ取得ロジック
+        await this.loadLeaveStatusForAllEmployees(employees, this.selectedYear);
+        this.allOriginalEmployeesData = await Promise.all(
+          employees.map((employee) => this.convertToEmployeeInsuranceData(employee))
+        );
+      } else {
+        // 月次データ取得ロジック
         this.allOriginalEmployeesData = await Promise.all(
           (employees as UserWithJudgment[]).map((employee) =>
             this.convertToEmployeeInsuranceData(employee)
           )
         );
-        this.filterDataByOffice();
+      }
 
-        // 賞与月の場合、産休育休状態を読み込み
-        if (this.selectedMonth >= 13) {
-          await this.loadLeaveStatusForAllEmployees(employees, this.selectedYear);
-        }
+      if (this.isAdmin) {
+        // 管理者：全従業員のデータを表示
+        this.filterDataByOffice();
 
         // 管理者の月別データを再生成
         this.monthlyData = this.generateMonthlyDataForAdmin(employees);
@@ -652,37 +635,39 @@ export class HomeComponent implements OnInit {
 
   // 全従業員の産休育休状態を読み込む
   private async loadLeaveStatusForAllEmployees(employees: User[], year: number): Promise<void> {
+    this.leaveStatusMap.clear();
     const companyId = await this.authService.getCurrentUserCompanyId();
     if (!companyId) return;
 
-    this.leaveStatusMap.clear();
+    // fiscalYearは日本の年度（4月始まり）
+    const fiscalYear = this.selectedMonth < 4 ? year - 1 : year;
 
     for (const employee of employees) {
-      if (!employee.employeeNumber) continue;
+      if (!employee.uid) continue;
 
-      try {
-        const docPath = `companies/${companyId}/employees/${employee.employeeNumber}/bonus_calculation_results/${year}`;
-        const docRef = doc(this.firestore, docPath);
-        const docSnap = await getDoc(docRef);
+      const docPath = `companies/${companyId}/employees/${employee.uid}/bonus_calculation_results/${fiscalYear}`;
+      const docRef = doc(this.firestore, docPath);
+      const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const results = data['results'] || [];
+      let leaveStatus = '未設定'; // デフォルト値
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && data['bonusResults'] && Array.isArray(data['bonusResults'])) {
+          // 日付が最新の賞与レコードを探す
+          const latestBonus = data['bonusResults'].reduce((latest, current) => {
+            if (!latest) return current;
+            const latestDate = new Date(latest.paymentDate || 0);
+            const currentDate = new Date(current.paymentDate || 0);
+            return currentDate > latestDate ? current : latest;
+          }, null);
 
-          // 選択された月に対応する賞与データを検索
-          const bonusIndex = this.selectedMonth - 13; // 13=1回目, 14=2回目, 15=3回目
-          if (bonusIndex >= 0 && bonusIndex < results.length) {
-            const leaveType = results[bonusIndex].leaveType || 'none';
-            this.leaveStatusMap.set(employee.employeeNumber, leaveType);
-          } else {
-            this.leaveStatusMap.set(employee.employeeNumber, 'none');
+          if (latestBonus && latestBonus.leaveType) {
+            leaveStatus = latestBonus.leaveType;
           }
-        } else {
-          this.leaveStatusMap.set(employee.employeeNumber, 'none');
         }
-      } catch (error) {
-        console.error(`産休育休状態の読み込みエラー (従業員: ${employee.employeeNumber}):`, error);
-        this.leaveStatusMap.set(employee.employeeNumber, 'none');
+      }
+      if (employee.employeeNumber) {
+        this.leaveStatusMap.set(employee.employeeNumber, leaveStatus);
       }
     }
   }
