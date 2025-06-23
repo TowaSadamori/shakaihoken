@@ -714,20 +714,24 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   private async loadExistingManualGradeData(recordId: string): Promise<void> {
-    if (!this.employeeId || !this.companyId) return;
+    if (!this.employeeInfo?.uid || !this.companyId) {
+      this.errorMessage = '従業員情報が不足しているため、データを読み込めません。';
+      return;
+    }
     this.isLoading = true;
     try {
-      const judgmentsRef = collection(this.firestore, 'gradeJudgments');
-      const q = query(
-        judgmentsRef,
-        where('companyId', '==', this.companyId),
-        where('employeeId', '==', this.employeeId)
+      const docRef = doc(
+        this.firestore,
+        `companies/${this.companyId}/employees/${this.employeeInfo.uid}/gradeHistory`,
+        recordId
       );
-      const querySnapshot = await getDocs(q);
-      const docSnap = querySnapshot.docs.find((d) => d.id === recordId);
+      const docSnap = await getDoc(docRef);
 
       if (docSnap && docSnap.exists()) {
         const data = docSnap.data();
+
+        // 適用理由を読み込み
+        this.judgmentReason = data['judgmentReason'] || '';
 
         if (data['inputData']) {
           this.monthlyAmount = data['inputData'].monthlyAmount || null;
