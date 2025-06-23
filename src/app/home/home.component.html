@@ -126,7 +126,7 @@
             <ng-container matColumnDef="leaveStatus">
               <th mat-header-cell *matHeaderCellDef>育休産休</th>
               <td mat-cell *matCellDef="let employee">
-                {{ getLeaveStatusLabel(employee.employeeNumber) }}
+                {{ getLeaveStatusLabel(employee.leaveStatus) }}
               </td>
             </ng-container>
 
@@ -238,7 +238,7 @@
             <ng-container matColumnDef="leaveStatus">
               <th mat-header-cell *matHeaderCellDef>育休産休</th>
               <td mat-cell *matCellDef="let employee">
-                {{ getLeaveStatusLabel(employee.employeeNumber) }}
+                {{ getLeaveStatusLabel(employee.leaveStatus) }}
               </td>
             </ng-container>
 

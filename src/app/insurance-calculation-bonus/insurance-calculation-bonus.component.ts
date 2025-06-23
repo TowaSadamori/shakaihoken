@@ -249,109 +249,71 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     }
 
     this.isLoading = true;
-    this.errorMessage = '';
-    this.importStatusMessage = '';
-    this.bonusDataList = [];
+    this.importStatusMessage = '賞与データを読み込んでいます...';
 
     try {
-      // 1. 賞与データを取得・計算
-      const results = await this.bonusCalculationService.getCalculatedBonusHistory(
-        this.employeeId,
-        this.targetYear,
-        this.employeeInfo
-      );
-
-      // 2. 保存された育休産休データを読み込み
+      // 既存の賞与データを読み込む
       const savedData = await this.loadSavedBonusData();
 
-      // 3. leaveTypeを初期化（保存されたデータがあれば復元）
-      this.bonusDataList = results.map((item, index) => {
-        const savedItemData =
-          savedData &&
-          typeof savedData === 'object' &&
-          savedData !== null &&
-          'bonusResults' in savedData &&
-          Array.isArray(savedData.bonusResults) &&
-          savedData.bonusResults[index] &&
-          typeof savedData.bonusResults[index] === 'object' &&
-          savedData.bonusResults[index] !== null &&
-          'leaveType' in savedData.bonusResults[index]
-            ? (savedData.bonusResults[index] as {
-                leaveType?: string;
-                calculationResult?: BonusPremiumResult;
-              })
-            : null;
-
-        const bonusItem: DisplayBonusHistoryItem = {
+      if (savedData && savedData.length > 0) {
+        // 保存済みデータがある場合はそれを表示
+        this.bonusDataList = savedData.map((item) => ({
           ...item,
-          leaveType: savedItemData?.leaveType || 'none',
-        };
-
-        return bonusItem;
-      });
-
-      // 4. 保存されたleaveTypeに基づいて保険料を再計算
-      this.bonusDataList.forEach((item, index) => {
-        if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {
-          console.log(`📋 読み込み時休業適用: index=${index}, leaveType=${item.leaveType}`);
-          item.calculationResult.healthInsurance = { employeeBurden: '0', companyBurden: '0' };
-          item.calculationResult.pensionInsurance = { employeeBurden: '0', companyBurden: '0' };
-          if (item.calculationResult.careInsurance) {
-            item.calculationResult.careInsurance = { employeeBurden: '0', companyBurden: '0' };
-          }
-        }
-      });
-
-      // 5. 計算結果をFirestoreに保存
-      if (results.length > 0) {
-        await this.bonusCalculationService.saveBonusCalculationResults(
-          results,
-          this.employeeId,
-          this.targetYear,
-          this.employeeInfo.companyId
-        );
-        this.importStatusMessage = `✅ ${results.length}件の賞与データを取得・計算し、保存しました。`;
+          leaveType: item.leaveType || 'none',
+        }));
+        this.importStatusMessage = '保存済みの賞与データを表示します。';
       } else {
-        this.importStatusMessage = '対象年度の賞与データはありません。';
+        // 保存済みデータがない場合は、給与情報からデフォルトの賞与データを生成
+        const bonusItems = await this.bonusCalculationService.getCalculatedBonusHistory(
+          this.employeeInfo.uid,
+          this.targetYear,
+          {
+            age: this.employeeInfo.age,
+            addressPrefecture: this.employeeInfo.addressPrefecture,
+            companyId: this.employeeInfo.companyId,
+            birthDate: this.employeeInfo.birthDate,
+          }
+        );
+        this.bonusDataList = bonusItems.map((item: CalculatedBonusHistoryItem) => ({
+          ...item,
+          leaveType: 'none', // 初期値
+        }));
+        this.importStatusMessage = '給与情報から賞与データを生成しました。';
       }
-
-      // 6. 画面表示を更新
-      this.updateLimitNotes();
       this.createPivotedTable();
     } catch (error) {
-      console.error('賞与データの取得・計算・保存エラー:', error);
-      this.errorMessage = '賞与データの処理中にエラーが発生しました。';
+      console.error('賞与データのインポートまたは計算エラー:', error);
+      this.errorMessage = `賞与データの処理中にエラーが発生しました: ${error}`;
+      this.importStatusMessage = '';
     } finally {
       this.isLoading = false;
+      this.updateLimitNotes();
     }
   }
 
   /**
-   * 保存された賞与データを読み込み
+   * Firestoreから保存済みの賞与データを読み込む
    */
-  private async loadSavedBonusData(): Promise<unknown> {
-    try {
-      if (!this.employeeInfo) return null;
+  private async loadSavedBonusData(): Promise<DisplayBonusHistoryItem[]> {
+    if (!this.uid || !this.employeeInfo?.companyId) {
+      return [];
+    }
+    const docPath = `companies/${this.employeeInfo.companyId}/employees/${this.uid}/bonus_calculation_results/${this.targetYear}`;
+    const docRef = doc(this.firestore, docPath);
+    const docSnap = await getDoc(docRef);
 
-      const { companyId, employeeNumber } = this.employeeInfo;
-      const docPath = `companies/${companyId}/employees/${employeeNumber}/bonus_calculation_results/${this.targetYear}`;
-      const docRef = doc(this.firestore, docPath);
-
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        return docSnap.data();
-      }
-      return null;
-    } catch (error) {
-      console.warn('保存されたデータの読み込みに失敗:', error);
-      return null;
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      // 'bonusResults' は配列であると仮定
+      return (data['bonusResults'] as CalculatedBonusHistoryItem[]).map((item) => ({
+        ...item,
+        leaveType: item.leaveType || 'none',
+      }));
+    } else {
+      return [];
     }
   }
 
-  /**
-   * 賞与データ取り込みボタンの処理
-   */
   async importBonusData() {
     await this.loadBonusData();
   }
