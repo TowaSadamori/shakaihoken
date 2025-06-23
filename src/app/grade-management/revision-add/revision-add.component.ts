@@ -617,10 +617,17 @@ export class RevisionAddComponent implements OnInit {
   }
 
   private async loadExistingRevisionData(recordId: string): Promise<void> {
-    if (!this.employeeId) return;
+    if (!this.companyId || !this.uid) {
+      console.warn('必要なIDが不足しているため、既存のデータを読み込めません。');
+      return;
+    }
     this.isLoading = true;
     try {
-      const docRef = doc(this.firestore, `gradeJudgments/${this.employeeId}/judgments`, recordId);
+      const docRef = doc(
+        this.firestore,
+        `companies/${this.companyId}/employees/${this.uid}/gradeHistory`,
+        recordId
+      );
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -876,13 +883,15 @@ export class RevisionAddComponent implements OnInit {
       if (this.isEditMode && this.recordId) {
         // 更新
         const docRef = doc(historyCollectionRef, this.recordId);
-        await updateDoc(docRef, this.deepConvertBigIntToString(dataToSave) as any);
+
+        await updateDoc(docRef, this.deepConvertBigIntToString(dataToSave));
       } else {
         // 新規作成
         const docRef = doc(historyCollectionRef); // FirestoreにIDを自動生成させる
+
         await setDoc(
           docRef,
-          this.deepConvertBigIntToString({ ...dataToSave, createdAt: new Date() }) as any
+          this.deepConvertBigIntToString({ ...dataToSave, createdAt: new Date() })
         );
         this.recordId = docRef.id; // 新しいIDを保存
         this.isEditMode = true; // 次回からは更新モードになる
@@ -978,7 +987,8 @@ export class RevisionAddComponent implements OnInit {
     return '';
   }
 
-  private deepConvertBigIntToString(obj: unknown): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private deepConvertBigIntToString(obj: unknown): any {
     if (obj === null || obj === undefined || typeof obj !== 'object') {
       return obj;
     }

@@ -185,17 +185,13 @@ export class SocialInsuranceCalculator {
    * @param amount2 金額2（Decimal文字列）
    * @returns 比較結果 (-1: amount1 < amount2, 0: 等しい, 1: amount1 > amount2)
    */
-  static compare(amount1: string, amount2: string): number {
-    // カンマを除去してからDecimalオブジェクトを作成
-    const cleanAmount1 = amount1.replace(/,/g, '');
-    const cleanAmount2 = amount2.replace(/,/g, '');
-
-    const decimal1 = new Decimal(cleanAmount1);
-    const decimal2 = new Decimal(cleanAmount2);
-
-    if (decimal1.lessThan(decimal2)) return -1;
-    if (decimal1.greaterThan(decimal2)) return 1;
-    return 0;
+  static compare(
+    amount1: string | number | null | undefined,
+    amount2: string | number | null | undefined
+  ): number {
+    const num1 = new Decimal(amount1 || 0);
+    const num2 = new Decimal(amount2 || 0);
+    return num1.comparedTo(num2);
   }
 
   /**

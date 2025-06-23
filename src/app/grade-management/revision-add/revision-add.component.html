@@ -83,13 +83,13 @@
           <div class="amount-input-group">
             <label for="beforeAmount">改定前</label>
             <input
-              type="number"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
               id="beforeAmount"
               [(ngModel)]="revisionData.beforeAmount"
               (ngModelChange)="onAmountChange()"
               placeholder="例: 280000"
-              min="0"
-              step="1"
             />
             <span class="unit">円</span>
           </div>
@@ -97,13 +97,13 @@
           <div class="amount-input-group">
             <label for="afterAmount">改定後</label>
             <input
-              type="number"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
               id="afterAmount"
               [(ngModel)]="revisionData.afterAmount"
               (ngModelChange)="onAmountChange()"
               placeholder="例: 320000"
-              min="0"
-              step="1"
             />
             <span class="unit">円</span>
           </div>
@@ -112,6 +112,7 @@
       </div>
 
       <!-- 著しく高低の判定結果表示 -->
+      <!--
       <div class="form-group" *ngIf="revisionData.beforeAmount && revisionData.afterAmount">
         <div class="section-label">著しく高低の判定</div>
         <div class="significant-change-display">
@@ -126,6 +127,7 @@
         </div>
         <small class="help-text">等級判定における著しく高低の判定結果</small>
       </div>
+      -->
 
       <!-- 継続月数 -->
       <div class="form-group">
