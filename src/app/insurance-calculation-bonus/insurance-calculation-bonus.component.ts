@@ -21,6 +21,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { AuthService } from '../services/auth.service';
 
 interface EmployeeInfo {
+  uid: string;
   name: string;
   employeeNumber: string;
   birthDate: string;
@@ -82,6 +83,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   limitNotes: string[] = [];
 
   private firestore = getFirestore();
+  private uid: string | null = null;
 
   // 育休産休プルダウンの状態を管理
   updateLeaveStatus(index: number, leaveType: string): void {
@@ -186,7 +188,9 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        this.uid = userDoc.id; // UIDをクラスプロパティに保存
         const birthDate = new Date(userData['birthDate']);
         let addressPrefecture = userData['addressPrefecture'] || '';
 
@@ -203,6 +207,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         }
 
         this.employeeInfo = {
+          uid: this.uid,
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
           birthDate: birthDate.toISOString().split('T')[0],
@@ -523,7 +528,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   }
 
   async saveBonusResults(): Promise<void> {
-    if (!this.employeeInfo || !this.bonusDataList.length) {
+    if (!this.employeeInfo || !this.bonusDataList.length || !this.uid) {
       this.errorMessage = '保存するデータがありません。';
       return;
     }
@@ -535,6 +540,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
       const saveData = {
         companyId: companyId,
+        uid: this.uid,
         employeeId: employeeNumber,
         targetYear: Number(this.targetYear),
         bonusResults: this.bonusDataList.map((item) => {
@@ -571,7 +577,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       // デバッグ: 保存データをログ出力
       console.log('Firestore保存データ:', saveData);
 
-      const docPath = `companies/${companyId}/employees/${employeeNumber}/bonus_calculation_results/${this.targetYear}`;
+      const docPath = `companies/${companyId}/employees/${this.uid}/bonus_calculation_results/${this.targetYear}`;
       const docRef = doc(this.firestore, docPath);
 
       console.log('保存先パス:', docPath);
