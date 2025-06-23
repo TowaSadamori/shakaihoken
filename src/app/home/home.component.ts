@@ -10,7 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { UserService, User } from '../services/user.service';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import {
   InsuranceCalculationService,
   MonthlyInsuranceFee,
@@ -69,6 +69,10 @@ export class HomeComponent implements OnInit {
   isAdmin = false;
   private firestore = getFirestore();
 
+  // 事業所選択
+  offices: { branchNumber: string; name: string }[] = [];
+  selectedOffice: string = 'all';
+
   // 年次切り替え用
   selectedYear: number = new Date().getFullYear();
   selectedMonth: number = new Date().getMonth() + 1;
@@ -108,6 +112,7 @@ export class HomeComponent implements OnInit {
 
   // 全従業員データ
   allEmployeesData: EmployeeInsuranceData[] = [];
+  private allOriginalEmployeesData: EmployeeInsuranceData[] = [];
 
   // 産休育休状態を管理するマップ
   leaveStatusMap = new Map<string, string>();
@@ -186,6 +191,9 @@ export class HomeComponent implements OnInit {
       const companyId = await this.authService.getCurrentUserCompanyId();
       if (!companyId) return;
 
+      // 事業所リストを取得
+      await this.loadOffices(companyId);
+
       // 同じ会社の従業員データを取得
       const employees = await this.userService.getUsersByCompanyId(companyId);
 
@@ -199,11 +207,12 @@ export class HomeComponent implements OnInit {
 
       if (this.isAdmin) {
         // 管理者：全従業員のデータを表示
-        this.allEmployeesData = await Promise.all(
+        this.allOriginalEmployeesData = await Promise.all(
           (employees as UserWithJudgment[]).map((employee) =>
             this.convertToEmployeeInsuranceData(employee)
           )
         );
+        this.filterDataByOffice(); // 初期表示
       } else {
         // 従業員：自分のデータのみをテーブル形式で表示
         const currentUserData = employees.find((emp) => emp.uid === this.currentUser?.uid);
@@ -227,6 +236,20 @@ export class HomeComponent implements OnInit {
     } catch (error) {
       console.error('An error occurred during ngOnInit:', error);
     }
+  }
+
+  // 事業所リストを読み込む
+  private async loadOffices(companyId: string): Promise<void> {
+    const officesCol = collection(this.firestore, 'offices');
+    const q = query(officesCol, where('companyId', '==', companyId));
+    const snapshot = await getDocs(q);
+    this.offices = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        branchNumber: data['branchNumber'],
+        name: data['name'],
+      };
+    });
   }
 
   // 判定結果を読み込むメソッド
@@ -346,14 +369,17 @@ export class HomeComponent implements OnInit {
   }
 
   // 年次切り替え時の処理
-  async onYearChange() {
-    await this.refreshData();
+  onYearChange() {
+    this.refreshData();
   }
 
   // 月選択変更時の処理
-  async onMonthChange() {
-    this.setDisplayedColumns();
-    await this.refreshData();
+  onMonthChange() {
+    this.refreshData();
+  }
+
+  onOfficeChange() {
+    this.filterDataByOffice();
   }
 
   // 表示する列を動的に設定するメソッド
@@ -391,11 +417,12 @@ export class HomeComponent implements OnInit {
 
       if (this.isAdmin) {
         // 管理者：全従業員のデータを表示
-        this.allEmployeesData = await Promise.all(
+        this.allOriginalEmployeesData = await Promise.all(
           (employees as UserWithJudgment[]).map((employee) =>
             this.convertToEmployeeInsuranceData(employee)
           )
         );
+        this.filterDataByOffice();
 
         // 賞与月の場合、産休育休状態を読み込み
         if (this.selectedMonth >= 13) {
@@ -493,5 +520,16 @@ export class HomeComponent implements OnInit {
 
     // TODO: Firestoreに保存する処理を後で実装
     console.log(`産休育休状態変更: ${employeeNumber} -> ${newLeaveType}`);
+  }
+
+  // フィルタリングメソッド
+  private filterDataByOffice() {
+    if (this.selectedOffice === 'all') {
+      this.allEmployeesData = [...this.allOriginalEmployeesData];
+    } else {
+      this.allEmployeesData = this.allOriginalEmployeesData.filter(
+        (employee) => employee.officeNumber === this.selectedOffice
+      );
+    }
   }
 }

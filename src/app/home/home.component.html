@@ -18,6 +18,15 @@
             </mat-option>
           </mat-select>
         </mat-form-field>
+        <mat-form-field appearance="outline" *ngIf="isAdmin">
+          <mat-label>事業所</mat-label>
+          <mat-select [(value)]="selectedOffice" (selectionChange)="onOfficeChange()">
+            <mat-option value="all">全体</mat-option>
+            <mat-option *ngFor="let office of offices" [value]="office.branchNumber">
+              {{ office.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
     </div>
     <p>従業員の社会保険料と会社負担額を簡単に管理・確認できます。</p>
