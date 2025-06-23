@@ -245,7 +245,8 @@ export class CreateAccountComponent implements OnInit {
         const deleteUserByAdmin = httpsCallable(this.functions, 'deleteUserByAdmin');
         try {
           await deleteUserByAdmin({ uid: user.uid });
-          await this.loadUsers();
+          this.users = this.users.filter((u) => u.uid !== user.uid);
+          // await this.loadUsers(); // 即時反映のため、一旦コメントアウト
         } catch (e) {
           console.error('ユーザー削除エラー:', e);
         }

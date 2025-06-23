@@ -87,25 +87,6 @@ export class RegisterComponent implements AfterViewInit {
 
   async onSubmit() {
     if (this.registerForm.valid) {
-      const employeeNumber = String(this.registerForm.get('employeeNumber')?.value ?? '').trim();
-      const companyIdForm = this.registerForm.get('companyId')?.value;
-      if (employeeNumber) {
-        const { getFirestore, collection, getDocs, query, where } = await import(
-          'firebase/firestore'
-        );
-        const db = getFirestore();
-        const usersCol = collection(db, 'users');
-        const q = query(
-          usersCol,
-          where('companyId', '==', companyIdForm),
-          where('employeeNumber', '==', employeeNumber)
-        );
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          this.registerForm.get('employeeNumber')?.setErrors({ duplicate: true });
-          return;
-        }
-      }
       const {
         lastName,
         firstName,
@@ -117,7 +98,28 @@ export class RegisterComponent implements AfterViewInit {
         password,
         role,
         companyId,
+        employeeNumber,
+        branchNumber,
       } = this.registerForm.value;
+
+      const employeeNumberStr = String(employeeNumber ?? '').trim();
+      if (employeeNumberStr) {
+        const { getFirestore, collection, getDocs, query, where } = await import(
+          'firebase/firestore'
+        );
+        const db = getFirestore();
+        const usersCol = collection(db, 'users');
+        const q = query(
+          usersCol,
+          where('companyId', '==', companyId),
+          where('employeeNumber', '==', employeeNumberStr)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          this.registerForm.get('employeeNumber')?.setErrors({ duplicate: true });
+          return;
+        }
+      }
       try {
         await this.authService.registerUserByAdmin(
           email,
@@ -129,7 +131,9 @@ export class RegisterComponent implements AfterViewInit {
           firstNameKana,
           birthDate,
           gender,
-          companyId
+          companyId,
+          employeeNumber,
+          branchNumber
         );
         this.dialogRef.close({ email, password });
       } catch (err) {

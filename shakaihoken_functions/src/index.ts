@@ -50,6 +50,8 @@ interface CreateUserRequest {
   gender: string;
   role: string;
   companyId: string;
+  employeeNumber?: string | number;
+  branchNumber?: string | number;
 }
 
 export const deleteUserByAdmin = onCall({ region: 'asia-northeast1' }, async (request) => {
@@ -115,6 +117,12 @@ export const updateUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
 
 export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (request) => {
   console.log('createUserByAdmin request.data:', request.data);
+  const data = request.data as CreateUserRequest & {
+    isFirstAdmin?: boolean;
+    companyName?: string;
+    companyId?: string;
+  };
+
   const {
     email,
     password,
@@ -128,11 +136,11 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
     companyId: reqCompanyId,
     isFirstAdmin, // 新規会社用管理者作成時のみtrue
     companyName,
-  } = request.data as CreateUserRequest & {
-    isFirstAdmin?: boolean;
-    companyName?: string;
-    companyId?: string;
-  };
+  } = data;
+
+  // employeeNumberとbranchNumberは安全に取得
+  const employeeNumber = data.employeeNumber;
+  const branchNumber = data.branchNumber;
   const token = request.auth?.token as Record<string, unknown> | undefined;
   // 管理者のみ実行可能。ただし未ログインでも「初回管理者作成」は許可
   if (
@@ -162,7 +170,7 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       await admin.auth().setCustomUserClaims(userRecord.uid, { admin: false });
       console.log(`admin権限を外した: ${userRecord.uid}`);
     }
-    await admin.firestore().collection('users').doc(userRecord.uid).set({
+    const userData: Record<string, string | number | Date> = {
       uid: userRecord.uid,
       email,
       password,
@@ -175,7 +183,27 @@ export const createUserByAdmin = onCall({ region: 'asia-northeast1' }, async (re
       role,
       companyId,
       createdAt: new Date(),
-    });
+    };
+
+    // undefined値を除外してFirestoreに保存
+    if (
+      Object.prototype.hasOwnProperty.call(data, 'employeeNumber') &&
+      employeeNumber !== undefined &&
+      employeeNumber !== null &&
+      employeeNumber !== ''
+    ) {
+      userData.employeeNumber = employeeNumber;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(data, 'branchNumber') &&
+      branchNumber !== undefined &&
+      branchNumber !== null &&
+      branchNumber !== ''
+    ) {
+      userData.branchNumber = branchNumber;
+    }
+
+    await admin.firestore().collection('users').doc(userRecord.uid).set(userData);
     // 新規会社管理者作成時はcompaniesコレクションにも保存
     if (isFirstAdmin && companyName) {
       await admin.firestore().collection('companies').doc(companyId).set({

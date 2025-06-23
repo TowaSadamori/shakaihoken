@@ -104,10 +104,13 @@ export class AuthService {
     firstNameKana: string,
     birthDate: string,
     gender: string,
-    companyId: string
+    companyId: string,
+    employeeNumber?: string | number | null,
+    branchNumber?: string | number | null
   ): Promise<{ success: boolean; uid?: string }> {
     const createUser = httpsCallable(this.functions, 'createUserByAdmin');
-    const result = await createUser({
+
+    const payload: Record<string, string | number | Date | boolean> = {
       email,
       password,
       role,
@@ -118,7 +121,16 @@ export class AuthService {
       birthDate,
       gender,
       companyId,
-    });
+    };
+
+    if (employeeNumber !== undefined && employeeNumber !== null) {
+      payload['employeeNumber'] = employeeNumber;
+    }
+    if (branchNumber !== undefined && branchNumber !== null) {
+      payload['branchNumber'] = branchNumber;
+    }
+
+    const result = await createUser(payload);
     return result.data as { success: boolean; uid?: string };
   }
 
