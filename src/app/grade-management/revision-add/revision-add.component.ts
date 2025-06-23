@@ -72,6 +72,8 @@ interface RevisionSaveData {
   judgmentResult: GradeJudgmentResult;
   applicableYear: bigint;
   applicableMonth: bigint;
+  endYear?: bigint;
+  endMonth?: bigint;
   calculationSnapshot: CalculationSnapshot;
   createdAt: Date;
   updatedAt: Date;
@@ -404,9 +406,49 @@ export class RevisionAddComponent implements OnInit {
   }
 
   async judgeAndSave(): Promise<void> {
-    await this.calculateGrade();
-    if (this.judgmentResult) {
-      await this.saveRevisionData();
+    this.isSaving = true;
+    this.errorMessage = '';
+
+    try {
+      await this.calculateGrade();
+
+      if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+        this.errorMessage = '保存に必要な情報が不足しています。';
+        this.isSaving = false;
+        return;
+      }
+
+      const docId = this.savedRevisionData?.id || `${this.employeeId}_revision`;
+
+      const saveData: RevisionSaveData = {
+        id: docId,
+        employeeId: this.employeeId,
+        revisionData: this.revisionData,
+        judgmentResult: this.judgmentResult,
+        applicableYear: this.applicableYear!,
+        applicableMonth: this.applicableMonth!,
+        calculationSnapshot: this.createCalculationSnapshot(),
+        createdAt: this.savedRevisionData?.createdAt || new Date(),
+        updatedAt: new Date(),
+        judgmentType: 'revision',
+      };
+
+      if (this.endYear && this.endMonth) {
+        saveData.endYear = this.endYear;
+        saveData.endMonth = this.endMonth;
+      }
+
+      const historyData = this.createHistoryData(saveData.calculationSnapshot);
+      await this.saveToGradeJudgmentHistory(historyData);
+
+      this.savedRevisionData = saveData;
+      alert('随時改定データが保存されました');
+      this.router.navigate(['/grade-judgment', this.employeeId]);
+    } catch (error) {
+      console.error('保存処理中にエラーが発生しました:', error);
+      this.errorMessage = 'データの保存に失敗しました。';
+    } finally {
+      this.isSaving = false;
     }
   }
 
@@ -643,43 +685,6 @@ export class RevisionAddComponent implements OnInit {
     }
   }
 
-  async saveRevisionData(): Promise<void> {
-    if (!this.employeeId || !this.judgmentResult) {
-      this.errorMessage = '保存に必要な情報が不足しています。';
-      return;
-    }
-    this.isSaving = true;
-    this.errorMessage = '';
-
-    const calculationSnapshot = this.createCalculationSnapshot();
-
-    const historyData = this.createHistoryData(calculationSnapshot);
-
-    try {
-      if (this.isEditMode && this.recordId) {
-        const historyDocRef = doc(
-          this.firestore,
-          `gradeJudgments/${this.employeeId}/judgments`,
-          this.recordId
-        );
-        const dataToUpdate = this.deepConvertBigIntToString(historyData);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await updateDoc(historyDocRef, dataToUpdate as any);
-        alert('随時改定データが正常に更新されました。');
-      } else {
-        await this.saveToGradeJudgmentHistory(historyData);
-        alert('随時改定データが正常に保存されました。');
-      }
-
-      this.router.navigate(['/grade-judgment', this.employeeId]);
-    } catch (error) {
-      console.error('保存エラー:', error);
-      this.errorMessage = `データの保存中にエラーが発生しました: ${error}`;
-    } finally {
-      this.isSaving = false;
-    }
-  }
-
   private createCalculationSnapshot(): CalculationSnapshot {
     const appliedRules: string[] = [];
 
@@ -752,24 +757,16 @@ export class RevisionAddComponent implements OnInit {
   }
 
   private validateContradictionRule(): boolean {
-    if (!this.judgmentResult || !this.revisionData.beforeAmount || !this.revisionData.afterAmount) {
-      return false;
-    }
+    if (!this.judgmentResult) return true;
 
-    const fixedWageIncreased = this.revisionData.afterAmount > this.revisionData.beforeAmount;
-    const totalGradeIncreased =
-      this.judgmentResult.afterGrades.healthInsuranceGrade >
-      this.judgmentResult.beforeGrades.healthInsuranceGrade;
-
-    const hasContradiction =
-      (fixedWageIncreased && !totalGradeIncreased) || (!fixedWageIncreased && totalGradeIncreased);
-
-    return !hasContradiction;
+    const before = this.judgmentResult.beforeGrades.healthInsuranceGrade;
+    const after = this.judgmentResult.afterGrades.healthInsuranceGrade;
+    return before === after;
   }
 
   async deleteRevisionData(): Promise<void> {
     if (!this.employeeId || !this.recordId) {
-      alert('削除対象のデータが特定できません。');
+      this.clearForm();
       return;
     }
     if (!confirm('この随時改定履歴を削除しますか？この操作は元に戻せません。')) {
@@ -795,8 +792,7 @@ export class RevisionAddComponent implements OnInit {
       this.router.navigate(['/grade-judgment', this.employeeId]);
     } catch (error) {
       console.error('削除エラー:', error);
-      this.errorMessage = `削除に失敗しました: ${error}`;
-      alert(this.errorMessage);
+      this.errorMessage = 'データの削除に失敗しました。';
     } finally {
       this.isSaving = false;
     }
@@ -853,38 +849,48 @@ export class RevisionAddComponent implements OnInit {
   private async saveToGradeJudgmentHistory(
     gradeJudgmentRecord: Record<string, unknown>
   ): Promise<void> {
-    if (!this.employeeId) {
+    if (!this.companyId || !this.uid) {
+      console.error('会社IDまたは従業員IDがありません。');
+      this.errorMessage = '会社情報または従業員情報が取得できていません。';
       return;
     }
 
     try {
       const historyCollectionRef = collection(
         this.firestore,
-        'gradeJudgments',
-        this.employeeId,
-        'judgments'
+        'companies',
+        this.companyId,
+        'employees',
+        this.uid,
+        'gradeHistory'
       );
 
-      const q = query(historyCollectionRef, where('endDate', '==', null));
-      const querySnapshot = await getDocs(q);
+      // gradeJudgmentRecord に companyId と uid を追加
+      const dataToSave = {
+        ...gradeJudgmentRecord,
+        companyId: this.companyId,
+        uid: this.uid,
+        updatedAt: new Date(),
+      };
 
-      if (!querySnapshot.empty) {
-        const activeDoc = querySnapshot.docs[0];
-        const newEffectiveDate = gradeJudgmentRecord['effectiveDate'] as Date;
-        const newEndDate = new Date(newEffectiveDate.getTime() - 24 * 60 * 60 * 1000);
-
-        await updateDoc(activeDoc.ref, {
-          endDate: Timestamp.fromDate(newEndDate),
-          updatedAt: Timestamp.now(),
-        });
+      if (this.isEditMode && this.recordId) {
+        // 更新
+        const docRef = doc(historyCollectionRef, this.recordId);
+        await updateDoc(docRef, this.deepConvertBigIntToString(dataToSave) as any);
+      } else {
+        // 新規作成
+        const docRef = doc(historyCollectionRef); // FirestoreにIDを自動生成させる
+        await setDoc(
+          docRef,
+          this.deepConvertBigIntToString({ ...dataToSave, createdAt: new Date() }) as any
+        );
+        this.recordId = docRef.id; // 新しいIDを保存
+        this.isEditMode = true; // 次回からは更新モードになる
       }
-
-      const newDocRef = doc(historyCollectionRef);
-      const convertedRecord = this.deepConvertBigIntToString(gradeJudgmentRecord);
-      await setDoc(newDocRef, convertedRecord);
     } catch (error) {
       console.error('等級履歴への保存エラー:', error);
-      throw new Error('等級履歴への保存に失敗しました。');
+      this.errorMessage = '等級履歴への保存に失敗しました。';
+      throw error; // エラーを呼び出し元に伝える
     }
   }
 
