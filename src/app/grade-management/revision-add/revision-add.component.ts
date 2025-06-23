@@ -20,6 +20,7 @@ import { OfficeService } from '../../services/office.service';
 import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 
 interface EmployeeInfo {
+  uid: string;
   name: string;
   employeeNumber: string;
   birthDate: string;
@@ -165,10 +166,28 @@ export class RevisionAddComponent implements OnInit {
     { value: 'other', label: 'その他' },
   ];
 
+  availableYears: bigint[] = [];
+  availableMonths = [
+    { value: BigInt(1), label: '1月' },
+    { value: BigInt(2), label: '2月' },
+    { value: BigInt(3), label: '3月' },
+    { value: BigInt(4), label: '4月' },
+    { value: BigInt(5), label: '5月' },
+    { value: BigInt(6), label: '6月' },
+    { value: BigInt(7), label: '7月' },
+    { value: BigInt(8), label: '8月' },
+    { value: BigInt(9), label: '9月' },
+    { value: BigInt(10), label: '10月' },
+    { value: BigInt(11), label: '11月' },
+    { value: BigInt(12), label: '12月' },
+  ];
+
   private employeeId: string | null = null;
   private recordId: string | null = null;
   isEditMode = false;
   private firestore = getFirestore();
+  private companyId: string | null = null;
+  private uid: string | null = null;
 
   savedRevisionData: RevisionSaveData | null = null;
   isSaving = false;
@@ -186,6 +205,7 @@ export class RevisionAddComponent implements OnInit {
     this.isEditMode = !!this.recordId;
 
     if (this.employeeId) {
+      await this.loadCompanyId();
       await this.loadEmployeeInfo();
       if (this.isEditMode && this.recordId) {
         await this.loadExistingRevisionData(this.recordId);
@@ -194,41 +214,60 @@ export class RevisionAddComponent implements OnInit {
     if (!this.isEditMode) {
       this.initializeDefaultDates();
     }
+    this.initializeYears();
+  }
+
+  private initializeYears(): void {
+    const currentYear = new Date().getFullYear();
+    for (let i = -5; i <= 10; i++) {
+      this.availableYears.push(BigInt(currentYear + i));
+    }
   }
 
   private initializeDefaultDates(): void {
     if (this.revisionData.revisionDate) return;
     const today = new Date();
     this.revisionData.revisionDate = today.toISOString().split('T')[0];
-    this.updateApplicablePeriod();
   }
 
-  updateApplicablePeriod(): void {
-    if (this.revisionData.revisionDate) {
-      const parts = this.revisionData.revisionDate.split('-').map((p) => parseInt(p, 10));
-      const revisionDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-
-      revisionDate.setUTCMonth(revisionDate.getUTCMonth() + 4);
-      revisionDate.setUTCDate(1);
-
-      this.applicableYear = BigInt(revisionDate.getUTCFullYear());
-      this.applicableMonth = BigInt(revisionDate.getUTCMonth() + 1);
+  private async loadCompanyId(): Promise<void> {
+    try {
+      const userId = await this.authService.getCurrentUserId();
+      if (userId) {
+        const userDoc = await getDoc(doc(this.firestore, 'users', userId));
+        if (userDoc.exists()) {
+          this.companyId = userDoc.data()['companyId'];
+        }
+      }
+      if (!this.companyId) {
+        console.error('Company ID could not be retrieved.');
+        this.errorMessage = '会社情報を取得できませんでした。';
+      }
+    } catch (error) {
+      console.error('Error fetching company ID:', error);
+      this.errorMessage = '会社情報の取得中にエラーが発生しました。';
     }
   }
 
   private async loadEmployeeInfo(): Promise<void> {
-    if (!this.employeeId) return;
+    if (!this.employeeId || !this.companyId) return;
 
     this.isLoading = true;
     try {
       console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
 
       const usersRef = collection(this.firestore, 'users');
-      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const q = query(
+        usersRef,
+        where('employeeNumber', '==', this.employeeId),
+        where('companyId', '==', this.companyId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        this.uid = userDoc.id;
         console.log('Firestoreから取得した従業員データ:', userData);
 
         const birthDate = new Date(userData['birthDate']);
@@ -260,6 +299,7 @@ export class RevisionAddComponent implements OnInit {
         }
 
         this.employeeInfo = {
+          uid: this.uid,
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
           birthDate: formattedBirthDate,
