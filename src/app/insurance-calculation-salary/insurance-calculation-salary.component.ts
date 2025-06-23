@@ -18,6 +18,7 @@ import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { AuthService } from '../services/auth.service';
 
 interface EmployeeInfo {
+  uid: string;
   name: string;
   employeeNumber: string;
   birthDate: string;
@@ -100,6 +101,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
   monthlyResults: MonthlyCalculationResult[] = [];
 
   private employeeId: string | null = null;
+  private uid: string | null = null;
   private firestore = getFirestore();
 
   constructor(
@@ -141,7 +143,10 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        this.uid = userDoc.id;
+
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
 
@@ -154,6 +159,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
         }
 
         this.employeeInfo = {
+          uid: this.uid,
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
           birthDate: birthDate.toISOString().split('T')[0],
@@ -399,14 +405,14 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
   }
 
   private async fetchGradeHistory(): Promise<GradeJudgmentRecord[]> {
-    if (!this.employeeInfo || !this.employeeId) return [];
+    if (!this.employeeInfo || !this.uid) return [];
 
     const { companyId } = this.employeeInfo;
 
     const history: GradeJudgmentRecord[] = [];
     const judgmentsRef = collection(
       this.firestore,
-      `companies/${companyId}/employees/${this.employeeId}/gradeHistory`
+      `companies/${companyId}/employees/${this.uid}/gradeHistory`
     );
     const q = query(judgmentsRef);
     const querySnapshot = await getDocs(q);
