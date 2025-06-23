@@ -41,6 +41,7 @@ export interface BonusPremiumResult {
   pensionInsurance: { employeeBurden: string; companyBurden: string };
   healthInsuranceRate: string;
   careInsuranceRate?: string;
+  combinedHealthAndCareRate?: string;
   pensionInsuranceRate: string;
 }
 
@@ -249,6 +250,7 @@ export class BonusCalculationService {
     return sortedBonuses.map((item) => {
       // 支払日時点の年齢を計算
       const ageAtPayment = this._calculateAgeAtDate(birthDate, item.paymentDate!);
+      const isCareInsuranceApplicable = ageAtPayment >= 40 && ageAtPayment < 65;
 
       // 休業免除判定
       if (this.isExemptedByLeave(item.paymentDate || '', leavePeriods)) {
@@ -265,6 +267,7 @@ export class BonusCalculationService {
           healthInsuranceRate: rates.nonNursingRate,
           pensionInsuranceRate: rates.pensionRate,
           careInsuranceRate: ageAtPayment >= 40 ? rates.nursingRate : undefined,
+          combinedHealthAndCareRate: rates.nursingRate,
         };
         return { ...item, calculationResult: zeroResult };
       }
@@ -321,42 +324,46 @@ export class BonusCalculationService {
         standardBonusAmount
       );
 
-      // 新しい計算ロジック: 50銭ルール
+      // --- 健康保険料の計算（介護なしの料率で計算） ---
       const healthTotalDecimal = SocialInsuranceCalculator.multiply(
         applicableHealthStandardAmount,
-        nonNursingRateDecimal
+        nonNursingRateDecimal.toString()
       );
       const healthEmployeeDecimal = healthTotalDecimal.div(2);
-      const healthEmployee =
+      const healthInsuranceEmployee =
         SocialInsuranceCalculator.roundForEmployeeBurden(healthEmployeeDecimal);
 
-      const healthTotalRounded = healthTotalDecimal.toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
-      const healthCompany = SocialInsuranceCalculator.subtract(
-        healthTotalRounded.toString(),
-        healthEmployee
-      );
+      const healthInsurance = {
+        employeeBurden: healthInsuranceEmployee,
+        companyBurden: SocialInsuranceCalculator.subtract(
+          healthTotalDecimal.toFixed(0, Decimal.ROUND_HALF_UP),
+          healthInsuranceEmployee
+        ),
+      };
 
-      // --- 介護保険料 (40歳以上) ---
-      let careResult: { employeeBurden: string; companyBurden: string } | undefined;
-      if (ageAtPayment >= 40) {
-        // 新しい計算ロジック: 50銭ルール
+      // --- 介護保険料の計算 ---
+      let careInsurance: { employeeBurden: string; companyBurden: string } | undefined;
+      let careInsuranceRate: string | undefined;
+      let combinedHealthAndCareRate: string | undefined;
+
+      if (isCareInsuranceApplicable) {
         const careTotalDecimal = SocialInsuranceCalculator.multiply(
           applicableHealthStandardAmount,
-          careInsuranceRateDecimal
+          careInsuranceRateDecimal.toString()
         );
         const careEmployeeDecimal = careTotalDecimal.div(2);
-        const careEmployee = SocialInsuranceCalculator.roundForEmployeeBurden(careEmployeeDecimal);
+        const careInsuranceEmployee =
+          SocialInsuranceCalculator.roundForEmployeeBurden(careEmployeeDecimal);
 
-        const careTotalRounded = careTotalDecimal.toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
-        const careCompany = SocialInsuranceCalculator.subtract(
-          careTotalRounded.toString(),
-          careEmployee
-        );
-
-        careResult = {
-          employeeBurden: careEmployee,
-          companyBurden: careCompany,
+        careInsurance = {
+          employeeBurden: careInsuranceEmployee,
+          companyBurden: SocialInsuranceCalculator.subtract(
+            careTotalDecimal.toFixed(0, Decimal.ROUND_HALF_UP),
+            careInsuranceEmployee
+          ),
         };
+        careInsuranceRate = new Decimal(careInsuranceRateDecimal).times(100).toFixed(3);
+        combinedHealthAndCareRate = rates.nursingRate;
       }
 
       const calculationResult: BonusPremiumResult = {
@@ -366,18 +373,12 @@ export class BonusCalculationService {
         applicableHealthStandardAmount,
         isHealthLimitApplied,
         pensionInsurance: { employeeBurden: pensionEmployee, companyBurden: pensionCompany },
-        healthInsurance: { employeeBurden: healthEmployee, companyBurden: healthCompany },
-        careInsurance: careResult,
-        healthInsuranceRate: `${new Decimal(rates.nonNursingRate.replace(/[^0-9.]/g, '')).toFixed(
-          3
-        )}%`,
-        pensionInsuranceRate: `${new Decimal(rates.pensionRate.replace(/[^0-9.]/g, '')).toFixed(
-          3
-        )}%`,
-        careInsuranceRate:
-          ageAtPayment >= 40
-            ? `${new Decimal(careInsuranceRateDecimal).times(100).toFixed(3)}%`
-            : undefined,
+        healthInsurance,
+        careInsurance,
+        healthInsuranceRate: rates.nonNursingRate,
+        careInsuranceRate,
+        combinedHealthAndCareRate,
+        pensionInsuranceRate: rates.pensionRate,
       };
 
       return { ...item, calculationResult };

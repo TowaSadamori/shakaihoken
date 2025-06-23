@@ -403,17 +403,11 @@ export class HomeComponent implements OnInit {
     // 合計の再計算
     currentMonthData.totalEmployee = SocialInsuranceCalculator.addAmounts(
       currentMonthData.healthInsuranceEmployee,
-      SocialInsuranceCalculator.addAmounts(
-        currentMonthData.pensionInsuranceEmployee,
-        currentMonthData.careInsuranceEmployee
-      )
+      currentMonthData.pensionInsuranceEmployee
     );
     currentMonthData.totalCompany = SocialInsuranceCalculator.addAmounts(
       currentMonthData.healthInsuranceCompany,
-      SocialInsuranceCalculator.addAmounts(
-        currentMonthData.pensionInsuranceCompany,
-        currentMonthData.careInsuranceCompany
-      )
+      currentMonthData.pensionInsuranceCompany
     );
 
     return {

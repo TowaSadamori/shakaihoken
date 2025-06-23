@@ -20,6 +20,7 @@ import { OfficeService } from '../services/office.service';
 import { doc, setDoc } from 'firebase/firestore';
 import { AuthService } from '../services/auth.service';
 import { Decimal } from 'decimal.js';
+import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 
 interface EmployeeInfo {
   uid: string;
@@ -408,31 +409,61 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     ];
 
     const rows: PivotRow[] = this.bonusDataList.map((item, index) => {
+      const calcResult = item.calculationResult;
+      const isCareApplicable = !!calcResult.careInsurance;
+
+      // 介護保険対象者か否かで表示内容を切り替える
+      const healthRate = isCareApplicable
+        ? '-'
+        : this.formatPercentage(calcResult.healthInsuranceRate);
+      const healthEmployee = isCareApplicable
+        ? '-'
+        : this.formatAmount(calcResult.healthInsurance.employeeBurden);
+      const healthCompany = isCareApplicable
+        ? '-'
+        : this.formatAmount(calcResult.healthInsurance.companyBurden);
+
+      const careRate = isCareApplicable
+        ? this.formatPercentage(calcResult.combinedHealthAndCareRate)
+        : '-';
+      let careEmployee = '-';
+      let careCompany = '-';
+
+      if (isCareApplicable && calcResult.careInsurance) {
+        // 介護対象者の場合、介護保険料の欄には「健康保険料＋介護保険料」の合算値を表示
+        careEmployee = this.formatAmount(
+          SocialInsuranceCalculator.addAmounts(
+            calcResult.healthInsurance.employeeBurden,
+            calcResult.careInsurance.employeeBurden
+          )
+        );
+        careCompany = this.formatAmount(
+          SocialInsuranceCalculator.addAmounts(
+            calcResult.healthInsurance.companyBurden,
+            calcResult.careInsurance.companyBurden
+          )
+        );
+      }
+
       const values = [
         `checkbox_${index}`, // チェックボックス用のプレースホルダー
         this.formatAmount(item.amount),
-        this.formatAmount(item.calculationResult.standardBonusAmount),
+        this.formatAmount(calcResult.standardBonusAmount),
         '', // Separator
-        this.formatPercentage(item.calculationResult.healthInsuranceRate),
-        this.formatAmount(item.calculationResult.healthInsurance.employeeBurden),
-        this.formatAmount(item.calculationResult.healthInsurance.companyBurden),
+        healthRate,
+        healthEmployee,
+        healthCompany,
         '', // Separator
-        item.calculationResult.careInsuranceRate
-          ? this.formatPercentage(item.calculationResult.careInsuranceRate)
-          : '-',
-        item.calculationResult.careInsurance
-          ? this.formatAmount(item.calculationResult.careInsurance.employeeBurden)
-          : '-',
-        item.calculationResult.careInsurance
-          ? this.formatAmount(item.calculationResult.careInsurance.companyBurden)
-          : '-',
+        careRate,
+        careEmployee,
+        careCompany,
         '', // Separator
-        this.formatPercentage(item.calculationResult.pensionInsuranceRate),
-        this.formatAmount(item.calculationResult.pensionInsurance.employeeBurden),
-        this.formatAmount(item.calculationResult.pensionInsurance.companyBurden),
+        this.formatPercentage(calcResult.pensionInsuranceRate),
+        this.formatAmount(calcResult.pensionInsurance.employeeBurden),
+        this.formatAmount(calcResult.pensionInsurance.companyBurden),
         '', // Separator
-        this.formatAmount(item.calculationResult.cappedPensionStandardAmount),
-        this.formatAmount(item.calculationResult.applicableHealthStandardAmount),
+        this.formatAmount(calcResult.cappedPensionStandardAmount),
+        this.formatAmount(calcResult.applicableHealthStandardAmount),
       ];
 
       return {
