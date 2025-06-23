@@ -479,20 +479,21 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
   }
 
   async saveMonthlyResults(): Promise<void> {
-    if (!this.employeeInfo || !this.targetYear || this.monthlyResults.length === 0) {
+    if (!this.employeeInfo || !this.targetYear || this.monthlyResults.length === 0 || !this.uid) {
       console.error('保存に必要な情報が不足しています。');
       // 必要に応じてユーザーにフィードバックを表示
       return;
     }
     this.isLoading = true;
     const { companyId, employeeNumber } = this.employeeInfo;
-    const docPath = `companies/${companyId}/employees/${employeeNumber}/salary_calculation_results/${this.targetYear}`;
+    const docPath = `companies/${companyId}/employees/${this.uid}/salary_calculation_results/${this.targetYear}`;
     const docRef = doc(this.firestore, docPath);
 
     // Firestoreに保存するためにデータを整形
     const resultsForDb = {
-      // companyIdを追加して、データの所有者を明確にする
+      // companyIdとuidを追加して、データの所有者を明確にする
       companyId: companyId,
+      uid: this.uid,
       employeeNumber: employeeNumber,
       year: this.targetYear,
       // monthlyResultsの各月のデータをオブジェクトとして持つように変更
