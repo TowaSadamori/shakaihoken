@@ -1273,7 +1273,13 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   async updateGradeJudgmentHistory(): Promise<void> {
-    if (!this.companyId || !this.employeeId || !this.recordId || !this.judgmentResult) {
+    if (
+      !this.uid ||
+      !this.companyId ||
+      !this.employeeId ||
+      !this.recordId ||
+      !this.judgmentResult
+    ) {
       this.errorMessage = '更新に必要な情報が不足しています。';
       return;
     }
@@ -1316,7 +1322,7 @@ export class RegularDeterminationAddComponent implements OnInit {
 
       const historyDocRef = doc(
         this.firestore,
-        `companies/${this.companyId}/employees/${this.employeeId}/gradeHistory`,
+        `companies/${this.companyId}/employees/${this.uid}/gradeHistory`,
         this.recordId
       );
       const convertedRecord = this.deepConvertBigIntToString(historyRecord);
