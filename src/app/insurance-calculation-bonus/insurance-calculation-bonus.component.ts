@@ -14,9 +14,11 @@ import { CommonModule, Location } from '@angular/common';
 import {
   BonusCalculationService,
   CalculatedBonusHistoryItem,
+  BonusPremiumResult,
 } from '../services/bonus-calculation.service';
 import { OfficeService } from '../services/office.service';
 import { doc, setDoc } from 'firebase/firestore';
+import { AuthService } from '../services/auth.service';
 
 interface EmployeeInfo {
   name: string;
@@ -45,6 +47,12 @@ interface PivotedTable {
   rows: PivotRow[];
 }
 
+// このコンポーネント内での表示用データ型
+type DisplayBonusHistoryItem = CalculatedBonusHistoryItem & {
+  leaveType: string;
+  originalCalculationResult?: BonusPremiumResult;
+};
+
 @Component({
   selector: 'app-insurance-calculation-bonus',
   templateUrl: './insurance-calculation-bonus.component.html',
@@ -59,7 +67,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   targetYear = BigInt(new Date().getFullYear());
 
   // 賞与データリスト
-  bonusDataList: CalculatedBonusHistoryItem[] = [];
+  bonusDataList: DisplayBonusHistoryItem[] = [];
 
   // ピボットテーブル用データ
   pivotedTable: PivotedTable | null = null;
@@ -106,23 +114,30 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {
       // 産休・育休の場合は保険料を0にする
       console.log(`💤 休業適用: ${item.leaveType} - 保険料を0に設定`);
+      // 元の計算結果をバックアップ
+      if (!item.originalCalculationResult) {
+        item.originalCalculationResult = { ...item.calculationResult };
+      }
       item.calculationResult.healthInsurance = { employeeBurden: '0', companyBurden: '0' };
       item.calculationResult.pensionInsurance = { employeeBurden: '0', companyBurden: '0' };
       if (item.calculationResult.careInsurance) {
         item.calculationResult.careInsurance = { employeeBurden: '0', companyBurden: '0' };
       }
     } else {
-      // 通常の計算に戻す（再計算が必要）
-      console.log(`💼 通常勤務: 保険料を再計算`);
+      // 通常の計算に戻す
+      console.log(`💼 通常勤務: 保険料をバックアップから復元`);
       this.recalculateItemPremiums(index);
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private async recalculateItemPremiums(_index: number): Promise<void> {
-    // 必要に応じて保険料の再計算を実装
-    // 現在は簡略化のため、データを再読み込み
-    await this.loadBonusData();
+  private async recalculateItemPremiums(index: number): Promise<void> {
+    const item = this.bonusDataList && this.bonusDataList[index];
+    if (item && item.originalCalculationResult) {
+      // バックアップから元の計算結果を復元
+      item.calculationResult = { ...item.originalCalculationResult };
+      // バックアップをクリアし、プロパティを削除
+      delete item.originalCalculationResult;
+    }
   }
 
   constructor(
@@ -130,7 +145,8 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     private route: ActivatedRoute,
     private officeService: OfficeService,
     private bonusCalculationService: BonusCalculationService,
-    private location: Location
+    private location: Location,
+    private authService: AuthService
   ) {}
 
   async ngOnInit() {
@@ -157,8 +173,16 @@ export class InsuranceCalculationBonusComponent implements OnInit {
    */
   async loadEmployeeInfo() {
     try {
+      const companyId = await this.authService.getCurrentUserCompanyId();
+      if (!companyId) {
+        throw new Error('会社IDが取得できませんでした。');
+      }
       const usersRef = collection(this.firestore, 'users');
-      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const q = query(
+        usersRef,
+        where('employeeNumber', '==', this.employeeId),
+        where('companyId', '==', companyId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
@@ -237,10 +261,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
       // 3. leaveTypeを初期化（保存されたデータがあれば復元）
       this.bonusDataList = results.map((item, index) => {
-        // 型を明示的にキャストしてleaveTypeプロパティを確実に追加
-        const bonusItem = item as CalculatedBonusHistoryItem & { leaveType: string };
-
-        bonusItem.leaveType =
+        const savedItemData =
           savedData &&
           typeof savedData === 'object' &&
           savedData !== null &&
@@ -250,8 +271,16 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           typeof savedData.bonusResults[index] === 'object' &&
           savedData.bonusResults[index] !== null &&
           'leaveType' in savedData.bonusResults[index]
-            ? String(savedData.bonusResults[index].leaveType) || 'none'
-            : 'none';
+            ? (savedData.bonusResults[index] as {
+                leaveType?: string;
+                calculationResult?: BonusPremiumResult;
+              })
+            : null;
+
+        const bonusItem: DisplayBonusHistoryItem = {
+          ...item,
+          leaveType: savedItemData?.leaveType || 'none',
+        };
 
         return bonusItem;
       });
@@ -299,11 +328,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     try {
       if (!this.employeeInfo) return null;
 
-      const docRef = doc(
-        this.firestore,
-        'bonusCalculationResults',
-        `${this.employeeInfo.employeeNumber}_${this.targetYear}`
-      );
+      const { companyId, employeeNumber } = this.employeeInfo;
+      const docPath = `companies/${companyId}/employees/${employeeNumber}/bonus_calculation_results/${this.targetYear}`;
+      const docRef = doc(this.firestore, docPath);
+
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -503,21 +531,11 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     try {
       this.isLoading = true;
       this.errorMessage = '';
-
-      // デバッグ: 保存前のleaveTypeをログ出力
-      console.log(
-        '保存前のleaveType状態:',
-        this.bonusDataList.map((item, index) => ({
-          index,
-          leaveType: item.leaveType,
-          paymentDate: item.paymentDate,
-          hasLeaveTypeProperty: 'leaveType' in item,
-          itemKeys: Object.keys(item),
-        }))
-      );
+      const { companyId, employeeNumber } = this.employeeInfo;
 
       const saveData = {
-        employeeId: this.employeeInfo.employeeNumber,
+        companyId: companyId,
+        employeeId: employeeNumber,
         targetYear: Number(this.targetYear),
         bonusResults: this.bonusDataList.map((item) => {
           // 育休産休の場合は保険料を0にして保存
@@ -553,16 +571,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       // デバッグ: 保存データをログ出力
       console.log('Firestore保存データ:', saveData);
 
-      const docRef = doc(
-        this.firestore,
-        'bonusCalculationResults',
-        `${this.employeeInfo.employeeNumber}_${this.targetYear}`
-      );
+      const docPath = `companies/${companyId}/employees/${employeeNumber}/bonus_calculation_results/${this.targetYear}`;
+      const docRef = doc(this.firestore, docPath);
 
-      console.log(
-        '保存先パス:',
-        `bonusCalculationResults/${this.employeeInfo.employeeNumber}_${this.targetYear}`
-      );
+      console.log('保存先パス:', docPath);
       console.log('保存前の詳細データ:', JSON.stringify(saveData, null, 2));
 
       // 既存ドキュメントを削除してから新規作成（完全な置き換えを保証）
