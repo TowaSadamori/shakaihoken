@@ -191,6 +191,11 @@ export class AuthService {
     return userData['companyId'] || null;
   }
 
+  getCurrentUserId(): string | null {
+    const user = this.auth.currentUser;
+    return user ? user.uid : null;
+  }
+
   async getCurrentUserProfileWithRole(): Promise<{
     uid: string;
     lastName: string;

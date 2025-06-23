@@ -14,15 +14,17 @@ import {
   orderBy,
   Timestamp,
   where,
+  getDoc,
 } from 'firebase/firestore';
 import { OfficeService } from '../services/office.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
+import { AuthService } from '../services/auth.service';
 
 interface EmployeeInfo {
   name: string;
   employeeNumber: string;
   birthDate: string;
-  age: bigint;
+  age: number;
   companyId: string;
   branchNumber: string;
   addressPrefecture: string;
@@ -95,58 +97,43 @@ export class GradeJudgmentComponent implements OnInit {
 
   private employeeId: string | null = null;
   private firestore = getFirestore();
+  private companyId: string | null = null;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private officeService: OfficeService
+    private officeService: OfficeService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit(): Promise<void> {
     this.employeeId = this.route.snapshot.paramMap.get('employeeId');
     if (!this.employeeId) {
-      this.errorMessage = '従業員IDが見つかりません';
+      this.errorMessage = '従業員番号がURLに含まれていません';
       return;
     }
 
-    await this.loadData();
-  }
-
-  async loadData(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      await Promise.all([
-        this.loadEmployeeInfo(),
-        this.loadSalaryData(),
-        this.loadJudgmentHistory(),
-      ]);
-    } catch (error) {
-      console.error('データ読み込みエラー:', error);
-      this.errorMessage = 'データの読み込みに失敗しました';
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  private async loadEmployeeInfo(): Promise<void> {
-    if (!this.employeeId) {
-      this.errorMessage = '従業員IDが指定されていません';
-      return;
+    const currentUserId = this.authService.getCurrentUserId();
+    if (currentUserId) {
+      const userDocRef = doc(this.firestore, 'users', currentUserId);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        this.companyId = userDocSnap.data()['companyId'];
+      }
     }
 
-    this.isLoading = true;
-    try {
-      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
-
-      // employeeNumberで検索（等級判定画面と同じ方法）
+    if (this.employeeId && this.companyId) {
       const usersRef = collection(this.firestore, 'users');
-      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const q = query(
+        usersRef,
+        where('employeeNumber', '==', this.employeeId),
+        where('companyId', '==', this.companyId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
         console.log('Firestoreから取得した従業員データ:', userData);
 
         const birthDate = new Date(userData['birthDate']);
@@ -194,6 +181,109 @@ export class GradeJudgmentComponent implements OnInit {
       } else {
         console.error(`従業員番号 ${this.employeeId} のデータがFirestoreに存在しません`);
         this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
+        this.employeeInfo = null;
+      }
+    } else {
+      console.error('会社IDが取得できません');
+      this.errorMessage = '会社IDが取得できません';
+      this.employeeInfo = null;
+    }
+
+    await this.loadData();
+  }
+
+  async loadData(): Promise<void> {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    try {
+      await Promise.all([
+        this.loadEmployeeInfo(),
+        this.loadSalaryData(),
+        this.loadJudgmentHistory(),
+      ]);
+    } catch (error) {
+      console.error('データ読み込みエラー:', error);
+      this.errorMessage = 'データの読み込みに失敗しました';
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  private async loadEmployeeInfo(): Promise<void> {
+    if (!this.employeeId) {
+      this.errorMessage = '従業員IDが指定されていません';
+      return;
+    }
+
+    this.isLoading = true;
+    try {
+      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
+
+      if (this.companyId) {
+        const usersRef = collection(this.firestore, 'users');
+        const q = query(
+          usersRef,
+          where('employeeNumber', '==', this.employeeId),
+          where('companyId', '==', this.companyId)
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0];
+          const userData = userDoc.data();
+          console.log('Firestoreから取得した従業員データ:', userData);
+
+          const birthDate = new Date(userData['birthDate']);
+          const age = this.calculateAge(birthDate);
+
+          // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
+          const formattedBirthDate = birthDate.toISOString().split('T')[0];
+
+          // 事業所情報から addressPrefecture を取得
+          let addressPrefecture = userData['addressPrefecture'] || '';
+
+          // ユーザーデータに addressPrefecture がない場合、事業所データから取得
+          if (!addressPrefecture && userData['companyId'] && userData['branchNumber']) {
+            try {
+              console.log('=== 事業所データ取得開始 ===');
+              console.log('対象companyId:', userData['companyId']);
+              console.log('対象branchNumber:', userData['branchNumber']);
+
+              addressPrefecture = await this.officeService.findOfficeAddressPrefecture(
+                userData['companyId'],
+                userData['branchNumber']
+              );
+
+              if (addressPrefecture) {
+                console.log('✅ 事業所所在地取得成功:', addressPrefecture);
+              } else {
+                console.warn('⚠️ 事業所所在地が見つかりませんでした');
+              }
+            } catch (officeError) {
+              console.error('❌ 事業所データ取得エラー:', officeError);
+            }
+          }
+
+          this.employeeInfo = {
+            name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
+            employeeNumber: userData['employeeNumber'] || '',
+            birthDate: formattedBirthDate,
+            age: age,
+            companyId: userData['companyId'] || '',
+            branchNumber: userData['branchNumber'] || '',
+            addressPrefecture: addressPrefecture,
+          };
+
+          console.log('設定された従業員情報:', this.employeeInfo);
+        } else {
+          console.error(`従業員番号 ${this.employeeId} のデータがFirestoreに存在しません`);
+          this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
+          this.employeeInfo = null;
+        }
+      } else {
+        console.error('会社IDが取得できません');
+        this.errorMessage = '会社IDが取得できません';
         this.employeeInfo = null;
       }
     } catch (error) {
@@ -499,15 +589,12 @@ export class GradeJudgmentComponent implements OnInit {
     };
   }
 
-  private calculateAge(birthDate: Date): bigint {
+  calculateAge(birthDate: Date): number {
     const today = new Date();
-    let age = BigInt(today.getFullYear()) - BigInt(birthDate.getFullYear());
-    const m = BigInt(today.getMonth()) - BigInt(birthDate.getMonth());
-    if (
-      m < BigInt(0) ||
-      (m === BigInt(0) && BigInt(today.getDate()) < BigInt(birthDate.getDate()))
-    ) {
-      age = age - BigInt(1);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
     }
     return age;
   }

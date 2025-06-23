@@ -177,7 +177,11 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
     if (!employeeId) return;
     const db = getFirestore();
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('employeeNumber', '==', employeeId));
+    const q = query(
+      usersRef,
+      where('companyId', '==', this.companyId),
+      where('employeeNumber', '==', employeeId)
+    );
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
       const data = querySnapshot.docs[0].data();
@@ -290,81 +294,35 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
   }
 
   parseAndApplyCsv(csv: string) {
-    const integerRows = [
-      '基本給',
-      '諸手当',
-      '役職手当',
-      '職務手当',
-      '資格手当',
-      '技能手当',
-      '家族手当',
-      '扶養手当',
-      '住宅手当',
-      '地域手当',
-      '通勤手当（通勤費）',
-      '時間外勤務手当（残業手当）',
-      '深夜勤務手当',
-      '休日勤務手当',
-      '宿直・日直手当（一定の基準を超える場合）',
-      '調整手当',
-      '奨励手当',
-      '皆勤手当',
-      '精勤手当',
-      'その他（金銭支給）',
-      '食事代',
-      '食券',
-      '社宅',
-      '寮費',
-      '通勤定期券',
-      '回数券',
-      '被服',
-      'その他（現物支給）',
-      '欠勤控除額',
-      '合計',
-      '出勤日数',
-      '欠勤日数',
-    ];
-    const lines = csv.trim().split(/\r?\n/);
-    if (lines.length < 2) return;
-    const headers = lines[0].split(',').map((h) => h.trim());
-    // 賞与列の自動表示
-    let maxBonus = 0;
-    for (let i = 0; i < this.bonusColumns.length; i++) {
-      if (headers.includes(this.bonusColumns[i])) {
-        maxBonus = i + 1;
-      }
+    const lines = csv.split(/\r\n|\n/).filter((line) => line.trim() !== '');
+    if (lines.length < 2) {
+      alert('CSVファイルにヘッダー行とデータ行が必要です。');
+      return;
     }
-    this.visibleBonusCount = maxBonus;
-    // 1列目は項目名
-    for (let i = 1; i < lines.length; i++) {
-      const cells = lines[i].split(',');
-      const rowName = cells[0].trim();
-      if (!this.salaryTable[rowName]) continue; // 未知の行は無視
-      for (let j = 1; j < cells.length; j++) {
-        const colName = headers[j]?.trim();
-        if (!colName || !(colName in this.salaryTable[rowName])) continue;
-        const val = cells[j]?.trim();
-        // 日付形式か数値か判定
-        if (/^\d{4}\/\d{2}\/\d{2}$/.test(val)) {
-          this.salaryTable[rowName][colName] = val;
-        } else if (val === '') {
-          this.salaryTable[rowName][colName] = null;
-        } else if (!isNaN(Number(val)) && integerRows.includes(rowName)) {
-          // 整数のみ許容の行は小数点以下を切り捨てて文字列で保存
-          this.salaryTable[rowName][colName] = String(Math.floor(Number(val)));
-        } else {
-          this.salaryTable[rowName][colName] = val;
+    const header = lines[0].split(',');
+    if (header[0] !== '項目') {
+      alert('1列目のヘッダーは「項目」である必要があります。');
+      return;
+    }
+    const dataRows = lines.slice(1);
+    const table: SalaryTable = JSON.parse(JSON.stringify(this.salaryTable));
+    dataRows.forEach((line) => {
+      const data = line.split(',');
+      const rowName = data[0];
+      if (this.rows.includes(rowName)) {
+        if (!table[rowName]) {
+          table[rowName] = {};
+        }
+        for (let i = 1; i < header.length; i++) {
+          const colName = header[i];
+          if (this.columns.includes(colName)) {
+            table[rowName][colName] = data[i] !== undefined ? data[i] : null;
+          }
         }
       }
-    }
-    // rows全てにsalaryTable[row]が必ず存在するよう補完
-    for (const row of this.rows) {
-      if (!this.salaryTable[row]) {
-        this.salaryTable[row] = {};
-      }
-    }
-    this.recalcTotals();
-    this.saveSalaryTable();
+    });
+    this.salaryTable = table;
+    this.saveSalaryTable(); // CSV取り込み後、自動で保存
   }
 
   startEdit() {
