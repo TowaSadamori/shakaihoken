@@ -260,10 +260,29 @@ export class HomeComponent implements OnInit {
 
   // 判定結果を読み込むメソッド
   private async loadJudgmentResults(users: UserWithJudgment[]): Promise<void> {
+    const db = getFirestore();
+    const currentCompanyId = await this.authService.getCurrentUserCompanyId();
+
     for (const user of users) {
-      // ここで非同期に判定結果を取得
-      // user.judgmentResult = await this.insuranceCalculationService.judge(user);
-      user.judgmentResult = null; // 現状はnull
+      try {
+        const docRef = doc(db, 'insuranceJudgments', user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const savedData = docSnap.data() as any;
+
+          // 会社ID、事業所番号、従業員番号が一致するかチェック
+          if (
+            savedData.employeeNumber === user.employeeNumber &&
+            savedData.officeNumber === user.branchNumber?.toString() &&
+            user.companyId === currentCompanyId
+          ) {
+            user.judgmentResult = savedData.judgmentResult;
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading judgment for user ${user.uid}:`, error);
+      }
     }
   }
 
@@ -290,6 +309,28 @@ export class HomeComponent implements OnInit {
     let careInsuranceRate: string | undefined;
     let pensionInsuranceRate: string | undefined;
     let leaveStatus: string | undefined;
+
+    // 判定ステータスを先に取得
+    const judgmentStatus = this.getJudgmentStatus(user);
+
+    // 「対象」以外の場合はFirestoreからデータを取得しない
+    if (judgmentStatus !== '対象') {
+      return {
+        employeeNumber: user.employeeNumber || '',
+        officeNumber: user.branchNumber || '',
+        employeeName: `${user.lastName || ''} ${user.firstName || ''}`.trim(),
+        attribute: judgmentStatus,
+        currentMonth: currentMonthData,
+        healthInsuranceGrade,
+        pensionInsuranceGrade,
+        leaveStatus: 'none',
+        paymentAmount: paymentAmount,
+        standardBonusAmount: standardBonusAmount,
+        healthInsuranceRate: healthInsuranceRate,
+        careInsuranceRate: careInsuranceRate,
+        pensionInsuranceRate: pensionInsuranceRate,
+      };
+    }
 
     const companyId = await this.authService.getCurrentUserCompanyId();
     if (companyId && user.uid) {
@@ -400,7 +441,7 @@ export class HomeComponent implements OnInit {
       employeeNumber: user.employeeNumber || '',
       officeNumber: user.branchNumber || '',
       employeeName: `${user.lastName || ''} ${user.firstName || ''}`.trim(),
-      attribute: this.getJudgmentStatus(user),
+      attribute: judgmentStatus,
       currentMonth: currentMonthData,
       healthInsuranceGrade,
       pensionInsuranceGrade,

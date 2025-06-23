@@ -67,7 +67,7 @@
             <div class="card-header-save-btn">
               <button
                 class="save-btn-header"
-                (click)="saveBonusResults(); console.log('保存ボタンクリック')"
+                (click)="saveBonusResults()"
                 [disabled]="isLoading || !bonusDataList.length"
               >
                 <span *ngIf="isLoading">保存中...</span>
