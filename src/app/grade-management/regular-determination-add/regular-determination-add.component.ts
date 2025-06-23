@@ -14,6 +14,7 @@ import {
   getDocs,
   query,
   where,
+  addDoc,
 } from 'firebase/firestore';
 import { AuthService } from '../../services/auth.service';
 import { OfficeService } from '../../services/office.service';
@@ -23,6 +24,7 @@ import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 type EmployeeType = 'general' | 'part_timer' | 'short_time_worker';
 
 interface EmployeeInfo {
+  uid: string; // FirestoreのドキュメントID
   name: string;
   employeeNumber: string;
   birthDate: string;
@@ -128,6 +130,7 @@ export class RegularDeterminationAddComponent implements OnInit {
   isEditMode = false;
   private firestore = getFirestore();
   private companyId: string | null = null;
+  private uid: string | null = null; // 従業員のFirestore UID
 
   constructor(
     private router: Router,
@@ -142,8 +145,8 @@ export class RegularDeterminationAddComponent implements OnInit {
     this.isEditMode = !!this.recordId;
 
     if (this.employeeId) {
-      await this.loadEmployeeInfo();
       await this.loadCompanyId();
+      await this.loadEmployeeInfo();
       if (this.isEditMode && this.recordId) {
         await this.loadExistingRegularGradeData(this.recordId);
       } else {
@@ -161,20 +164,30 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   private async loadEmployeeInfo(): Promise<void> {
-    if (!this.employeeId) return;
+    if (!this.employeeId || !this.companyId) return;
 
     this.isLoading = true;
     try {
-      console.log('従業員情報を読み込み中 (employeeNumber):', this.employeeId);
+      console.log(
+        '従業員情報を読み込み中 (employeeNumber, companyId):',
+        this.employeeId,
+        this.companyId
+      );
 
-      // employeeNumberで検索（等級判定画面と同じ方法）
+      // employeeNumberとcompanyIdで検索
       const usersRef = collection(this.firestore, 'users');
-      const q = query(usersRef, where('employeeNumber', '==', this.employeeId));
+      const q = query(
+        usersRef,
+        where('employeeNumber', '==', this.employeeId),
+        where('companyId', '==', this.companyId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
-        console.log('Firestoreから取得した従業員データ:', userData);
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        this.uid = userDoc.id; // UIDをクラスプロパティに保存
+        console.log('Firestoreから取得した従業員データ:', userData, 'UID:', this.uid);
 
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
@@ -208,6 +221,7 @@ export class RegularDeterminationAddComponent implements OnInit {
         }
 
         this.employeeInfo = {
+          uid: this.uid,
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
           birthDate: formattedBirthDate,
@@ -766,10 +780,7 @@ export class RegularDeterminationAddComponent implements OnInit {
         this.router.navigate(['/grade-judgment', this.employeeId]);
       } else {
         // 新規作成の場合
-        const docId = this.savedGradeData?.id || `${this.employeeId}_regular`;
-
-        const gradeData: SavedGradeData = {
-          id: docId,
+        const gradeData: Omit<SavedGradeData, 'id'> = {
           employeeId: this.employeeId,
           targetYear: this.targetYear,
           monthlyPayments: this.monthlyPayments,
@@ -787,15 +798,15 @@ export class RegularDeterminationAddComponent implements OnInit {
           gradeData.endMonth = this.endMonth;
         }
 
-        const docRef = doc(this.firestore, 'employee_grades', docId);
-        const dataForFirestore = this.deepConvertBigIntToString(gradeData);
-        await setDoc(docRef, dataForFirestore);
+        const newRecordId = await this.saveToGradeJudgmentHistory(gradeData);
 
-        await this.saveToGradeJudgmentHistory(gradeData);
-
-        // 保存成功後、コンポーネントの状態を更新
-        this.savedGradeData = gradeData;
-        alert('定時決定データが正常に保存されました。');
+        if (newRecordId) {
+          alert('定時決定データが正常に保存されました。');
+          // 保存後、新しいrecordIdをURLに追加して編集モードに移行
+          this.router.navigate([newRecordId], { relativeTo: this.route });
+        } else {
+          this.errorMessage = 'データの保存中にエラーが発生しました。';
+        }
       }
     } catch (error) {
       console.error('保存エラー:', error);
@@ -1078,10 +1089,17 @@ export class RegularDeterminationAddComponent implements OnInit {
   }
 
   private async loadExistingRegularGradeData(recordId: string): Promise<void> {
-    if (!this.employeeId) return;
+    if (!this.uid || !this.companyId || !this.employeeId) {
+      console.warn('必要なIDが不足しているため、既存のデータを読み込めません。');
+      return;
+    }
     this.isLoading = true;
     try {
-      const docRef = doc(this.firestore, `gradeJudgments/${this.employeeId}/judgments`, recordId);
+      const docRef = doc(
+        this.firestore,
+        `companies/${this.companyId}/employees/${this.uid}/gradeHistory`,
+        recordId
+      );
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -1192,9 +1210,10 @@ export class RegularDeterminationAddComponent implements OnInit {
     }
   }
 
-  async saveToGradeJudgmentHistory(gradeData: SavedGradeData): Promise<void> {
-    if (!this.employeeId) {
-      return;
+  async saveToGradeJudgmentHistory(gradeData: Omit<SavedGradeData, 'id'>): Promise<string | null> {
+    if (!this.companyId || !this.employeeId) {
+      this.errorMessage = '従業員情報が読み込めていないため、保存できません。';
+      return null;
     }
 
     try {
@@ -1228,26 +1247,34 @@ export class RegularDeterminationAddComponent implements OnInit {
       }
 
       // endDateは値がある場合のみ設定
-      if (this.endYear && this.endMonth) {
-        historyRecord['endDate'] = new Date(Number(this.endYear), Number(this.endMonth) - 1, 1);
+      if (gradeData.endYear && gradeData.endMonth) {
+        historyRecord['endDate'] = new Date(
+          Number(gradeData.endYear),
+          Number(gradeData.endMonth) - 1,
+          1
+        );
+      } else {
+        historyRecord['endDate'] = null;
       }
 
-      const historyCollectionRef = collection(
+      const historyRef = collection(
         this.firestore,
-        'gradeJudgments',
-        this.employeeId,
-        'judgments'
+        `companies/${this.companyId}/employees/${this.employeeId}/gradeHistory`
       );
-      const newDocRef = doc(historyCollectionRef);
-      const convertedRecord = this.deepConvertBigIntToString(historyRecord);
-      await setDoc(newDocRef, convertedRecord);
+      console.log('>>> [SAVE] Saving to path:', historyRef.path);
+      const newDocRef = await addDoc(historyRef, this.deepConvertBigIntToString(historyRecord));
+
+      console.log('✅ 等級履歴保存成功、ドキュメントID:', newDocRef.id);
+      return newDocRef.id;
     } catch (error) {
       console.error('履歴保存エラー:', error);
+      return null;
     }
   }
 
   async updateGradeJudgmentHistory(): Promise<void> {
-    if (!this.employeeId || !this.recordId || !this.judgmentResult) {
+    if (!this.companyId || !this.employeeId || !this.recordId || !this.judgmentResult) {
+      this.errorMessage = '更新に必要な情報が不足しています。';
       return;
     }
 
@@ -1284,13 +1311,12 @@ export class RegularDeterminationAddComponent implements OnInit {
       if (this.endYear && this.endMonth) {
         historyRecord['endDate'] = new Date(Number(this.endYear), Number(this.endMonth) - 1, 1);
       } else {
-        // 終了日が削除された場合はnullに設定
         historyRecord['endDate'] = null;
       }
 
       const historyDocRef = doc(
         this.firestore,
-        `gradeJudgments/${this.employeeId}/judgments`,
+        `companies/${this.companyId}/employees/${this.employeeId}/gradeHistory`,
         this.recordId
       );
       const convertedRecord = this.deepConvertBigIntToString(historyRecord);
@@ -1307,37 +1333,18 @@ export class RegularDeterminationAddComponent implements OnInit {
       // 編集モードの場合は履歴から削除
       await this.deleteRegularGradeRecord();
     } else {
-      // 通常モードの場合は既存の処理
-      if (!this.savedGradeData?.id) {
-        this.clearForm();
-        return;
-      }
-
-      this.isSaving = true;
-      this.errorMessage = '';
-
-      try {
-        const docRef = doc(this.firestore, 'employee_grades', this.savedGradeData.id);
-        await deleteDoc(docRef);
-
-        this.clearForm();
-        this.savedGradeData = null;
-
-        this.errorMessage = '定時決定データを削除しました';
-        setTimeout(() => {
-          this.errorMessage = '';
-        }, 3000);
-      } catch (error) {
-        console.error('削除エラー:', error);
-        this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
-      } finally {
-        this.isSaving = false;
-      }
+      // 新規作成モードでクリアボタンとして機能
+      this.clearForm();
+      this.judgmentResult = null;
+      this.errorMessage = '入力内容をクリアしました。';
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, 3000);
     }
   }
 
   async deleteRegularGradeRecord(): Promise<void> {
-    if (!this.employeeId || !this.recordId) {
+    if (!this.companyId || !this.employeeId || !this.recordId) {
       alert('削除対象のデータが特定できません。');
       return;
     }
@@ -1352,32 +1359,13 @@ export class RegularDeterminationAddComponent implements OnInit {
     try {
       console.log('削除開始:', { employeeId: this.employeeId, recordId: this.recordId });
 
-      // 1. 履歴コレクションから削除（メイン画面と同じロジック）
       const historyDocRef = doc(
         this.firestore,
-        `gradeJudgments/${this.employeeId}/judgments`,
+        `companies/${this.companyId}/employees/${this.employeeId}/gradeHistory`,
         this.recordId
       );
       console.log('履歴削除:', historyDocRef.path);
       await deleteDoc(historyDocRef);
-
-      // 2. employee_gradesコレクションからも削除
-      const gradeDocId = `${this.employeeId}_regular`;
-      const gradeDocRef = doc(this.firestore, 'employee_grades', gradeDocId);
-      console.log('employee_grades削除:', gradeDocRef.path);
-
-      try {
-        const gradeDocSnap = await getDoc(gradeDocRef);
-        if (gradeDocSnap.exists()) {
-          await deleteDoc(gradeDocRef);
-          console.log('employee_gradesからも削除しました');
-        } else {
-          console.log('employee_gradesにドキュメントが存在しませんでした');
-        }
-      } catch (gradeDeleteError) {
-        console.warn('employee_gradesからの削除でエラー:', gradeDeleteError);
-        // 履歴削除は成功しているので、続行
-      }
 
       console.log('削除処理完了');
       alert('定時決定データを削除しました');

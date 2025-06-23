@@ -124,11 +124,12 @@ export class GradeJudgmentComponent implements OnInit {
         throw new Error('会社IDが取得できませんでした。');
       }
 
-      await Promise.all([
-        this.loadEmployeeInfo(),
-        this.loadSalaryData(),
-        this.loadJudgmentHistory(),
-      ]);
+      // 従業員情報を先に読み込む
+      await this.loadEmployeeInfo();
+      // 従業員情報が読み込めたら、給与と履歴を並行して読み込む
+      if (this.employeeInfo) {
+        await Promise.all([this.loadSalaryData(), this.loadJudgmentHistory()]);
+      }
     } catch (error) {
       console.error('データ読み込みエラー:', error);
       if (error instanceof Error) {
@@ -205,16 +206,17 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   private async loadJudgmentHistory(): Promise<void> {
-    if (!this.employeeId || !this.companyId || !this.employeeInfo?.uid) return;
+    if (!this.companyId || !this.employeeInfo?.uid) return;
 
     try {
       this.judgmentRecords = [];
-      const q = query(
-        collection(this.firestore, 'gradeJudgments'),
-        where('uid', '==', this.employeeInfo.uid),
-        where('companyId', '==', this.companyId),
-        orderBy('effectiveDate', 'desc')
+      const historyCollectionRef = collection(
+        this.firestore,
+        `companies/${this.companyId}/employees/${this.employeeInfo.uid}/gradeHistory`
       );
+      console.log('>>> [LOAD] Loading from path:', historyCollectionRef.path);
+      const q = query(historyCollectionRef, orderBy('effectiveDate', 'desc'));
+
       const querySnapshot = await getDocs(q);
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -407,8 +409,8 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   async deleteJudgment(recordId: string): Promise<void> {
-    if (!this.employeeId || !this.companyId) {
-      this.errorMessage = '従業員IDまたは会社IDが不明です。';
+    if (!this.employeeId || !this.companyId || !this.employeeInfo?.uid) {
+      this.errorMessage = '従業員ID、会社ID、またはユーザーUIDが不明です。';
       return;
     }
 
@@ -432,7 +434,12 @@ export class GradeJudgmentComponent implements OnInit {
 
     try {
       console.log('削除開始:', { recordId, judgmentType: recordToDelete.judgmentType });
-      const historyDocRef = doc(this.firestore, `gradeJudgments`, recordId);
+      // 正しい階層のパスを使用する
+      const historyDocRef = doc(
+        this.firestore,
+        `companies/${this.companyId}/employees/${this.employeeInfo.uid}/gradeHistory`,
+        recordId
+      );
       console.log('履歴削除:', historyDocRef.path);
       await deleteDoc(historyDocRef);
 
