@@ -9,7 +9,7 @@
               item.label !== '被扶養者情報';
             else dynamicLinkBtn
           "
-          [routerLink]="item.path"
+          [routerLink]="item.label === '事業所手続き' ? employerProceduresPath : item.path"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: true }"
           (click)="onNavItemClick()"

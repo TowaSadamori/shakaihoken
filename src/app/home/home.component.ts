@@ -32,6 +32,14 @@ interface InsuranceEligibility {
   careInsurance?: { eligible: boolean; reason: string };
 }
 
+// Firestoreから取得する保険判定データの型
+interface InsuranceJudgmentData {
+  employeeNumber: string;
+  officeNumber: string;
+  judgmentResult: InsuranceEligibility;
+  // 必要に応じて他のフィールドも追加
+}
+
 interface EmployeeInsuranceData {
   employeeNumber: string;
   officeNumber: string;
@@ -78,7 +86,7 @@ export class HomeComponent implements OnInit {
 
   // 事業所選択
   offices: { branchNumber: string; name: string }[] = [];
-  selectedOffice: string = 'all';
+  selectedOffice = 'all';
 
   // 年次切り替え用
   selectedYear: number = new Date().getFullYear();
@@ -269,7 +277,7 @@ export class HomeComponent implements OnInit {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const savedData = docSnap.data() as any;
+          const savedData = docSnap.data() as InsuranceJudgmentData;
 
           // 会社ID、事業所番号、従業員番号が一致するかチェック
           if (
@@ -449,7 +457,7 @@ export class HomeComponent implements OnInit {
   }
 
   // 金額を安全に取得するヘルパー関数
-  private safeGetAmount(value: any): string {
+  private safeGetAmount(value: string | number | null | undefined): string {
     if (value === null || typeof value === 'undefined') {
       return '0';
     }

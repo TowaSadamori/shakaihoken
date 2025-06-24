@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { AuthService } from '../services/auth.service';
+import { OfficeService } from '../services/office.service';
 
 export interface NavItem {
   label: string;
@@ -50,7 +51,8 @@ export class SidebarComponent implements OnChanges {
 
   constructor(
     public router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    public officeService: OfficeService
   ) {}
 
   ngOnChanges(changes: SimpleChanges) {
@@ -97,5 +99,10 @@ export class SidebarComponent implements OnChanges {
       this.router.navigate(['/employee-procedures/application-form', currentUser.uid]);
     }
     this.onNavItemClick();
+  }
+
+  get employerProceduresPath(): string {
+    const officeId = this.officeService.selectedOfficeId;
+    return officeId ? `/employer-procedures/${officeId}` : '/employer-procedures';
   }
 }

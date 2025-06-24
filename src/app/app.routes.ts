@@ -35,6 +35,7 @@ export const routes: Routes = [
           ),
       },
       { path: 'employer-procedures', component: EmployerProceduresPlaceholderComponent },
+      { path: 'employer-procedures/:officeId', component: EmployerProceduresPlaceholderComponent },
       {
         path: 'company-register',
         loadComponent: () =>

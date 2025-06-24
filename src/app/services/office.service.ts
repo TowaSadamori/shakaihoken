@@ -18,24 +18,27 @@ import { AuthService } from './auth.service';
 export class OfficeService {
   private firestore = getFirestore();
 
+  // 選択中の事業所IDを管理
+  private _selectedOfficeId: string | null = null;
+  get selectedOfficeId(): string | null {
+    return this._selectedOfficeId;
+  }
+  set selectedOfficeId(id: string | null) {
+    this._selectedOfficeId = id;
+  }
+
   constructor(private authService: AuthService) {}
 
   async getOfficesForCurrentUser(): Promise<{ id: string; [key: string]: unknown }[]> {
     const userProfile = await this.authService.getCurrentUserProfileWithRole();
     if (!userProfile) return [];
 
-    if (userProfile.role === 'admin') {
-      // 管理者は全事業所
-      const officesSnapshot = await getDocs(collection(this.firestore, 'offices'));
-      return officesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    } else {
-      // 一般ユーザーは自分の事業所のみ
-      const companyId = await this.authService.getCurrentUserCompanyId();
-      if (!companyId) return [];
-      const q = query(collection(this.firestore, 'offices'), where('companyId', '==', companyId));
-      const officesSnapshot = await getDocs(q);
-      return officesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    }
+    // 管理者・一般ユーザー問わず、必ずcompanyIdでフィルタ
+    const companyId = await this.authService.getCurrentUserCompanyId();
+    if (!companyId) return [];
+    const q = query(collection(this.firestore, 'offices'), where('companyId', '==', companyId));
+    const officesSnapshot = await getDocs(q);
+    return officesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   }
 
   async getOfficeById(officeId: string): Promise<{ id: string; [key: string]: unknown } | null> {

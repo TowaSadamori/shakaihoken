@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { MatSelectModule } from '@angular/material/select';
 import { OfficeService } from '../services/office.service';
 import { CommonModule } from '@angular/common';
@@ -20,7 +20,8 @@ export class EmployerProceduresPlaceholderComponent implements OnInit {
   constructor(
     private router: Router,
     private officeService: OfficeService,
-    private authService: AuthService
+    private authService: AuthService,
+    private route: ActivatedRoute
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -29,13 +30,14 @@ export class EmployerProceduresPlaceholderComponent implements OnInit {
 
     this.offices = await this.officeService.getOfficesForCurrentUser();
     if (this.offices.length > 0) {
-      this.selectedOfficeId = this.offices[0].id;
+      this.selectedOfficeId = this.officeService.selectedOfficeId || this.offices[0].id;
+      this.officeService.selectedOfficeId = this.selectedOfficeId;
     }
   }
 
   onOfficeChange(officeId: string) {
-    // 現在のURLを維持しつつ、officeIdをパラメータとして遷移
-    // 例: /employer-procedures/:officeId
+    this.selectedOfficeId = officeId;
+    this.officeService.selectedOfficeId = officeId;
     this.router.navigate(['/employer-procedures', officeId]);
   }
 
