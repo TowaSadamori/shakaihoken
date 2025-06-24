@@ -113,7 +113,19 @@ export class CareInsuranceExemptionApplicationComponent implements OnInit {
     }
   }
 
-  async ngOnInit() {
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.paramMap.get('uid');
     const currentUser = await this.authService.getCurrentUserProfileWithRole();
     if (!currentUser) {
@@ -152,6 +164,9 @@ export class CareInsuranceExemptionApplicationComponent implements OnInit {
     if (this.uid) {
       await this.loadExistingData();
     }
+
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async loadExistingData() {
@@ -190,6 +205,7 @@ export class CareInsuranceExemptionApplicationComponent implements OnInit {
 
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -214,10 +230,12 @@ export class CareInsuranceExemptionApplicationComponent implements OnInit {
       });
     }
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
     // フォームを元に戻す
     this.loadExistingData();
   }

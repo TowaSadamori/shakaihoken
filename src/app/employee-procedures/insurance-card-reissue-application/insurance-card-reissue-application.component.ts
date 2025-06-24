@@ -109,7 +109,7 @@ export class InsuranceCardReissueApplicationComponent implements OnInit {
     });
   }
 
-  async ngOnInit() {
+  async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.paramMap.get('uid');
     const currentUser = await this.authService.getCurrentUserProfileWithRole();
     if (!currentUser) {
@@ -143,6 +143,10 @@ export class InsuranceCardReissueApplicationComponent implements OnInit {
       }
       this.cdr.detectChanges();
     }
+
+    this.isEditing = false;
+    this.setFormEnabled(false);
+    await this.loadExistingData();
   }
 
   async loadExistingData() {
@@ -164,6 +168,7 @@ export class InsuranceCardReissueApplicationComponent implements OnInit {
 
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -176,6 +181,7 @@ export class InsuranceCardReissueApplicationComponent implements OnInit {
         this.form.value
       );
       this.isEditing = false;
+      this.setFormEnabled(false);
       alert('保存しました');
     } catch (error) {
       console.error('保存に失敗しました:', error);
@@ -185,6 +191,7 @@ export class InsuranceCardReissueApplicationComponent implements OnInit {
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
     // フォームを元の状態に戻す
     if (this.uid) {
       this.loadExistingData();
@@ -214,5 +221,17 @@ export class InsuranceCardReissueApplicationComponent implements OnInit {
       a.click();
       window.URL.revokeObjectURL(url);
     }
+  }
+
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
   }
 }
