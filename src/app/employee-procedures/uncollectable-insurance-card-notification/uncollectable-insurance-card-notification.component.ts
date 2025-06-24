@@ -119,7 +119,7 @@ export class UncollectableInsuranceCardNotificationComponent implements OnInit {
         'uncollectable-insurance-card-notification'
       );
       if (existingData) {
-        this.form.patchValue(existingData);
+        this.form.patchValue(existingData.formData);
       }
     }
   }

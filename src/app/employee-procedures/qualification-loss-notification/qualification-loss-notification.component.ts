@@ -118,7 +118,7 @@ export class QualificationLossNotificationComponent implements OnInit {
         'qualification-loss-notification'
       );
       if (existingData) {
-        this.form.patchValue(existingData);
+        this.form.patchValue(existingData.formData);
       }
     }
   }
