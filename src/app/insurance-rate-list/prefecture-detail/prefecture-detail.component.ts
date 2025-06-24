@@ -231,4 +231,18 @@ export class PrefectureDetailComponent {
       });
     }
   }
+
+  get warekiYear(): string {
+    if (!this.year) return '';
+    const yearNum = Number(this.year);
+    if (yearNum >= 2019) {
+      return `令和${yearNum - 2018}年`;
+    } else if (yearNum >= 1989) {
+      return `平成${yearNum - 1988}年`;
+    } else if (yearNum >= 1926) {
+      return `昭和${yearNum - 1925}年`;
+    } else {
+      return `${yearNum}年`;
+    }
+  }
 }
