@@ -81,12 +81,12 @@
             </ng-container>
             <ng-container matColumnDef="healthInsuranceGroup">
               <th mat-header-cell *matHeaderCellDef [attr.colspan]="3" class="group-header">
-                健康保険料
+                健康保険料 <br />（介護保険非該当）
               </th>
             </ng-container>
             <ng-container matColumnDef="careInsuranceGroup">
               <th mat-header-cell *matHeaderCellDef [attr.colspan]="2" class="group-header">
-                介護保険料
+                健康保険料 <br />（介護保険該当）
               </th>
             </ng-container>
             <ng-container matColumnDef="pensionInsuranceGroup">
@@ -132,7 +132,7 @@
 
             <!-- Col: 健康保険 等級 -->
             <ng-container matColumnDef="healthInsuranceGrade">
-              <th mat-header-cell *matHeaderCellDef>健康保険<br />等級</th>
+              <th mat-header-cell *matHeaderCellDef>健康保険<br />介護保険<br />等級</th>
               <td mat-cell *matCellDef="let employee">
                 {{ employee.healthInsuranceGrade || '-' }}
               </td>
@@ -140,7 +140,9 @@
 
             <!-- Col: 健康保険料(本人) -->
             <ng-container matColumnDef="healthInsuranceEmployee">
-              <th mat-header-cell *matHeaderCellDef>健康保険料<br />(本人)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険非該当<br />(本人)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.healthInsuranceEmployee) }}円
               </td>
@@ -148,7 +150,9 @@
 
             <!-- Col: 健康保険料(会社) -->
             <ng-container matColumnDef="healthInsuranceCompany">
-              <th mat-header-cell *matHeaderCellDef>健康保険料<br />(会社)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険非該当）<br />(会社)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.healthInsuranceCompany) }}円
               </td>
@@ -156,7 +160,9 @@
 
             <!-- Col: 介護保険料(本人) -->
             <ng-container matColumnDef="careInsuranceEmployee">
-              <th mat-header-cell *matHeaderCellDef>介護保険料<br />(本人)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険該当）<br />(本人)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.careInsuranceEmployee) }}円
               </td>
@@ -164,7 +170,9 @@
 
             <!-- Col: 介護保険料(会社) -->
             <ng-container matColumnDef="careInsuranceCompany">
-              <th mat-header-cell *matHeaderCellDef>介護保険料<br />(会社)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険該当）<br />(会社)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.careInsuranceCompany) }}円
               </td>
@@ -252,13 +260,15 @@
 
             <!-- Col: 健康保険料率 -->
             <ng-container matColumnDef="healthInsuranceRate">
-              <th mat-header-cell *matHeaderCellDef>健康保険<br />料率</th>
-              <td mat-cell *matCellDef="let employee">{{ employee.healthInsuranceRate }}%</td>
+              <th mat-header-cell *matHeaderCellDef>健康保険 <br />（介護保険非該当）<br />料率</th>
+              <td mat-cell *matCellDef="let employee">{{ employee.healthInsuranceRate }}</td>
             </ng-container>
 
             <!-- Col: 健康保険料(本人) -->
             <ng-container matColumnDef="healthInsuranceEmployee">
-              <th mat-header-cell *matHeaderCellDef>健康保険料<br />(本人)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険非該当）<br />(本人)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.healthInsuranceEmployee) }}円
               </td>
@@ -266,7 +276,9 @@
 
             <!-- Col: 健康保険料(会社) -->
             <ng-container matColumnDef="healthInsuranceCompany">
-              <th mat-header-cell *matHeaderCellDef>健康保険料<br />(会社)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険非該当）<br />(会社)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.healthInsuranceCompany) }}円
               </td>
@@ -274,13 +286,15 @@
 
             <!-- Col: 介護保険料率 -->
             <ng-container matColumnDef="careInsuranceRate">
-              <th mat-header-cell *matHeaderCellDef>介護保険<br />料率</th>
-              <td mat-cell *matCellDef="let employee">{{ employee.careInsuranceRate }}%</td>
+              <th mat-header-cell *matHeaderCellDef>健康保険 <br />（介護保険該当）<br />料率</th>
+              <td mat-cell *matCellDef="let employee">{{ employee.careInsuranceRate }}</td>
             </ng-container>
 
             <!-- Col: 介護保険料(本人) -->
             <ng-container matColumnDef="careInsuranceEmployee">
-              <th mat-header-cell *matHeaderCellDef>介護保険料<br />(本人)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険該当）<br />(本人)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.careInsuranceEmployee) }}円
               </td>
@@ -288,7 +302,9 @@
 
             <!-- Col: 介護保険料(会社) -->
             <ng-container matColumnDef="careInsuranceCompany">
-              <th mat-header-cell *matHeaderCellDef>介護保険料<br />(会社)</th>
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料 <br />（介護保険該当）<br />(会社)
+              </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.careInsuranceCompany) }}円
               </td>
@@ -297,7 +313,7 @@
             <!-- Col: 厚生年金保険料率 -->
             <ng-container matColumnDef="pensionInsuranceRate">
               <th mat-header-cell *matHeaderCellDef>厚生年金<br />保険料率</th>
-              <td mat-cell *matCellDef="let employee">{{ employee.pensionInsuranceRate }}%</td>
+              <td mat-cell *matCellDef="let employee">{{ employee.pensionInsuranceRate }}</td>
             </ng-container>
 
             <!-- Col: 厚生年金保険料(本人) -->
