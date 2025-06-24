@@ -149,10 +149,13 @@ export class MonthlyChangeNotificationComponent implements OnInit {
         }
       }
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -167,10 +170,12 @@ export class MonthlyChangeNotificationComponent implements OnInit {
       );
     }
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV() {
@@ -200,5 +205,27 @@ export class MonthlyChangeNotificationComponent implements OnInit {
       a.click();
       window.URL.revokeObjectURL(url);
     }
+  }
+
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (key === 'insuredList' && control instanceof FormArray) {
+        (control as FormArray).controls.forEach((group) => {
+          if (enabled) {
+            group.enable();
+          } else {
+            group.disable();
+          }
+        });
+      } else {
+        if (enabled) {
+          control.enable();
+        } else {
+          control.disable();
+        }
+      }
+    });
   }
 }
