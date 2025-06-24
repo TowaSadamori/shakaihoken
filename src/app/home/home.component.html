@@ -141,7 +141,7 @@
             <!-- Col: 健康保険料(本人) -->
             <ng-container matColumnDef="healthInsuranceEmployee">
               <th mat-header-cell *matHeaderCellDef>
-                健康保険料 <br />（介護保険非該当<br />(本人)
+                健康保険料 <br />（介護保険非該当）<br />(本人)
               </th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.healthInsuranceEmployee) }}円
