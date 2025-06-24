@@ -120,6 +120,18 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
     });
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+  }
+
   async ngOnInit() {
     this.uid = this.route.snapshot.paramMap.get('uid');
     const currentUser = await this.authService.getCurrentUserProfileWithRole();
@@ -169,6 +181,8 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
     if (this.uid) {
       await this.loadExistingData();
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async loadExistingData() {
@@ -196,6 +210,7 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
 
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -208,6 +223,7 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
       await setDoc(docRef, this.form.value, { merge: true });
 
       this.isEditing = false;
+      this.setFormEnabled(false);
       alert('保存しました');
     } catch (error) {
       console.error('保存に失敗しました:', error);
@@ -217,6 +233,7 @@ export class ChildcarePeriodExemptionApplicationComponent implements OnInit {
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
     // フォームを元の状態に戻す
     if (this.uid) {
       this.loadExistingData();

@@ -92,7 +92,7 @@ export class Over70NonApplicationComponent implements OnInit {
     });
   }
 
-  async ngOnInit() {
+  async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.paramMap.get('uid');
     const currentUser = await this.authService.getCurrentUserProfileWithRole();
     if (!currentUser) {
@@ -126,52 +126,49 @@ export class Over70NonApplicationComponent implements OnInit {
       }
       this.cdr.detectChanges();
     }
-  }
 
-  async loadExistingData() {
-    if (!this.uid) return;
-
-    try {
+    this.isEditing = false;
+    this.setFormEnabled(false);
+    if (this.uid) {
       const data = await this.userService.getUserApplication(this.uid, 'over70-non-application');
       if (data && data.formData) {
-        // undefined/nullを空文字に変換
-        const cleanData = Object.fromEntries(
-          Object.entries(data.formData).map(([key, value]) => [key, value == null ? '' : value])
-        );
-        this.form.patchValue(cleanData);
+        this.form.patchValue(data.formData);
       }
-    } catch (error) {
-      console.error('データの読み込みに失敗しました:', error);
     }
+  }
+
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
   }
 
   onEdit(): void {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
-  async onSave() {
-    if (!this.uid) return;
-
-    try {
+  async onSave(): Promise<void> {
+    if (this.uid) {
       await this.userService.saveUserApplication(
         this.uid,
         'over70-non-application',
         this.form.value
       );
-      this.isEditing = false;
-      alert('保存しました');
-    } catch (error) {
-      console.error('保存に失敗しました:', error);
-      alert('保存に失敗しました');
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
-  onCancel() {
+  onCancel(): void {
     this.isEditing = false;
-    // フォームを元の状態に戻す
-    if (this.uid) {
-      this.loadExistingData();
-    }
+    this.setFormEnabled(false);
   }
 
   async onExportCSV() {
