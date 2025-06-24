@@ -105,4 +105,8 @@ export class SidebarComponent implements OnChanges {
     const officeId = this.officeService.selectedOfficeId;
     return officeId ? `/employer-procedures/${officeId}` : '/employer-procedures';
   }
+
+  get filteredNavItems(): NavItem[] {
+    return this.isMini ? this.navItems.filter((item) => !!item.icon) : this.navItems;
+  }
 }
