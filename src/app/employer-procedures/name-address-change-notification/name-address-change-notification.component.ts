@@ -79,6 +79,18 @@ export class NameAddressChangeNotificationComponent implements OnInit {
     this.form = this.fb.group(controls);
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.params['uid'];
     if (this.uid) {
@@ -103,10 +115,13 @@ export class NameAddressChangeNotificationComponent implements OnInit {
         }
       }
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -122,10 +137,12 @@ export class NameAddressChangeNotificationComponent implements OnInit {
       );
     }
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onExportCSV() {

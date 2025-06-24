@@ -96,6 +96,28 @@ export class BonusPaymentNotificationComponent implements OnInit {
     }
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (key === 'insuredList' && control instanceof FormArray) {
+        (control as FormArray).controls.forEach((group) => {
+          if (enabled) {
+            group.enable();
+          } else {
+            group.disable();
+          }
+        });
+      } else {
+        if (enabled) {
+          control.enable();
+        } else {
+          control.disable();
+        }
+      }
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.params['uid'];
     if (this.uid) {
@@ -121,10 +143,13 @@ export class BonusPaymentNotificationComponent implements OnInit {
         }
       }
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -140,10 +165,12 @@ export class BonusPaymentNotificationComponent implements OnInit {
       );
     }
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV() {
