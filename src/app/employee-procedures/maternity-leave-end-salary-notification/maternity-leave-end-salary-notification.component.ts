@@ -7,8 +7,6 @@ import { UserService } from '../../services/user.service';
 import { OfficeService } from '../../services/office.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { doc, getDoc } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
 import { exportMaternityLeaveEndSalaryNotificationToCSV } from '../../csv-export/maternity-leave-end-salary-notification-csv-export';
 import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
 
@@ -109,6 +107,8 @@ export class MaternityLeaveEndSalaryNotificationComponent implements OnInit {
       await this.loadUserName();
       await this.loadExistingData();
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   private async loadUserName(): Promise<void> {
@@ -125,30 +125,35 @@ export class MaternityLeaveEndSalaryNotificationComponent implements OnInit {
   }
 
   private async loadExistingData(): Promise<void> {
+    if (!this.uid) return;
     try {
-      const db = getFirestore();
-      const docRef = doc(
-        db,
-        'users',
+      const data = await this.userService.getUserApplication(
         this.uid,
-        'applications',
         'maternity-leave-end-salary-notification'
       );
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data && data['formData']) {
-          this.form.patchValue(data['formData']);
-        }
+      if (data && data.formData) {
+        this.form.patchValue(data.formData);
       }
     } catch (error) {
       console.error('Error loading existing data:', error);
     }
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+  }
+
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -156,18 +161,19 @@ export class MaternityLeaveEndSalaryNotificationComponent implements OnInit {
     const userId = userProfile?.uid || '';
 
     if (this.uid && userId) {
-      await this.officeService.saveApplicationForOffice(
+      await this.userService.saveUserApplication(
         this.uid,
         'maternity-leave-end-salary-notification',
-        this.form.value,
-        userId
+        this.form.value
       );
     }
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV() {

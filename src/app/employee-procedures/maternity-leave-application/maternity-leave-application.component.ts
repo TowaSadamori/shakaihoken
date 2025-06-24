@@ -108,6 +108,18 @@ export class MaternityLeaveApplicationComponent implements OnInit {
     this.form = this.fb.group(formConfig);
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.params['uid'];
     if (this.uid) {
@@ -116,7 +128,6 @@ export class MaternityLeaveApplicationComponent implements OnInit {
         if (user) {
           this.userName = `${user.lastName}${user.firstName}`;
         }
-
         // 既存データを取得
         const existingData = await this.userService.getUserApplication(
           this.uid,
@@ -129,10 +140,13 @@ export class MaternityLeaveApplicationComponent implements OnInit {
         console.error('Error loading user data:', error);
       }
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onEdit(): void {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave(): Promise<void> {
@@ -145,6 +159,7 @@ export class MaternityLeaveApplicationComponent implements OnInit {
         );
       }
       this.isEditing = false;
+      this.setFormEnabled(false);
     } catch (error) {
       console.error('Error saving data:', error);
     }
@@ -152,6 +167,7 @@ export class MaternityLeaveApplicationComponent implements OnInit {
 
   onCancel(): void {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV(): Promise<void> {

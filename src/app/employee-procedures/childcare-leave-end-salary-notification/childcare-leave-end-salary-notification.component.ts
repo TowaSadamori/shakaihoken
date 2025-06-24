@@ -140,6 +140,32 @@ export class ChildcareLeaveEndSalaryNotificationComponent implements OnInit {
     }
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+    // salaryMonths FormArrayの各FormGroupも制御
+    if (this.form.get('salaryMonths')) {
+      (this.form.get('salaryMonths') as FormArray).controls.forEach((group) => {
+        Object.keys((group as FormGroup).controls).forEach((fieldKey) => {
+          const fieldControl = (group as FormGroup).get(fieldKey);
+          if (!fieldControl) return;
+          if (enabled) {
+            fieldControl.enable();
+          } else {
+            fieldControl.disable();
+          }
+        });
+      });
+    }
+  }
+
   async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.params['uid'];
     if (this.uid) {
@@ -148,7 +174,6 @@ export class ChildcareLeaveEndSalaryNotificationComponent implements OnInit {
         if (user) {
           this.userName = `${user.lastName}${user.firstName}`;
         }
-
         // 既存データを取得
         const existingData = await this.userService.getUserApplication(
           this.uid,
@@ -169,10 +194,13 @@ export class ChildcareLeaveEndSalaryNotificationComponent implements OnInit {
         console.error('Error loading user data:', error);
       }
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onEdit(): void {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave(): Promise<void> {
@@ -185,6 +213,7 @@ export class ChildcareLeaveEndSalaryNotificationComponent implements OnInit {
         );
       }
       this.isEditing = false;
+      this.setFormEnabled(false);
     } catch (error) {
       console.error('Error saving data:', error);
     }
@@ -192,6 +221,7 @@ export class ChildcareLeaveEndSalaryNotificationComponent implements OnInit {
 
   onCancel(): void {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV(): Promise<void> {
