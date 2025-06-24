@@ -84,6 +84,8 @@ export class QualificationAcquisitionNotificationComponent implements OnInit {
         this.form.patchValue(existingData.formData);
       }
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   private async loadUserName(): Promise<void> {
@@ -99,8 +101,21 @@ export class QualificationAcquisitionNotificationComponent implements OnInit {
     }
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+  }
+
   onEdit(): void {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave(): Promise<void> {
@@ -112,10 +127,12 @@ export class QualificationAcquisitionNotificationComponent implements OnInit {
       );
     }
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onCancel(): void {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV(): Promise<void> {

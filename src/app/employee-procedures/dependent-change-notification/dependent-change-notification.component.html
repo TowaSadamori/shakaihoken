@@ -34,7 +34,7 @@
                 <select
                   [formControlName]="field.key"
                   [id]="'input-' + field.key"
-                  [attr.disabled]="!isEditing ? true : null"
+                  [disabled]="!isEditing"
                   class="form-select"
                 >
                   <option value="">選択してください</option>
@@ -72,7 +72,7 @@
                 <select
                   [formControlName]="field.key"
                   [id]="'input-' + field.key"
-                  [attr.disabled]="!isEditing ? true : null"
+                  [disabled]="!isEditing"
                   class="form-select"
                 >
                   <option value="">選択してください</option>
@@ -156,7 +156,7 @@
                     <select
                       [formControlName]="field.key"
                       [id]="'input-' + field.key + '-' + i"
-                      [attr.disabled]="!isEditing ? true : null"
+                      [disabled]="!isEditing"
                       class="form-select"
                     >
                       <option value="">選択してください</option>

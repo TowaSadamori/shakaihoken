@@ -147,7 +147,35 @@ export class DependentChangeNotificationComponent implements OnInit {
     }
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (key === 'dependents') {
+        // 被扶養者配列も同様に制御
+        (control as FormArray).controls.forEach((group) => {
+          Object.keys((group as FormGroup).controls).forEach((depKey) => {
+            const depControl = (group as FormGroup).get(depKey);
+            if (!depControl) return;
+            if (enabled) {
+              depControl.enable();
+            } else {
+              depControl.disable();
+            }
+          });
+        });
+      } else {
+        if (enabled) {
+          control.enable();
+        } else {
+          control.disable();
+        }
+      }
+    });
+  }
+
   async ngOnInit(): Promise<void> {
+    this.isEditing = false;
     this.uid = this.route.snapshot.params['uid'];
     if (this.uid) {
       try {
@@ -183,10 +211,12 @@ export class DependentChangeNotificationComponent implements OnInit {
         console.error('Error loading user data:', error);
       }
     }
+    this.setFormEnabled(false);
   }
 
   onEdit(): void {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave(): Promise<void> {
@@ -199,6 +229,7 @@ export class DependentChangeNotificationComponent implements OnInit {
         );
       }
       this.isEditing = false;
+      this.setFormEnabled(false);
     } catch (error) {
       console.error('Error saving data:', error);
     }
@@ -206,6 +237,7 @@ export class DependentChangeNotificationComponent implements OnInit {
 
   onCancel(): void {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV(): Promise<void> {

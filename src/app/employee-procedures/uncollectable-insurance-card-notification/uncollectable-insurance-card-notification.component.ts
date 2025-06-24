@@ -105,6 +105,18 @@ export class UncollectableInsuranceCardNotificationComponent implements OnInit {
     this.form = this.fb.group(formConfig);
   }
 
+  setFormEnabled(enabled: boolean) {
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
+      if (!control) return;
+      if (enabled) {
+        control.enable();
+      } else {
+        control.disable();
+      }
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     this.uid = this.route.snapshot.params['uid'];
     if (this.uid) {
@@ -112,7 +124,6 @@ export class UncollectableInsuranceCardNotificationComponent implements OnInit {
       if (user) {
         this.userName = `${user.lastName}${user.firstName}`;
       }
-
       // 既存データを取得
       const existingData = await this.userService.getUserApplication(
         this.uid,
@@ -122,10 +133,13 @@ export class UncollectableInsuranceCardNotificationComponent implements OnInit {
         this.form.patchValue(existingData.formData);
       }
     }
+    this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onEdit() {
     this.isEditing = true;
+    this.setFormEnabled(true);
   }
 
   async onSave() {
@@ -137,10 +151,12 @@ export class UncollectableInsuranceCardNotificationComponent implements OnInit {
       );
     }
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   onCancel() {
     this.isEditing = false;
+    this.setFormEnabled(false);
   }
 
   async onExportCSV() {
