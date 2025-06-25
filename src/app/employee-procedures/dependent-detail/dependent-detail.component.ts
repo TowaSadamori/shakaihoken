@@ -91,7 +91,7 @@ export class DependentDetailComponent implements OnInit {
     };
   }
 
-  async save(i: number) {
+  async save(i: number, fromCsv = false) {
     if (!this.currentUser) return;
     // companyId/employeeNumberを本人情報で上書き
     this.dependents[i].companyId = this.currentUser.companyId || '';
@@ -100,7 +100,14 @@ export class DependentDetailComponent implements OnInit {
     await this.userService.saveDependent(this.uid, this.dependents[i]);
     this.dependents[i].originalData = { ...this.dependents[i] };
     this.dependents[i].isEditMode = false;
-    alert('保存しました');
+
+    // CSV取り込み時とマニュアル保存時でアラートメッセージを変更
+    if (fromCsv) {
+      alert('CSVから情報を保存しました');
+    } else {
+      alert('保存しました');
+    }
+
     // 保存後にIDを再取得（新規追加時）
     const deps = await this.userService.getDependents(this.uid);
     this.dependents = deps.map((dep) => ({
@@ -119,7 +126,8 @@ export class DependentDetailComponent implements OnInit {
     if (data && data['lastName'] && data['firstName']) {
       this.dependents[i] = { ...this.dependents[i], ...data };
       this.dependents[i].originalData = { ...this.dependents[i] };
-      alert('CSVから情報を保存しました');
+      // CSV取り込み後、自動でFirestoreに保存
+      await this.save(i, true);
     } else {
       alert('CSVの内容が不正です');
     }
