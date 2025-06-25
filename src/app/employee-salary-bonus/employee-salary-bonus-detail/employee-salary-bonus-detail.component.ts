@@ -250,7 +250,6 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
       this.selectedYear
     );
     await setDoc(ref, { salaryTable: this.salaryTable });
-    alert('保存しました');
   }
 
   goBack() {
@@ -338,18 +337,17 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
 
   async saveEdit() {
     if (!this.editSalaryTable) return;
-    // バリデーション: 整数のみ許容の行で小数点や空欄があればエラー
+    // バリデーション: 整数のみ許容の行で小数点があればエラー（空欄は許可）
     for (const row of this.integerRows) {
       if (!this.editSalaryTable[row]) continue;
       for (const col of this.columns) {
         const val = this.editSalaryTable[row][col];
-        if (val === null || val === undefined || val === '') {
-          this.editErrorMessage = `「${row}」の「${col}」は空欄にできません。0以上の整数を入力してください。`;
-          return;
-        }
-        if (!/^[0-9]+$/.test(String(val))) {
-          this.editErrorMessage = `「${row}」の「${col}」は整数のみ入力可能です。小数点や記号は使えません。`;
-          return;
+        // 空欄は許可するが、値がある場合は整数のみ
+        if (val !== null && val !== undefined && val !== '') {
+          if (!/^[0-9]+$/.test(String(val))) {
+            this.editErrorMessage = `「${row}」の「${col}」は整数のみ入力可能です。小数点や記号は使えません。`;
+            return;
+          }
         }
       }
     }
@@ -365,6 +363,7 @@ export class EmployeeSalaryBonusDetailComponent implements OnInit, OnChanges {
     this.editErrorMessage = '';
     this.recalcTotals();
     await this.saveSalaryTable();
+    alert('保存しました');
   }
 
   editCellInput(event: Event, row: string, col: string) {

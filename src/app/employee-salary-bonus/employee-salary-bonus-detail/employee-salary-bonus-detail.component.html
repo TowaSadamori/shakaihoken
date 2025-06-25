@@ -27,6 +27,12 @@
     🎯 等級判定
   </button>
 </div>
+<div
+  *ngIf="editErrorMessage"
+  style="color: red; text-align: center; margin-bottom: 12px; font-weight: bold"
+>
+  {{ editErrorMessage }}
+</div>
 <div class="csv-table-container" *ngIf="salaryTableReady">
   <table class="csv-table">
     <thead>
