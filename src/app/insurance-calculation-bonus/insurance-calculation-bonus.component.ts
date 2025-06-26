@@ -55,6 +55,7 @@ interface PivotedTable {
 type DisplayBonusHistoryItem = CalculatedBonusHistoryItem & {
   leaveType: string;
   originalCalculationResult?: BonusPremiumResult;
+  header?: string;
 };
 
 // 保険期間情報の型
@@ -310,6 +311,25 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     return BigInt(age);
   }
 
+  // 支給回数番号を抽出するユーティリティ
+  private extractBonusNumber(header: string): number {
+    const match = header.match(/\((\d+)回目\)/);
+    return match ? parseInt(match[1], 10) : 9999;
+  }
+
+  // 賞与データリストを日付・支給回数順でソート
+  private sortBonusList() {
+    this.bonusDataList.sort((a: DisplayBonusHistoryItem, b: DisplayBonusHistoryItem) => {
+      const dateA = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
+      const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
+      if (dateA !== dateB) return dateA - dateB;
+      // 同じ日付の場合は支給回数番号で昇順
+      const numA = this.extractBonusNumber(a.header || '');
+      const numB = this.extractBonusNumber(b.header || '');
+      return numA - numB;
+    });
+  }
+
   /**
    * 賞与データの取り込みと計算
    */
@@ -330,8 +350,9 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         // 保存済みデータがある場合はそれを表示
         this.bonusDataList = savedData.map((item) => ({
           ...item,
-          leaveType: item.leaveType || 'none',
+          leaveType: item.leaveType || 'excluded',
         }));
+        this.sortBonusList();
         this.importStatusMessage = '保存済みの賞与データを表示します。';
       } else {
         // 保存済みデータがない場合は、給与情報からデフォルトの賞与データを生成
@@ -347,8 +368,9 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         );
         this.bonusDataList = bonusItems.map((item: CalculatedBonusHistoryItem) => ({
           ...item,
-          leaveType: 'none', // 初期値
+          leaveType: 'excluded', // 初期値
         }));
+        this.sortBonusList();
         this.importStatusMessage = '給与情報から賞与データを生成しました。';
       }
 
@@ -380,16 +402,27 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     const docRef = doc(this.firestore, docPath);
     const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
+    if (docSnap && docSnap.exists()) {
       const data = docSnap.data();
-      // 'bonusResults' は配列であると仮定
-      return (data['bonusResults'] as CalculatedBonusHistoryItem[]).map((item) => ({
-        ...item,
-        leaveType: item.leaveType || 'none',
-      }));
-    } else {
-      return [];
+      if (data && Array.isArray(data['bonusResults'])) {
+        const list: DisplayBonusHistoryItem[] = (
+          data['bonusResults'] as CalculatedBonusHistoryItem[]
+        ).map((item: CalculatedBonusHistoryItem) => ({
+          ...item,
+          leaveType: item.leaveType || 'excluded',
+        }));
+        list.sort((a: DisplayBonusHistoryItem, b: DisplayBonusHistoryItem) => {
+          const dateA = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
+          const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
+          if (dateA !== dateB) return dateA - dateB;
+          const numA = this.extractBonusNumber(a.header || '');
+          const numB = this.extractBonusNumber(b.header || '');
+          return numA - numB;
+        });
+        return list;
+      }
     }
+    return [];
   }
 
   async importBonusData() {
@@ -757,15 +790,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         combinedHealthAndCareRate: '',
         pensionInsuranceRate: '',
       },
-      leaveType: bonus.leaveType,
+      leaveType: bonus.leaveType || 'excluded',
     });
-    // 支給日で昇順ソート
-    this.bonusDataList.sort((a, b) => {
-      if (!a.paymentDate || !b.paymentDate) return 0;
-      return new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime();
-    });
+    this.sortBonusList();
     this.createPivotedTable();
-    // 追加直後に即保存
     this.saveBonusResults();
   }
 
@@ -801,5 +829,19 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
     return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+  }
+
+  // 編集ボタン押下時の処理（今はアラートのみ）
+  onEditBonus(index: number): void {
+    alert('編集機能は未実装です（index: ' + index + '）');
+  }
+
+  // 削除ボタン押下時の処理
+  onDeleteBonus(index: number): void {
+    if (confirm('この賞与情報を削除しますか？')) {
+      this.bonusDataList.splice(index, 1);
+      this.createPivotedTable();
+      this.saveBonusResults();
+    }
   }
 }

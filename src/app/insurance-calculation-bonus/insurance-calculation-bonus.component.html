@@ -93,16 +93,6 @@
         <div class="card">
           <header class="card-header">
             <!-- 保存ボタンをタイトル横に配置 -->
-            <div class="card-header-save-btn" *ngIf="bonusDataList.length">
-              <button
-                class="save-btn-header"
-                (click)="saveBonusResults()"
-                [disabled]="isLoading || !bonusDataList.length"
-              >
-                <span *ngIf="isLoading">保存中...</span>
-                <span *ngIf="!isLoading">💾 データベースに保存</span>
-              </button>
-            </div>
           </header>
           <div class="card-content">
             <!-- ピボットテーブル -->
@@ -110,7 +100,8 @@
               <table class="results-table">
                 <thead>
                   <tr>
-                    <th>賞与</th>
+                    <th>操作</th>
+                    <th>支給回数・支給日</th>
                     <ng-container *ngFor="let col of pivotedTable.columns">
                       <th
                         *ngIf="!col.isSeparator"
@@ -123,6 +114,10 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let row of pivotedTable.rows; let rowIndex = index" class="data-row">
+                    <td>
+                      <button class="edit-btn" (click)="onEditBonus(rowIndex)">編集</button>
+                      <button class="delete-btn" (click)="onDeleteBonus(rowIndex)">削除</button>
+                    </td>
                     <td [innerHTML]="row.header"></td>
                     <ng-container *ngFor="let col of pivotedTable.columns; let i = index">
                       <td *ngIf="!col.isSeparator" [class.is-numeric]="col.isNumeric">

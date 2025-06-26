@@ -11,7 +11,7 @@ import { FormsModule } from '@angular/forms';
 export class BonusAddFormComponent {
   paymentDate = '';
   amount: number | null = null;
-  leaveType: 'none' | 'maternity' | 'childcare' = 'none';
+  leaveType: 'excluded' | 'maternity' | 'childcare' = 'excluded';
 
   @Output() save = new EventEmitter<{ paymentDate: string; amount: number; leaveType: string }>();
   @Output() closed = new EventEmitter<void>();
