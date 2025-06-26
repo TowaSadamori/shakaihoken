@@ -1056,7 +1056,9 @@ export class InsuranceJudgmentComponent implements OnInit {
     if (hasResult && this.currentUid) {
       try {
         const firestore = getFirestore();
+        console.log('DEBUG: this.birthDate =', this.birthDate);
         const careInsurancePeriod = this.getCareInsurancePeriod(this.birthDate);
+        console.log('DEBUG: careInsurancePeriod to save =', careInsurancePeriod);
         const healthInsurancePeriod = this.getHealthInsurancePeriod(this.birthDate);
         const pensionInsurancePeriod = this.getPensionInsurancePeriod(this.birthDate);
         const judgmentData: SavedJudgmentData = {
@@ -1077,6 +1079,12 @@ export class InsuranceJudgmentComponent implements OnInit {
         };
         const docRef = doc(firestore, 'insuranceJudgments', this.currentUid);
         await setDoc(docRef, judgmentData);
+
+        // 画面表示用のプロパティを最新の計算結果で更新
+        this.careInsurancePeriod = careInsurancePeriod || undefined;
+        this.healthInsurancePeriod = healthInsurancePeriod || undefined;
+        this.pensionInsurancePeriod = pensionInsurancePeriod || undefined;
+
         this.isJudgmentSaved = true;
         console.log('判定結果を保存しました:', judgmentData);
         alert('判定結果を保存しました');
@@ -3029,17 +3037,46 @@ export class InsuranceJudgmentComponent implements OnInit {
     const startDate = new Date(bd);
     startDate.setFullYear(bd.getFullYear() + 40);
     startDate.setDate(startDate.getDate() - 1);
-    // 65歳の誕生日の前日
-    const endDate = new Date(bd);
-    endDate.setFullYear(bd.getFullYear() + 65);
-    endDate.setDate(endDate.getDate() - 1);
-    // 開始月（YYYY-MM）
     const start = `${startDate.getFullYear()}-${('0' + (startDate.getMonth() + 1)).slice(-2)}`;
-    // 終了月（65歳の誕生日の前日が属する月の前月）
-    const endDatePrevMonth = new Date(endDate);
-    endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
-    const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
-    return { start, end };
+
+    if (bd.getDate() === 1) {
+      // 1日生まれの場合：65歳の誕生日の前日が属する月の前月が終了月
+      // 例：1985年1月1日生まれ → 2050年1月1日の前日は2049年12月31日 → その前月は11月
+      const year65 = bd.getFullYear() + 65;
+      const month65 = bd.getMonth(); // 65歳の誕生月（0始まり）
+
+      // 65歳の誕生日の前日が属する月（=前月）を求める
+      let prevYear = year65;
+      let prevMonth = month65 - 1;
+      if (prevMonth < 0) {
+        prevYear -= 1;
+        prevMonth = 11; // 12月
+      }
+
+      // その前月を求める
+      let endYear = prevYear;
+      let endMonth = prevMonth - 1;
+      if (endMonth < 0) {
+        endYear -= 1;
+        endMonth = 11; // 12月
+      }
+
+      const end = `${endYear}-${('0' + (endMonth + 1)).slice(-2)}`;
+      return { start, end };
+    } else {
+      // 2日以降生まれの場合は従来通り
+      const endDate = new Date(bd);
+      endDate.setFullYear(bd.getFullYear() + 65);
+      endDate.setDate(endDate.getDate() - 1);
+      // eslint-disable-next-line prefer-const
+      let endDatePrevMonth = new Date(endDate);
+      endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
+      if (endDate.getDate() === 1) {
+        endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
+      }
+      const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
+      return { start, end };
+    }
   }
 
   // 生年月日から健康保険該当期間（開始月・終了月）を計算する関数
