@@ -1,13 +1,3 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatSelectModule } from '@angular/material/select';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { UserService, User } from '../services/user.service';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -18,6 +8,16 @@ import {
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { Decimal } from 'decimal.js';
 import { BonusCalculationService } from '../services/bonus-calculation.service';
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { FormsModule } from '@angular/forms';
 
 // ユーザープロフィール型定義
 interface UserProfileWithRole {
@@ -199,6 +199,7 @@ export class HomeComponent implements OnInit {
   displayedColumnsAdminBonus: string[] = [
     'employeeNumber',
     'officeNumber',
+    'paymentInfo',
     'employeeName',
     'leaveStatus',
     'standardBonusAmount',
