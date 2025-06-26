@@ -20,7 +20,7 @@ interface Question {
   text: string;
   type: 'yesno' | 'choice' | 'date-range';
   choices?: { value: string; label: string }[];
-  nextQuestion?: Record<string, string>; // 分岐用
+  nextQuestion?: Record<string, string | ((this: InsuranceJudgmentComponent) => string)>; // 分岐用
 }
 
 interface InsuranceEligibility {
@@ -177,7 +177,9 @@ export class InsuranceJudgmentComponent implements OnInit {
         regular: 'regularEmployeeType',
         'part-time': 'workingHours',
         contract: 'contractWorkingHours',
-        manual: 'manualHealthInsurance',
+        manual: function (this: InsuranceJudgmentComponent) {
+          return this.age >= 75 ? 'manualPensionInsurance' : 'manualHealthInsurance';
+        },
       },
     },
     regularEmployeeType: {
@@ -779,14 +781,31 @@ export class InsuranceJudgmentComponent implements OnInit {
   private moveToNextQuestion() {
     console.log('🎯 === moveToNextQuestion START ===');
 
-    const currentAnswer = this.answers[this.currentQuestionId];
-    const nextQuestionId = this.currentQuestion?.nextQuestion?.[currentAnswer];
+    let nextQuestionId = '';
+    if (
+      this.currentQuestion &&
+      this.currentQuestion.nextQuestion &&
+      this.answers[this.currentQuestionId] in this.currentQuestion.nextQuestion
+    ) {
+      const nextQ = this.currentQuestion.nextQuestion[this.answers[this.currentQuestionId]];
+      if (typeof nextQ === 'function') {
+        nextQuestionId = nextQ.call(this);
+      } else {
+        nextQuestionId = nextQ || '';
+      }
+    }
 
     const isEnd = !nextQuestionId || nextQuestionId === 'end';
     const isFinalEnd = nextQuestionId === 'finalEnd';
 
     console.log('📋 現在の質問ID:', this.currentQuestionId);
-    console.log('✅ 選択された回答:', currentAnswer, '(型:', typeof currentAnswer, ')');
+    console.log(
+      '✅ 選択された回答:',
+      this.answers[this.currentQuestionId],
+      '(型:',
+      typeof this.answers[this.currentQuestionId],
+      ')'
+    );
     console.log('🔍 nextQuestion設定:', this.currentQuestion?.nextQuestion);
     console.log('➡️ 次の質問ID:', nextQuestionId, '(型:', typeof nextQuestionId, ')');
     console.log('❓ nextQuestionIdがundefined:', nextQuestionId === undefined);
@@ -860,8 +879,26 @@ export class InsuranceJudgmentComponent implements OnInit {
 
   private performJudgment(rule: JudgmentRule): InsuranceEligibility {
     const healthInsurance = this.evaluateInsurance('healthInsurance', rule);
-    const pensionInsurance = this.evaluateInsurance('pensionInsurance', rule);
+    let pensionInsurance = this.evaluateInsurance('pensionInsurance', rule);
     const careInsurance = this.evaluateCareInsurance();
+
+    // 手入力かつ70歳以上かつ「厚生年金加入対象」選択時は特例で必ず加入対象
+    if (
+      this.answers['employmentType'] === 'manual' &&
+      this.age >= 70 &&
+      this.answers['manualPensionInsurance'] === 'eligible'
+    ) {
+      pensionInsurance = {
+        eligible: true,
+        reason: '加入対象（特例）',
+      };
+      // 期間も上限なしにする
+      if (this.birthDate) {
+        const bd = new Date(this.birthDate);
+        const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
+        this.pensionInsurancePeriod = { start, end: '' };
+      }
+    }
 
     return { healthInsurance, pensionInsurance, careInsurance };
   }
@@ -3026,13 +3063,22 @@ export class InsuranceJudgmentComponent implements OnInit {
   // 2日以降の場合は誕生日の属する月が資格喪失月となる（例：5月2日生まれ→5月が資格喪失月）。
   getPensionInsurancePeriod(birthDate: string): { start: string; end: string } | null {
     if (!birthDate) return null;
+    // 手入力かつ70歳以上かつ「厚生年金加入対象」選択時は上限なし
+    if (
+      this.answers &&
+      this.answers['employmentType'] === 'manual' &&
+      this.age >= 70 &&
+      this.answers['manualPensionInsurance'] === 'eligible'
+    ) {
+      const bd = new Date(birthDate);
+      const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
+      return { start, end: '' };
+    }
+    // 通常のロジック
     const bd = new Date(birthDate);
-    // 開始月（生まれた月）
     const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
-    // 70歳の誕生日
     const seventiethBirthday = new Date(bd);
     seventiethBirthday.setFullYear(bd.getFullYear() + 70);
-    // 70歳の誕生日の前月
     const endDatePrevMonth = new Date(seventiethBirthday);
     endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
     const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
@@ -3040,9 +3086,12 @@ export class InsuranceJudgmentComponent implements OnInit {
   }
 
   // YYYY-MM → YYYY年M月 形式に変換
-  formatJapaneseYearMonth(ym: string): string {
-    if (!ym) return '';
-    const [y, m] = ym.split('-');
+  formatJapaneseYearMonth(ym: string | null | undefined): string {
+    if (!ym || ym === '') return '';
+    const parts = ym.split('-');
+    if (parts.length !== 2) return '';
+    const [y, m] = parts;
+    if (!y || !m) return '';
     return `${y}年${parseInt(m, 10)}月`;
   }
 }

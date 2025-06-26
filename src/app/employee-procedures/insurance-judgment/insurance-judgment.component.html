@@ -234,8 +234,11 @@
         <p>{{ judgmentResult.pensionInsurance.reason }}</p>
         <div *ngIf="judgmentResult.pensionInsurance.eligible && pensionInsurancePeriod">
           <span style="font-weight: bold">厚生年金保険料該当期間:</span>
-          {{ formatJapaneseYearMonth(pensionInsurancePeriod.start) }} ～
-          {{ formatJapaneseYearMonth(pensionInsurancePeriod.end) }}
+          {{ formatJapaneseYearMonth(pensionInsurancePeriod.start) }}
+          <ng-container *ngIf="pensionInsurancePeriod.end; else noLimit">
+            ～ {{ formatJapaneseYearMonth(pensionInsurancePeriod.end) }}
+          </ng-container>
+          <ng-template #noLimit>～（上限なし）</ng-template>
         </div>
       </div>
     </div>
