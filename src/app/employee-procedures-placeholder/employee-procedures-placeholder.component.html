@@ -51,16 +51,8 @@
         </td>
         <!-- <td>{{ user.companyId }}</td> -->
         <td>{{ getJudgmentStatus(user) }}</td>
-        <td>
-          <ng-container *ngIf="user.judgmentResult?.healthInsurance?.eligible">
-            {{ getHealthInsurancePeriodText(user) }}
-          </ng-container>
-        </td>
-        <td>
-          <ng-container *ngIf="user.judgmentResult?.careInsurance?.eligible">
-            {{ getCareInsurancePeriodText(user) }}
-          </ng-container>
-        </td>
+        <td>{{ getHealthInsurancePeriodText(user) }}</td>
+        <td>{{ getCareInsurancePeriodText(user) }}</td>
         <td>
           <ng-container *ngIf="user.judgmentResult?.pensionInsurance?.eligible">
             {{ getPensionInsurancePeriodText(user) }}

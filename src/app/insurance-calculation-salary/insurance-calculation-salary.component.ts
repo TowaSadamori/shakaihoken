@@ -333,6 +333,13 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           pensionInsuranceFeeCompany: null,
         };
 
+        // === 介護保険期間取得 ===
+        let careInsurancePeriod: { start: string; end: string } | null = null;
+        if (this.employeeInfo && this.employeeInfo.birthDate) {
+          careInsurancePeriod = this.getCareInsurancePeriod(this.employeeInfo.birthDate);
+        }
+        const isCarePeriod = this.isInPeriod(year, month, careInsurancePeriod);
+
         if (applicableGrade) {
           // 産休・育休の判定
           if (applicableGrade.judgmentReason === 'maternity_leave') {
@@ -393,6 +400,13 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           // 適用される等級がない場合
           result.healthInsuranceGrade = '履歴なし';
           result.pensionInsuranceGrade = '履歴なし';
+        }
+
+        // === 介護保険期間と重なっている場合は健康保険を非表示にする ===
+        if (isCarePeriod) {
+          // 等級は必ず表示、金額のみ非表示
+          result.healthInsuranceFeeEmployee = null;
+          result.healthInsuranceFeeCompany = null;
         }
 
         finalResults.push(result);
@@ -546,5 +560,36 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  // === period calculation helpers (copied from insurance-judgment.component.ts) ===
+  getCareInsurancePeriod(birthDate: string): { start: string; end: string } | null {
+    if (!birthDate) return null;
+    const bd = new Date(birthDate);
+    // 40歳の誕生日の前日
+    const startDate = new Date(bd);
+    startDate.setFullYear(bd.getFullYear() + 40);
+    startDate.setDate(startDate.getDate() - 1);
+    // 65歳の誕生日の前日
+    const endDate = new Date(bd);
+    endDate.setFullYear(bd.getFullYear() + 65);
+    endDate.setDate(endDate.getDate() - 1);
+    // 開始月（YYYY-MM）
+    const start = `${startDate.getFullYear()}-${('0' + (startDate.getMonth() + 1)).slice(-2)}`;
+    // 終了月（65歳の誕生日の前日が属する月の前月）
+    const endDatePrevMonth = new Date(endDate);
+    endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
+    const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
+    return { start, end };
+  }
+
+  isInPeriod(year: number, month: number, period: { start: string; end: string } | null): boolean {
+    if (!period || !period.start) return false;
+    const ym = `${year}-${month.toString().padStart(2, '0')}`;
+    if (!period.end || period.end === '') {
+      // 上限なし
+      return ym >= period.start;
+    }
+    return ym >= period.start && ym <= period.end;
   }
 }
