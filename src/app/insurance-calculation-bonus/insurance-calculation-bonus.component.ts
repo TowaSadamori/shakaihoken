@@ -445,15 +445,15 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       { header: '---', isNumeric: false, isSeparator: true },
       { header: '健康保険料率<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
       { header: '健康保険料(個人)<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
-      { header: '健康保険料(会社)<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
+      { header: '健康保険料(全額)<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
       { header: '健康保険料率<br />（介護保険該当）', isNumeric: true, isSeparator: false },
       { header: '健康保険料(個人)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
-      { header: '健康保険料(会社)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
+      { header: '健康保険料(全額)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
       { header: '厚生年金保険料率', isNumeric: true, isSeparator: false },
       { header: '厚生年金保険料(個人)', isNumeric: true, isSeparator: false },
-      { header: '厚生年金保険料(会社)', isNumeric: true, isSeparator: false },
+      { header: '厚生年金保険料(全額)', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
       {
         header: '厚生年金<br>上限適用後標準賞与額',
@@ -478,15 +478,20 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       const healthEmployee = isCareApplicable
         ? '-'
         : this.formatAmount(calcResult.healthInsurance.employeeBurden);
-      const healthCompany = isCareApplicable
+      const healthTotal = isCareApplicable
         ? '-'
-        : this.formatAmount(calcResult.healthInsurance.companyBurden);
+        : this.formatAmount(
+            SocialInsuranceCalculator.addAmounts(
+              calcResult.healthInsurance.employeeBurden,
+              calcResult.healthInsurance.companyBurden
+            )
+          );
 
       const careRate = isCareApplicable
         ? this.formatPercentage(calcResult.combinedHealthAndCareRate)
         : '-';
       let careEmployee = '-';
-      let careCompany = '-';
+      let careTotal = '-';
 
       if (isCareApplicable && calcResult.careInsurance) {
         // 介護対象者の場合、介護保険料の欄には「健康保険料＋介護保険料」の合算値を表示
@@ -496,10 +501,16 @@ export class InsuranceCalculationBonusComponent implements OnInit {
             calcResult.careInsurance.employeeBurden
           )
         );
-        careCompany = this.formatAmount(
+        careTotal = this.formatAmount(
           SocialInsuranceCalculator.addAmounts(
-            calcResult.healthInsurance.companyBurden,
-            calcResult.careInsurance.companyBurden
+            SocialInsuranceCalculator.addAmounts(
+              calcResult.healthInsurance.employeeBurden,
+              calcResult.healthInsurance.companyBurden
+            ),
+            SocialInsuranceCalculator.addAmounts(
+              calcResult.careInsurance.employeeBurden,
+              calcResult.careInsurance.companyBurden
+            )
           )
         );
       }
@@ -511,15 +522,20 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         '', // Separator
         healthRate,
         healthEmployee,
-        healthCompany,
+        healthTotal,
         '', // Separator
         careRate,
         careEmployee,
-        careCompany,
+        careTotal,
         '', // Separator
         this.formatPercentage(calcResult.pensionInsuranceRate),
         this.formatAmount(calcResult.pensionInsurance.employeeBurden),
-        this.formatAmount(calcResult.pensionInsurance.companyBurden),
+        this.formatAmount(
+          SocialInsuranceCalculator.addAmounts(
+            calcResult.pensionInsurance.employeeBurden,
+            calcResult.pensionInsurance.companyBurden
+          )
+        ),
         '', // Separator
         this.formatAmount(calcResult.cappedPensionStandardAmount),
         this.formatAmount(calcResult.applicableHealthStandardAmount),
