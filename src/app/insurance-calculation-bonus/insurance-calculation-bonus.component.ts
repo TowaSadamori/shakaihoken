@@ -895,7 +895,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     ) {
       if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
         // 産休・育休の場合は計算せず0で登録
-        this.bonusDataList[this.editBonusIndex] = {
+        const newItem: DisplayBonusHistoryItem = {
           amount: bonus.amount.toString(),
           paymentDate: bonus.paymentDate,
           month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
@@ -918,6 +918,8 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           },
           leaveType: bonus.leaveType || 'excluded',
         };
+        this.bonusDataList.splice(this.editBonusIndex, 1);
+        this.bonusDataList.push(newItem);
         this.sortBonusList();
         this.createPivotedTable();
         this.saveBonusResults();
@@ -925,6 +927,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         this.editBonusIndex = null;
         this.editBonusInitialData = null;
         return;
+      }
+      // 対象外に戻した場合はoriginalCalculationResultを必ず削除し、再計算で必ず上書き
+      if (this.bonusDataList[this.editBonusIndex].originalCalculationResult) {
+        delete this.bonusDataList[this.editBonusIndex].originalCalculationResult;
       }
       // 年間累計標準賞与額を再計算（自分以外の分のみ合計）
       const cumulativeHealthBonus = this.bonusDataList
@@ -957,10 +963,15 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       );
 
       if (calculated) {
-        this.bonusDataList[this.editBonusIndex] = {
+        const newItem: DisplayBonusHistoryItem = {
           ...calculated,
           leaveType: bonus.leaveType || 'excluded',
         };
+        if (newItem.originalCalculationResult) {
+          delete newItem.originalCalculationResult;
+        }
+        this.bonusDataList.splice(this.editBonusIndex, 1);
+        this.bonusDataList.push(newItem);
         this.sortBonusList();
         this.createPivotedTable();
         this.saveBonusResults();
