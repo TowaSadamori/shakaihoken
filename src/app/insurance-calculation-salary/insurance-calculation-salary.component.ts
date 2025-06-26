@@ -17,6 +17,7 @@ import { OfficeService } from '../services/office.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { AuthService } from '../services/auth.service';
 import { RoundForEmployeeBurdenPipe } from './round-for-employee-burden.pipe';
+import { Decimal } from 'decimal.js';
 
 interface EmployeeInfo {
   uid: string;
@@ -74,8 +75,8 @@ interface MonthlyCalculationResult {
 
 // DB保存用の月別計算結果のインターフェース
 interface MonthlyCalculationResultForDb {
-  month: number;
-  year: number;
+  month: string;
+  year: string;
   healthInsuranceGrade: string;
   healthInsuranceFeeEmployee: string;
   healthInsuranceFeeCompany: string;
@@ -398,7 +399,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       }
       this.monthlyResults = finalResults;
       // 計算結果を自動保存
-      await this.saveMonthlyResults();
+      await this.saveMonthlyResults(false);
     } catch (error) {
       console.error('等級の判定中にエラーが発生しました:', error);
       this.errorMessage = '等級の判定処理でエラーが発生しました。';
@@ -481,10 +482,9 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     return isNaN(num) ? null : num;
   }
 
-  async saveMonthlyResults(): Promise<void> {
+  async saveMonthlyResults(showAlert = false): Promise<void> {
     if (!this.employeeInfo || !this.targetYear || this.monthlyResults.length === 0 || !this.uid) {
       console.error('保存に必要な情報が不足しています。');
-      // 必要に応じてユーザーにフィードバックを表示
       return;
     }
     this.isLoading = true;
@@ -494,36 +494,37 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
 
     // Firestoreに保存するためにデータを整形
     const resultsForDb = {
-      // companyIdとuidを追加して、データの所有者を明確にする
       companyId: companyId,
       uid: this.uid,
       employeeNumber: employeeNumber,
       year: this.targetYear,
-      // monthlyResultsの各月のデータをオブジェクトとして持つように変更
       months: this.monthlyResults.reduce(
         (acc, r) => {
-          // 値をDB保存用の文字列に変換する内部関数
-          const formatForDb = (value: string | number | null | undefined): string => {
-            if (value === null || typeof value === 'undefined' || value === '-') {
-              return '-';
+          // 端数処理関数
+          const round = (v: string | number | null | undefined) => {
+            if (v === null || v === undefined || v === '' || v === '-') return '-';
+            try {
+              return String(SocialInsuranceCalculator.roundForEmployeeBurden(new Decimal(v)));
+            } catch {
+              return String(v);
             }
-            if (typeof value === 'number') {
-              return new Intl.NumberFormat('ja-JP').format(value);
-            }
-            return String(value);
           };
-
           acc[r.month] = {
-            year: r.year,
-            month: r.month,
-            healthInsuranceGrade: formatForDb(r.healthInsuranceGrade),
-            healthInsuranceFeeEmployee: formatForDb(r.healthInsuranceFeeEmployee),
-            healthInsuranceFeeCompany: formatForDb(r.healthInsuranceFeeCompany),
-            careInsuranceFeeEmployee: formatForDb(r.careInsuranceFeeEmployee),
-            careInsuranceFeeCompany: formatForDb(r.careInsuranceFeeCompany),
-            pensionInsuranceGrade: formatForDb(r.pensionInsuranceGrade),
-            pensionInsuranceFeeEmployee: formatForDb(r.pensionInsuranceFeeEmployee),
-            pensionInsuranceFeeCompany: formatForDb(r.pensionInsuranceFeeCompany),
+            year: String(r.year),
+            month: String(r.month),
+            healthInsuranceGrade:
+              r.healthInsuranceGrade != null ? String(r.healthInsuranceGrade) : '-',
+            healthInsuranceFeeEmployee: round(r.healthInsuranceFeeEmployee),
+            healthInsuranceFeeCompany:
+              r.healthInsuranceFeeCompany != null ? String(r.healthInsuranceFeeCompany) : '-',
+            careInsuranceFeeEmployee: round(r.careInsuranceFeeEmployee),
+            careInsuranceFeeCompany:
+              r.careInsuranceFeeCompany != null ? String(r.careInsuranceFeeCompany) : '-',
+            pensionInsuranceGrade:
+              r.pensionInsuranceGrade != null ? String(r.pensionInsuranceGrade) : '-',
+            pensionInsuranceFeeEmployee: round(r.pensionInsuranceFeeEmployee),
+            pensionInsuranceFeeCompany:
+              r.pensionInsuranceFeeCompany != null ? String(r.pensionInsuranceFeeCompany) : '-',
           };
           return acc;
         },
@@ -534,10 +535,14 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
 
     try {
       await setDoc(docRef, resultsForDb, { merge: true });
-      alert(`${this.targetYear}年度の計算結果を保存しました。`);
+      if (showAlert) {
+        alert(`${this.targetYear}年度の計算結果を保存しました。`);
+      }
     } catch (error) {
       console.error('計算結果の保存中にエラーが発生しました:', error);
-      alert('エラーが発生しました。コンソールを確認してください。');
+      if (showAlert) {
+        alert('エラーが発生しました。コンソールを確認してください。');
+      }
     } finally {
       this.isLoading = false;
     }
