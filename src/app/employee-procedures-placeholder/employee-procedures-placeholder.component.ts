@@ -233,18 +233,24 @@ export class EmployeeProceduresPlaceholderComponent implements OnInit {
 
   // 期間テキストを返す
   getHealthInsurancePeriodText(user: UserWithJudgment): string {
+    const status = this.getJudgmentStatus(user);
+    if (status === '対象外' || status === '未実施') return '';
     if (user.healthInsurancePeriod)
       return `${this.formatJapaneseYearMonth(user.healthInsurancePeriod.start)}～${this.formatJapaneseYearMonth(user.healthInsurancePeriod.end)}`;
     return '';
   }
 
   getCareInsurancePeriodText(user: UserWithJudgment): string {
+    const status = this.getJudgmentStatus(user);
+    if (status === '対象外' || status === '未実施') return '';
     if (user.careInsurancePeriod)
       return `${this.formatJapaneseYearMonth(user.careInsurancePeriod.start)}～${this.formatJapaneseYearMonth(user.careInsurancePeriod.end)}`;
     return '';
   }
 
   getPensionInsurancePeriodText(user: UserWithJudgment): string {
+    const status = this.getJudgmentStatus(user);
+    if (status === '対象外' || status === '未実施') return '';
     if (user.pensionInsurancePeriod)
       return `${this.formatJapaneseYearMonth(user.pensionInsurancePeriod.start)}～${this.formatJapaneseYearMonth(user.pensionInsurancePeriod.end)}`;
     return '';
