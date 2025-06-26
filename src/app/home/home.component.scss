@@ -464,3 +464,48 @@
     }
   }
 }
+
+.company-expense-summary-section {
+  margin: 24px auto 0 auto;
+  max-width: 1200px;
+  width: 95%;
+}
+
+.summary-card {
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+  border-radius: 8px;
+  padding: 0 0 8px 0;
+}
+
+.summary-row,
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 24px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 1.05em;
+}
+
+.summary-total {
+  font-weight: bold;
+  background: #f3f6fa;
+  color: #1976d2;
+  border-bottom: none;
+}
+
+.summary-label {
+  color: #333;
+}
+
+.summary-amount {
+  color: #1976d2;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+// テーブルとの間にスペース
+.admin-section {
+  margin-top: 24px;
+}

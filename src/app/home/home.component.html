@@ -31,35 +31,32 @@
     </div>
   </section>
 
-  <!-- 管理者向け：全従業員保険料表示 -->
-  <section class="admin-section">
-    <!-- <h2>全従業員の社会保険料</h2> -->
-
-    <!-- 会社負担合計カード -->
-    <!--
+  <!-- 会社負担額サマリーカード（新規追加） -->
+  <section class="company-expense-summary-section">
     <mat-card class="summary-card">
       <mat-card-header>
         <mat-card-title>会社負担額サマリー</mat-card-title>
       </mat-card-header>
       <mat-card-content>
         <div class="summary-row">
-          <span class="summary-label">
-            健康保険料（会社負担分）合計
-            <small class="insurance-note">（40歳以上65歳未満は介護保険料を含む）</small>
-          </span>
-          <span class="summary-amount">{{ formatNumber('0') }}円</span>
+          <span class="summary-label">健康保険料（会社負担分）合計</span>
+          <span class="summary-amount">- 円</span>
         </div>
         <div class="summary-row">
           <span class="summary-label">厚生年金保険料（会社負担分）合計</span>
-          <span class="summary-amount">{{ formatNumber('0') }}円</span>
+          <span class="summary-amount">- 円</span>
         </div>
         <div class="summary-total">
           <span class="summary-label">会社負担分総額</span>
-          <span class.summary-amount">{{ formatNumber(getTotalCompanyExpense()) }}円</span>
+          <span class="summary-amount">- 円</span>
         </div>
       </mat-card-content>
     </mat-card>
-    -->
+  </section>
+
+  <!-- 管理者向け：全従業員保険料表示 -->
+  <section class="admin-section">
+    <!-- <h2>全従業員の社会保険料</h2> -->
 
     <!-- 全従業員一覧テーブル -->
     <mat-card class="employees-card">
