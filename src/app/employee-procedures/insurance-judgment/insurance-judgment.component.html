@@ -260,10 +260,12 @@
 
     <div class="special-cases">
       <!-- 特殊事例がない場合のメッセージ -->
+  <!--
   <div class="no-cases-message" *ngIf="selectedSpecialCases.length === 0">
     <span class="icon">📋</span>
     <p>現在、追加情報は登録されていません</p>
   </div>
+  -->
 
   <div class="case-item" *ngFor="let specialCase of selectedSpecialCases; let i = index">
     <div class="case-header">
@@ -1199,12 +1201,14 @@
     </div>
   </div>
 
+  <!--
   <div class="add-case-section">
     <button class="btn-add-case" (click)="addSpecialCase()">
       <i class="icon-plus"></i>
       事例を追加
     </button>
   </div>
+  -->
 </div>
 -->
 
