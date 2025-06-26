@@ -16,6 +16,7 @@ import {
 import { OfficeService } from '../services/office.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { AuthService } from '../services/auth.service';
+import { RoundForEmployeeBurdenPipe } from './round-for-employee-burden.pipe';
 
 interface EmployeeInfo {
   uid: string;
@@ -88,7 +89,7 @@ interface MonthlyCalculationResultForDb {
 @Component({
   selector: 'app-insurance-calculation-salary',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RoundForEmployeeBurdenPipe],
   templateUrl: './insurance-calculation-salary.component.html',
   styleUrls: ['./insurance-calculation-salary.component.scss'],
 })
@@ -396,6 +397,8 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
         finalResults.push(result);
       }
       this.monthlyResults = finalResults;
+      // 計算結果を自動保存
+      await this.saveMonthlyResults();
     } catch (error) {
       console.error('等級の判定中にエラーが発生しました:', error);
       this.errorMessage = '等級の判定処理でエラーが発生しました。';

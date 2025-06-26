@@ -76,12 +76,34 @@
           <tr *ngFor="let result of monthlyResults">
             <td>{{ result.year }}年 {{ result.month }}月</td>
             <td>{{ result.healthInsuranceGrade }}</td>
-            <td>{{ result.healthInsuranceFeeEmployee }}</td>
+            <td>
+              <ng-container
+                *ngIf="
+                  result.healthInsuranceFeeEmployee && result.healthInsuranceFeeEmployee !== '0'
+                "
+              >
+                {{ result.healthInsuranceFeeEmployee | roundForEmployeeBurden }}
+              </ng-container>
+            </td>
             <td>{{ result.healthInsuranceFeeCompany }}</td>
-            <td>{{ result.careInsuranceFeeEmployee }}</td>
+            <td>
+              <ng-container
+                *ngIf="result.careInsuranceFeeEmployee && result.careInsuranceFeeEmployee !== '0'"
+              >
+                {{ result.careInsuranceFeeEmployee | roundForEmployeeBurden }}
+              </ng-container>
+            </td>
             <td>{{ result.careInsuranceFeeCompany }}</td>
             <td>{{ result.pensionInsuranceGrade }}</td>
-            <td>{{ result.pensionInsuranceFeeEmployee }}</td>
+            <td>
+              <ng-container
+                *ngIf="
+                  result.pensionInsuranceFeeEmployee && result.pensionInsuranceFeeEmployee !== '0'
+                "
+              >
+                {{ result.pensionInsuranceFeeEmployee | roundForEmployeeBurden }}
+              </ng-container>
+            </td>
             <td>{{ result.pensionInsuranceFeeCompany }}</td>
           </tr>
         </tbody>
