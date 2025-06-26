@@ -211,15 +211,21 @@
           {{ judgmentResult.healthInsurance.eligible ? '加入対象' : '加入対象外' }}
         </div>
         <p>{{ judgmentResult.healthInsurance.reason }}</p>
-        <div *ngIf="judgmentResult.healthInsurance.eligible && careInsurancePeriod">
-          <span style="font-weight: bold">介護保険料該当期間:</span>
-          {{ formatJapaneseYearMonth(careInsurancePeriod.start) }} ～
-          {{ formatJapaneseYearMonth(careInsurancePeriod.end) }}
-        </div>
-        <div *ngIf="judgmentResult.healthInsurance.eligible && healthInsurancePeriod">
+        <!-- 健康保険・介護保険期間: 健康保険が対象なら両方必ず表示、対象外なら両方とも表示しない -->
+        <div
+          *ngIf="
+            judgmentResult?.healthInsurance?.eligible &&
+            healthInsurancePeriod &&
+            careInsurancePeriod
+          "
+        >
           <span style="font-weight: bold">健康保険料該当期間:</span>
-          {{ formatJapaneseYearMonth(healthInsurancePeriod.start) }} ～
-          {{ formatJapaneseYearMonth(healthInsurancePeriod.end) }}
+          {{ formatJapaneseYearMonth(healthInsurancePeriod?.start) }} ～
+          {{ formatJapaneseYearMonth(healthInsurancePeriod?.end) }}
+          <br />
+          <span style="font-weight: bold">介護保険料該当期間:</span>
+          {{ formatJapaneseYearMonth(careInsurancePeriod?.start) }} ～
+          {{ formatJapaneseYearMonth(careInsurancePeriod?.end) }}
         </div>
       </div>
 
@@ -244,7 +250,8 @@
     </div>
   </div>
 
-  <!-- 追加質問（社会保険加入対象者のみ） -->
+  <!-- 追加質問（社会保険加入対象者のみ）
+  <!--
   <div class="additional-questions" *ngIf="judgmentResult && isInsuranceEligible()">
     <div class="section-header">
       <h3>追加情報の入力</h3>
@@ -253,986 +260,955 @@
 
     <div class="special-cases">
       <!-- 特殊事例がない場合のメッセージ -->
-      <div class="no-cases-message" *ngIf="selectedSpecialCases.length === 0">
-        <span class="icon">📋</span>
-        <p>現在、追加情報は登録されていません</p>
-      </div>
+  <div class="no-cases-message" *ngIf="selectedSpecialCases.length === 0">
+    <span class="icon">📋</span>
+    <p>現在、追加情報は登録されていません</p>
+  </div>
 
-      <div class="case-item" *ngFor="let specialCase of selectedSpecialCases; let i = index">
-        <div class="case-header">
-          <button class="btn-remove" (click)="removeSpecialCase(i)">
-            <i class="icon-close"></i>
-            削除
-          </button>
-        </div>
+  <div class="case-item" *ngFor="let specialCase of selectedSpecialCases; let i = index">
+    <div class="case-header">
+      <button class="btn-remove" (click)="removeSpecialCase(i)">
+        <i class="icon-close"></i>
+        削除
+      </button>
+    </div>
 
-        <div class="case-selection">
-          <label [for]="'case-type-' + i">事例の種類:</label>
+    <div class="case-selection">
+      <label [for]="'case-type-' + i">事例の種類:</label>
+      <select
+        [id]="'case-type-' + i"
+        [(ngModel)]="specialCase.type"
+        (change)="onSpecialCaseTypeChange(i)"
+      >
+        <option value="">選択してください</option>
+        <option value="maternity-leave">産前産後休業期間中の保険料免除</option>
+        <option value="childcare-leave">育児休業等期間中の保険料免除</option>
+        <option value="other-leave">その他の休職</option>
+        <option value="secondment">出向者の社会保険加入</option>
+        <option value="multiple-workplace">二以上事業所勤務者</option>
+      </select>
+    </div>
+
+    <!-- 産前産後休業の詳細フォーム -->
+    <div class="case-details" *ngIf="specialCase.type === 'maternity-leave'">
+      <div class="form-grid">
+        <div class="form-group">
+          <label [for]="'pregnancy-type-' + i">妊娠の種類:</label>
           <select
-            [id]="'case-type-' + i"
-            [(ngModel)]="specialCase.type"
-            (change)="onSpecialCaseTypeChange(i)"
+            [id]="'pregnancy-type-' + i"
+            [(ngModel)]="specialCase.details.pregnancyType"
+            (change)="calculateMaternityPeriod(i)"
           >
             <option value="">選択してください</option>
-            <option value="maternity-leave">産前産後休業期間中の保険料免除</option>
-            <option value="childcare-leave">育児休業等期間中の保険料免除</option>
-            <option value="other-leave">その他の休職</option>
-            <option value="secondment">出向者の社会保険加入</option>
-            <option value="multiple-workplace">二以上事業所勤務者</option>
+            <option value="single">単胎</option>
+            <option value="multiple">多胎</option>
           </select>
         </div>
 
-        <!-- 産前産後休業の詳細フォーム -->
-        <div class="case-details" *ngIf="specialCase.type === 'maternity-leave'">
-          <div class="form-grid">
-            <div class="form-group">
-              <label [for]="'pregnancy-type-' + i">妊娠の種類:</label>
-              <select
-                [id]="'pregnancy-type-' + i"
-                [(ngModel)]="specialCase.details.pregnancyType"
-                (change)="calculateMaternityPeriod(i)"
-              >
-                <option value="">選択してください</option>
-                <option value="single">単胎</option>
-                <option value="multiple">多胎</option>
-              </select>
-            </div>
+        <div class="form-group">
+          <label [for]="'expected-birth-date-' + i">出産予定日:</label>
+          <input
+            [id]="'expected-birth-date-' + i"
+            type="date"
+            [(ngModel)]="specialCase.details.expectedBirthDate"
+            (change)="calculateMaternityPeriod(i)"
+          />
+        </div>
 
-            <div class="form-group">
-              <label [for]="'expected-birth-date-' + i">出産予定日:</label>
-              <input
-                [id]="'expected-birth-date-' + i"
-                type="date"
-                [(ngModel)]="specialCase.details.expectedBirthDate"
-                (change)="calculateMaternityPeriod(i)"
-              />
-            </div>
+        <div class="form-group">
+          <label [for]="'actual-birth-date-' + i">実際の出産日（任意）:</label>
+          <input
+            [id]="'actual-birth-date-' + i"
+            type="date"
+            [(ngModel)]="specialCase.details.actualBirthDate"
+            (change)="calculateMaternityPeriod(i); onActualBirthDateChange(i)"
+          />
+        </div>
 
-            <div class="form-group">
-              <label [for]="'actual-birth-date-' + i">実際の出産日（任意）:</label>
-              <input
-                [id]="'actual-birth-date-' + i"
-                type="date"
-                [(ngModel)]="specialCase.details.actualBirthDate"
-                (change)="calculateMaternityPeriod(i); onActualBirthDateChange(i)"
-              />
-            </div>
-
-            <!-- 計算された最大期間表示 -->
-            <div class="form-group full-width" *ngIf="getCalculatedMaternityPeriod(i)">
-              <div class="calculated-period">
-                <h5>法定最大期間（参考）</h5>
-                <div class="period-info">
-                  <div class="period-item">
-                    <span class="label">産前期間:</span>
-                    <span class="value">{{ getCalculatedMaternityPeriod(i)?.preNatalPeriod }}</span>
-                  </div>
-                  <div class="period-item">
-                    <span class="label">産後期間:</span>
-                    <span class="value">{{
-                      getCalculatedMaternityPeriod(i)?.postNatalPeriod
-                    }}</span>
-                  </div>
-                  <div class="period-item total">
-                    <span class="label">最大免除期間:</span>
-                    <span class="value">{{ getCalculatedMaternityPeriod(i)?.totalPeriod }}</span>
-                  </div>
-                  <div class="period-item exemption">
-                    <span class="label">社会保険料免除期間:</span>
-                    <span class="value">{{
-                      getCalculatedMaternityPeriod(i)?.exemptionPeriod
-                    }}</span>
-                  </div>
-                </div>
+        <!-- 計算された最大期間表示 -->
+        <div class="form-group full-width" *ngIf="getCalculatedMaternityPeriod(i)">
+          <div class="calculated-period">
+            <h5>法定最大期間（参考）</h5>
+            <div class="period-info">
+              <div class="period-item">
+                <span class="label">産前期間:</span>
+                <span class="value">{{ getCalculatedMaternityPeriod(i)?.preNatalPeriod }}</span>
               </div>
-            </div>
-
-            <!-- 実際の申請期間選択 -->
-            <div class="form-group full-width" *ngIf="getCalculatedMaternityPeriod(i)">
-              <div class="actual-period-selection">
-                <h5>実際の社会保険料免除期間</h5>
-
-                <!-- 産前・産後期間の入力 -->
-                <div class="period-breakdown">
-                  <div class="period-section prenatal">
-                    <div class="period-header">
-                      <span class="period-title">産前の期間</span>
-                      <div class="period-inputs">
-                        <input
-                          type="date"
-                          [(ngModel)]="specialCase.details.preNatalStartDate"
-                          [value]="specialCase.details.preNatalStartDate || getPreNatalStartDate(i)"
-                          (ngModelChange)="onPreNatalStartDateChange(i, $event)"
-                          class="period-date-input"
-                          placeholder="開始日"
-                        />
-                        <span class="date-separator">～</span>
-                        <input
-                          type="date"
-                          [(ngModel)]="specialCase.details.preNatalEndDate"
-                          [value]="specialCase.details.preNatalEndDate || getPreNatalEndDate(i)"
-                          (ngModelChange)="onPreNatalEndDateChange(i, $event)"
-                          class="period-date-input"
-                          placeholder="終了日"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div class="period-section postnatal">
-                    <div class="period-header">
-                      <span class="period-title">産後の期間</span>
-                      <div class="period-inputs">
-                        <input
-                          type="date"
-                          [(ngModel)]="specialCase.details.postNatalStartDate"
-                          [value]="
-                            specialCase.details.postNatalStartDate || getPostNatalStartDate(i)
-                          "
-                          (ngModelChange)="onPostNatalStartDateChange(i, $event)"
-                          class="period-date-input"
-                          placeholder="開始日"
-                        />
-                        <span class="date-separator">～</span>
-                        <input
-                          type="date"
-                          [(ngModel)]="specialCase.details.postNatalEndDate"
-                          [value]="specialCase.details.postNatalEndDate || getPostNatalEndDate(i)"
-                          [min]="getPostNatalStartDate(i)"
-                          [max]="getPostNatalMaxDate(i)"
-                          (ngModelChange)="onPostNatalEndDateChange(i, $event)"
-                          class="period-date-input"
-                          placeholder="終了日"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 社会保険料免除期間の表示 -->
-                <div class="exemption-period-display">
-                  <div class="exemption-bar">
-                    <span class="exemption-label">社会保険料免除期間:</span>
-                    <span class="exemption-period">{{ getActualExemptionPeriod(i) }}</span>
-                  </div>
-                </div>
-
-                <div
-                  class="selected-period-info"
-                  *ngIf="specialCase.details.actualStartDate && specialCase.details.actualEndDate"
-                >
-                  <div class="info-item">
-                    <span class="label">選択された期間:</span>
-                    <span class="value"
-                      >{{ specialCase.details.actualStartDate }} ～
-                      {{ specialCase.details.actualEndDate }}</span
-                    >
-                  </div>
-                  <div class="info-item">
-                    <span class="label">申請日数:</span>
-                    <span class="value">{{ getSelectedPeriodDays(i) }}日間</span>
-                  </div>
-                </div>
+              <div class="period-item">
+                <span class="label">産後期間:</span>
+                <span class="value">{{ getCalculatedMaternityPeriod(i)?.postNatalPeriod }}</span>
               </div>
-            </div>
-
-            <div class="form-group full-width">
-              <label [for]="'maternity-remarks-' + i">備考:</label>
-              <textarea
-                [id]="'maternity-remarks-' + i"
-                [(ngModel)]="specialCase.details.remarks"
-                placeholder="産前産後休業に関する特記事項など"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- 産前産後休業の保存ボタン -->
-          <div class="case-save-section">
-            <button
-              class="btn-save-case"
-              (click)="saveSpecialCase(i)"
-              [disabled]="!canSaveMaternityCase(i)"
-            >
-              <i class="icon-save"></i>
-              この情報を保存
-            </button>
-            <div class="save-status" *ngIf="specialCase.saveStatus">
-              <span class="status-icon" [class]="specialCase.saveStatus">
-                {{
-                  specialCase.saveStatus === 'saved'
-                    ? '✓'
-                    : specialCase.saveStatus === 'saving'
-                      ? '⏳'
-                      : '✗'
-                }}
-              </span>
-              <span class="status-text">
-                {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
-              </span>
+              <div class="period-item total">
+                <span class="label">最大免除期間:</span>
+                <span class="value">{{ getCalculatedMaternityPeriod(i)?.totalPeriod }}</span>
+              </div>
+              <div class="period-item exemption">
+                <span class="label">社会保険料免除期間:</span>
+                <span class="value">{{ getCalculatedMaternityPeriod(i)?.exemptionPeriod }}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 育休の詳細フォーム -->
-        <div class="case-details" *ngIf="specialCase.type === 'childcare-leave'">
-          <div class="form-grid">
-            <!-- 育児休業の種類と子の生年月日（横並び） -->
-            <div class="form-group">
-              <label [for]="'childcare-type-' + i" class="form-label">育児休業の種類:</label>
-              <select
-                [id]="'childcare-type-' + i"
-                [(ngModel)]="specialCase.details.childcareType"
-                (change)="calculateChildcarePeriod(i)"
-                class="form-select"
-              >
-                <option value="">選択してください</option>
-                <option value="basic">基本の育児休業</option>
-                <option value="papa-leave">産後パパ育休（出生時育児休業）</option>
-                <option value="extended-1-6">延長育児休業（1歳～1歳6か月）</option>
-                <option value="extended-2">延長育児休業（1歳6か月～2歳）</option>
-                <option value="similar-measures">育児休業に準ずる措置</option>
-              </select>
+        <!-- 実際の申請期間選択 -->
+        <div class="form-group full-width" *ngIf="getCalculatedMaternityPeriod(i)">
+          <div class="actual-period-selection">
+            <h5>実際の社会保険料免除期間</h5>
+
+            <!-- 産前・産後期間の入力 -->
+            <div class="period-breakdown">
+              <div class="period-section prenatal">
+                <div class="period-header">
+                  <span class="period-title">産前の期間</span>
+                  <div class="period-inputs">
+                    <input
+                      type="date"
+                      [(ngModel)]="specialCase.details.preNatalStartDate"
+                      [value]="specialCase.details.preNatalStartDate || getPreNatalStartDate(i)"
+                      (ngModelChange)="onPreNatalStartDateChange(i, $event)"
+                      class="period-date-input"
+                      placeholder="開始日"
+                    />
+                    <span class="date-separator">～</span>
+                    <input
+                      type="date"
+                      [(ngModel)]="specialCase.details.preNatalEndDate"
+                      [value]="specialCase.details.preNatalEndDate || getPreNatalEndDate(i)"
+                      (ngModelChange)="onPreNatalEndDateChange(i, $event)"
+                      class="period-date-input"
+                      placeholder="終了日"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="period-section postnatal">
+                <div class="period-header">
+                  <span class="period-title">産後の期間</span>
+                  <div class="period-inputs">
+                    <input
+                      type="date"
+                      [(ngModel)]="specialCase.details.postNatalStartDate"
+                      [value]="specialCase.details.postNatalStartDate || getPostNatalStartDate(i)"
+                      (ngModelChange)="onPostNatalStartDateChange(i, $event)"
+                      class="period-date-input"
+                      placeholder="開始日"
+                    />
+                    <span class="date-separator">～</span>
+                    <input
+                      type="date"
+                      [(ngModel)]="specialCase.details.postNatalEndDate"
+                      [value]="specialCase.details.postNatalEndDate || getPostNatalEndDate(i)"
+                      [min]="getPostNatalStartDate(i)"
+                      [max]="getPostNatalMaxDate(i)"
+                      (ngModelChange)="onPostNatalEndDateChange(i, $event)"
+                      class="period-date-input"
+                      placeholder="終了日"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label [for]="'child-birth-date-' + i" class="form-label">子の生年月日:</label>
-              <input
-                [id]="'child-birth-date-' + i"
-                type="date"
-                [(ngModel)]="specialCase.details.childBirthDate"
-                (change)="calculateChildcarePeriod(i)"
-                class="form-input"
-              />
+            <!-- 社会保険料免除期間の表示 -->
+            <div class="exemption-period-display">
+              <div class="exemption-bar">
+                <span class="exemption-label">社会保険料免除期間:</span>
+                <span class="exemption-period">{{ getActualExemptionPeriod(i) }}</span>
+              </div>
             </div>
 
-            <!-- 育児休業開始日と終了予定日（横並び） -->
-            <div class="form-group">
-              <label [for]="'childcare-start-' + i" class="form-label">育児休業開始日:</label>
-              <input
-                [id]="'childcare-start-' + i"
-                type="date"
-                [(ngModel)]="specialCase.details.startDate"
-                [max]="
-                  specialCase.details.childcareType === 'papa-leave'
-                    ? getPapaLeaveMaxStartDate(i)
-                    : null
-                "
-                [min]="
-                  specialCase.details.childcareType === 'extended-1-6'
-                    ? getExtended16ChildcareMinStartDate(i)
+            <div
+              class="selected-period-info"
+              *ngIf="specialCase.details.actualStartDate && specialCase.details.actualEndDate"
+            >
+              <div class="info-item">
+                <span class="label">選択された期間:</span>
+                <span class="value"
+                  >{{ specialCase.details.actualStartDate }} ～
+                  {{ specialCase.details.actualEndDate }}</span
+                >
+              </div>
+              <div class="info-item">
+                <span class="label">申請日数:</span>
+                <span class="value">{{ getSelectedPeriodDays(i) }}日間</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group full-width">
+          <label [for]="'maternity-remarks-' + i">備考:</label>
+          <textarea
+            [id]="'maternity-remarks-' + i"
+            [(ngModel)]="specialCase.details.remarks"
+            placeholder="産前産後休業に関する特記事項など"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 産前産後休業の保存ボタン -->
+      <div class="case-save-section">
+        <button
+          class="btn-save-case"
+          (click)="saveSpecialCase(i)"
+          [disabled]="!canSaveMaternityCase(i)"
+        >
+          <i class="icon-save"></i>
+          この情報を保存
+        </button>
+        <div class="save-status" *ngIf="specialCase.saveStatus">
+          <span class="status-icon" [class]="specialCase.saveStatus">
+            {{
+              specialCase.saveStatus === 'saved'
+                ? '✓'
+                : specialCase.saveStatus === 'saving'
+                  ? '⏳'
+                  : '✗'
+            }}
+          </span>
+          <span class="status-text">
+            {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 育休の詳細フォーム -->
+    <div class="case-details" *ngIf="specialCase.type === 'childcare-leave'">
+      <div class="form-grid">
+        <!-- 育児休業の種類と子の生年月日（横並び） -->
+        <div class="form-group">
+          <label [for]="'childcare-type-' + i" class="form-label">育児休業の種類:</label>
+          <select
+            [id]="'childcare-type-' + i"
+            [(ngModel)]="specialCase.details.childcareType"
+            (change)="calculateChildcarePeriod(i)"
+            class="form-select"
+          >
+            <option value="">選択してください</option>
+            <option value="basic">基本の育児休業</option>
+            <option value="papa-leave">産後パパ育休（出生時育児休業）</option>
+            <option value="extended-1-6">延長育児休業（1歳～1歳6か月）</option>
+            <option value="extended-2">延長育児休業（1歳6か月～2歳）</option>
+            <option value="similar-measures">育児休業に準ずる措置</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label [for]="'child-birth-date-' + i" class="form-label">子の生年月日:</label>
+          <input
+            [id]="'child-birth-date-' + i"
+            type="date"
+            [(ngModel)]="specialCase.details.childBirthDate"
+            (change)="calculateChildcarePeriod(i)"
+            class="form-input"
+          />
+        </div>
+
+        <!-- 育児休業開始日と終了予定日（横並び） -->
+        <div class="form-group">
+          <label [for]="'childcare-start-' + i" class="form-label">育児休業開始日:</label>
+          <input
+            [id]="'childcare-start-' + i"
+            type="date"
+            [(ngModel)]="specialCase.details.startDate"
+            [max]="
+              specialCase.details.childcareType === 'papa-leave'
+                ? getPapaLeaveMaxStartDate(i)
+                : null
+            "
+            [min]="
+              specialCase.details.childcareType === 'extended-1-6'
+                ? getExtended16ChildcareMinStartDate(i)
+                : specialCase.details.childcareType === 'extended-2'
+                  ? getExtended2ChildcareMinStartDate(i)
+                  : null
+            "
+            (change)="
+              calculateChildcarePeriod(i);
+              validatePapaLeaveInput(i);
+              validateBasicChildcareInput(i);
+              validateExtended16ChildcareInput(i);
+              validateExtended2ChildcareInput(i);
+              validateSimilarMeasuresInput(i)
+            "
+            [class.invalid]="
+              (specialCase.details.childcareType === 'papa-leave' &&
+                isPapaLeaveStartDateInvalid(i)) ||
+              (specialCase.details.childcareType === 'basic' &&
+                isBasicChildcareStartDateInvalid(i)) ||
+              (specialCase.details.childcareType === 'extended-1-6' &&
+                isExtended16ChildcareStartDateInvalid(i)) ||
+              (specialCase.details.childcareType === 'extended-2' &&
+                isExtended2ChildcareStartDateInvalid(i))
+            "
+            class="form-input"
+          />
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'papa-leave'">
+            産後パパ育休は出生後8週間以内に開始してください
+          </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'basic'">
+            基本の育児休業は子が1歳になる日まで取得可能です
+          </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-1-6'">
+            延長育児休業は子が1歳になる日以降、1歳6か月になる日まで取得可能です
+          </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-2'">
+            延長育児休業は子が1歳6か月になる日以降、2歳になる日まで取得可能です
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label [for]="'childcare-end-' + i" class="form-label">育児休業終了予定日:</label>
+          <input
+            [id]="'childcare-end-' + i"
+            type="date"
+            [(ngModel)]="specialCase.details.endDate"
+            [max]="
+              specialCase.details.childcareType === 'papa-leave'
+                ? getPapaLeaveMaxEndDate(i)
+                : specialCase.details.childcareType === 'basic'
+                  ? getBasicChildcareMaxEndDate(i)
+                  : specialCase.details.childcareType === 'extended-1-6'
+                    ? getExtended16ChildcareMaxEndDate(i)
                     : specialCase.details.childcareType === 'extended-2'
-                      ? getExtended2ChildcareMinStartDate(i)
+                      ? getExtended2ChildcareMaxEndDate(i)
                       : null
-                "
-                (change)="
-                  calculateChildcarePeriod(i);
-                  validatePapaLeaveInput(i);
-                  validateBasicChildcareInput(i);
-                  validateExtended16ChildcareInput(i);
-                  validateExtended2ChildcareInput(i);
-                  validateSimilarMeasuresInput(i)
-                "
-                [class.invalid]="
-                  (specialCase.details.childcareType === 'papa-leave' &&
-                    isPapaLeaveStartDateInvalid(i)) ||
-                  (specialCase.details.childcareType === 'basic' &&
-                    isBasicChildcareStartDateInvalid(i)) ||
-                  (specialCase.details.childcareType === 'extended-1-6' &&
-                    isExtended16ChildcareStartDateInvalid(i)) ||
-                  (specialCase.details.childcareType === 'extended-2' &&
-                    isExtended2ChildcareStartDateInvalid(i))
-                "
-                class="form-input"
-              />
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'papa-leave'">
-                産後パパ育休は出生後8週間以内に開始してください
-              </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'basic'">
-                基本の育児休業は子が1歳になる日まで取得可能です
-              </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-1-6'">
-                延長育児休業は子が1歳になる日以降、1歳6か月になる日まで取得可能です
-              </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-2'">
-                延長育児休業は子が1歳6か月になる日以降、2歳になる日まで取得可能です
-              </div>
-            </div>
+            "
+            (change)="
+              calculateChildcarePeriod(i);
+              validatePapaLeaveInput(i);
+              validateBasicChildcareInput(i);
+              validateExtended16ChildcareInput(i);
+              validateExtended2ChildcareInput(i);
+              validateSimilarMeasuresInput(i)
+            "
+            [class.invalid]="
+              (specialCase.details.childcareType === 'papa-leave' &&
+                isPapaLeaveEndDateInvalid(i)) ||
+              (specialCase.details.childcareType === 'basic' &&
+                isBasicChildcareEndDateInvalid(i)) ||
+              (specialCase.details.childcareType === 'extended-1-6' &&
+                isExtended16ChildcareEndDateInvalid(i)) ||
+              (specialCase.details.childcareType === 'extended-2' &&
+                isExtended2ChildcareEndDateInvalid(i))
+            "
+            class="form-input"
+          />
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'papa-leave'">
+            産後パパ育休は最大4週間（28日）まで取得可能です
+          </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'basic'">
+            基本の育児休業は子が1歳になる日まで取得可能です
+          </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-1-6'">
+            延長育児休業は子が1歳6か月になる日まで取得可能です
+          </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-2'">
+            延長育児休業は子が2歳になる日まで取得可能です
+          </div>
+        </div>
 
-            <div class="form-group">
-              <label [for]="'childcare-end-' + i" class="form-label">育児休業終了予定日:</label>
-              <input
-                [id]="'childcare-end-' + i"
-                type="date"
-                [(ngModel)]="specialCase.details.endDate"
-                [max]="
-                  specialCase.details.childcareType === 'papa-leave'
-                    ? getPapaLeaveMaxEndDate(i)
-                    : specialCase.details.childcareType === 'basic'
-                      ? getBasicChildcareMaxEndDate(i)
-                      : specialCase.details.childcareType === 'extended-1-6'
-                        ? getExtended16ChildcareMaxEndDate(i)
-                        : specialCase.details.childcareType === 'extended-2'
-                          ? getExtended2ChildcareMaxEndDate(i)
-                          : null
-                "
-                (change)="
-                  calculateChildcarePeriod(i);
-                  validatePapaLeaveInput(i);
-                  validateBasicChildcareInput(i);
-                  validateExtended16ChildcareInput(i);
-                  validateExtended2ChildcareInput(i);
-                  validateSimilarMeasuresInput(i)
-                "
-                [class.invalid]="
-                  (specialCase.details.childcareType === 'papa-leave' &&
-                    isPapaLeaveEndDateInvalid(i)) ||
-                  (specialCase.details.childcareType === 'basic' &&
-                    isBasicChildcareEndDateInvalid(i)) ||
-                  (specialCase.details.childcareType === 'extended-1-6' &&
-                    isExtended16ChildcareEndDateInvalid(i)) ||
-                  (specialCase.details.childcareType === 'extended-2' &&
-                    isExtended2ChildcareEndDateInvalid(i))
-                "
-                class="form-input"
-              />
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'papa-leave'">
-                産後パパ育休は最大4週間（28日）まで取得可能です
+        <!-- 延長理由（延長育児休業の場合のみ表示） -->
+        <div class="form-group full-width" *ngIf="isExtendedChildcare(i)">
+          <label [for]="'extension-reason-' + i">延長理由:</label>
+          <div class="custom-select-wrapper">
+            <div
+              class="custom-select"
+              [class.open]="extensionReasonDropdownOpen[i]"
+              (click)="toggleExtensionReasonDropdown(i)"
+              (keydown.enter)="toggleExtensionReasonDropdown(i)"
+              (keydown.space)="toggleExtensionReasonDropdown(i)"
+              tabindex="0"
+            >
+              <div class="select-display">
+                {{ getExtensionReasonDisplayText(specialCase.details.extensionReason) }}
+                <span class="dropdown-arrow">▼</span>
               </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'basic'">
-                基本の育児休業は子が1歳になる日まで取得可能です
-              </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-1-6'">
-                延長育児休業は子が1歳6か月になる日まで取得可能です
-              </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-2'">
-                延長育児休業は子が2歳になる日まで取得可能です
-              </div>
-            </div>
-
-            <!-- 延長理由（延長育児休業の場合のみ表示） -->
-            <div class="form-group full-width" *ngIf="isExtendedChildcare(i)">
-              <label [for]="'extension-reason-' + i">延長理由:</label>
-              <div class="custom-select-wrapper">
+              <div class="options-list" *ngIf="extensionReasonDropdownOpen[i]">
                 <div
-                  class="custom-select"
-                  [class.open]="extensionReasonDropdownOpen[i]"
-                  (click)="toggleExtensionReasonDropdown(i)"
-                  (keydown.enter)="toggleExtensionReasonDropdown(i)"
-                  (keydown.space)="toggleExtensionReasonDropdown(i)"
+                  class="option-item"
+                  [class.selected]="specialCase.details.extensionReason === ''"
+                  (click)="selectExtensionReason(i, ''); $event.stopPropagation()"
+                  (keydown.enter)="selectExtensionReason(i, ''); $event.stopPropagation()"
                   tabindex="0"
                 >
-                  <div class="select-display">
-                    {{ getExtensionReasonDisplayText(specialCase.details.extensionReason) }}
-                    <span class="dropdown-arrow">▼</span>
-                  </div>
-                  <div class="options-list" *ngIf="extensionReasonDropdownOpen[i]">
-                    <div
-                      class="option-item"
-                      [class.selected]="specialCase.details.extensionReason === ''"
-                      (click)="selectExtensionReason(i, ''); $event.stopPropagation()"
-                      (keydown.enter)="selectExtensionReason(i, ''); $event.stopPropagation()"
-                      tabindex="0"
-                    >
-                      選択してください
-                    </div>
-                    <div
-                      class="option-item"
-                      [class.selected]="
-                        specialCase.details.extensionReason === 'nursery-unavailable'
-                      "
-                      (click)="
-                        selectExtensionReason(i, 'nursery-unavailable'); $event.stopPropagation()
-                      "
-                      (keydown.enter)="
-                        selectExtensionReason(i, 'nursery-unavailable'); $event.stopPropagation()
-                      "
-                      tabindex="0"
-                    >
-                      保育所等に入所できない
-                    </div>
-                    <div
-                      class="option-item"
-                      [class.selected]="
-                        specialCase.details.extensionReason === 'spouse-circumstances'
-                      "
-                      (click)="
-                        selectExtensionReason(i, 'spouse-circumstances'); $event.stopPropagation()
-                      "
-                      (keydown.enter)="
-                        selectExtensionReason(i, 'spouse-circumstances'); $event.stopPropagation()
-                      "
-                      tabindex="0"
-                    >
-                      配偶者の死亡・負傷・疾病等
-                    </div>
-                    <div
-                      class="option-item"
-                      [class.selected]="specialCase.details.extensionReason === 'spouse-separation'"
-                      (click)="
-                        selectExtensionReason(i, 'spouse-separation'); $event.stopPropagation()
-                      "
-                      (keydown.enter)="
-                        selectExtensionReason(i, 'spouse-separation'); $event.stopPropagation()
-                      "
-                      tabindex="0"
-                    >
-                      配偶者との別居等
-                    </div>
-                    <div
-                      class="option-item"
-                      [class.selected]="
-                        specialCase.details.extensionReason === 'spouse-work-restart'
-                      "
-                      (click)="
-                        selectExtensionReason(i, 'spouse-work-restart'); $event.stopPropagation()
-                      "
-                      (keydown.enter)="
-                        selectExtensionReason(i, 'spouse-work-restart'); $event.stopPropagation()
-                      "
-                      tabindex="0"
-                    >
-                      配偶者の職場復帰
-                    </div>
-                  </div>
+                  選択してください
+                </div>
+                <div
+                  class="option-item"
+                  [class.selected]="specialCase.details.extensionReason === 'nursery-unavailable'"
+                  (click)="
+                    selectExtensionReason(i, 'nursery-unavailable'); $event.stopPropagation()
+                  "
+                  (keydown.enter)="
+                    selectExtensionReason(i, 'nursery-unavailable'); $event.stopPropagation()
+                  "
+                  tabindex="0"
+                >
+                  保育所等に入所できない
+                </div>
+                <div
+                  class="option-item"
+                  [class.selected]="specialCase.details.extensionReason === 'spouse-circumstances'"
+                  (click)="
+                    selectExtensionReason(i, 'spouse-circumstances'); $event.stopPropagation()
+                  "
+                  (keydown.enter)="
+                    selectExtensionReason(i, 'spouse-circumstances'); $event.stopPropagation()
+                  "
+                  tabindex="0"
+                >
+                  配偶者の死亡・負傷・疾病等
+                </div>
+                <div
+                  class="option-item"
+                  [class.selected]="specialCase.details.extensionReason === 'spouse-separation'"
+                  (click)="selectExtensionReason(i, 'spouse-separation'); $event.stopPropagation()"
+                  (keydown.enter)="
+                    selectExtensionReason(i, 'spouse-separation'); $event.stopPropagation()
+                  "
+                  tabindex="0"
+                >
+                  配偶者との別居等
+                </div>
+                <div
+                  class="option-item"
+                  [class.selected]="specialCase.details.extensionReason === 'spouse-work-restart'"
+                  (click)="
+                    selectExtensionReason(i, 'spouse-work-restart'); $event.stopPropagation()
+                  "
+                  (keydown.enter)="
+                    selectExtensionReason(i, 'spouse-work-restart'); $event.stopPropagation()
+                  "
+                  tabindex="0"
+                >
+                  配偶者の職場復帰
                 </div>
               </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-1-6'">
-                延長育児休業には特別な理由が必要です。該当する理由を選択してください
-              </div>
-              <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-2'">
-                2歳までの延長育児休業には、1歳6か月時点での特別な事情の継続が必要です
-              </div>
-            </div>
-
-            <!-- 産後パパ育休の分割取得（産後パパ育休の場合のみ表示） -->
-            <div
-              class="form-group full-width"
-              *ngIf="specialCase.details.childcareType === 'papa-leave'"
-            >
-              <label [for]="'papa-split-' + i">分割取得:</label>
-              <select [id]="'papa-split-' + i" [(ngModel)]="specialCase.details.papaSplit">
-                <option value="">選択してください</option>
-                <option value="no-split">分割なし（一括取得）</option>
-                <option value="split-2">2回に分割</option>
-              </select>
-            </div>
-
-            <!-- 産後パパ育休の期間チェック結果表示 -->
-            <div
-              class="form-group full-width"
-              *ngIf="
-                specialCase.details.childcareType === 'papa-leave' && getPapaLeaveValidation(i)
-              "
-            >
-              <div
-                class="validation-result validation-result-unified"
-                [class.error]="!getPapaLeaveValidation(i)?.isValid"
-              >
-                <h5>産後パパ育休 期間チェック結果</h5>
-
-                <!-- エラー表示 -->
-                <div
-                  class="validation-errors"
-                  *ngIf="(getPapaLeaveValidation(i)?.errors?.length || 0) > 0"
-                >
-                  <div
-                    class="error-item"
-                    *ngFor="let error of getPapaLeaveValidation(i)?.errors || []"
-                  >
-                    <i class="icon-warning"></i>
-                    {{ error }}
-                  </div>
-                </div>
-
-                <!-- 期間情報表示 -->
-                <div class="period-summary" *ngIf="getPapaLeaveCalculation(i)">
-                  <div class="summary-item">
-                    <span class="label">申請期間:</span>
-                    <span class="value">{{ getPapaLeaveCalculation(i)?.requestedDays }}日間</span>
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">法定上限:</span>
-                    <span class="value">{{ getPapaLeaveCalculation(i)?.maxAllowedDays }}日間</span>
-                  </div>
-                  <div
-                    class="summary-item"
-                    [class.valid]="getPapaLeaveCalculation(i)?.isWithinLimit"
-                    [class.invalid]="!getPapaLeaveCalculation(i)?.isWithinLimit"
-                  >
-                    <span class="label">判定:</span>
-                    <span class="value">{{
-                      getPapaLeaveCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
-                    }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 基本育児休業の期間チェック結果表示 -->
-            <div
-              class="form-group full-width"
-              *ngIf="
-                specialCase.details.childcareType === 'basic' && getBasicChildcareValidation(i)
-              "
-            >
-              <div
-                class="validation-result validation-result-unified"
-                [class.error]="!getBasicChildcareValidation(i)?.isValid"
-              >
-                <h5>基本育児休業 期間チェック結果</h5>
-
-                <!-- エラー表示 -->
-                <div
-                  class="validation-errors"
-                  *ngIf="(getBasicChildcareValidation(i)?.errors?.length || 0) > 0"
-                >
-                  <div
-                    class="error-item"
-                    *ngFor="let error of getBasicChildcareValidation(i)?.errors || []"
-                  >
-                    <i class="icon-warning"></i>
-                    {{ error }}
-                  </div>
-                </div>
-
-                <!-- 警告表示 -->
-                <div
-                  class="validation-warnings"
-                  *ngIf="(getBasicChildcareValidation(i)?.warnings?.length || 0) > 0"
-                >
-                  <div
-                    class="warning-item"
-                    *ngFor="let warning of getBasicChildcareValidation(i)?.warnings || []"
-                  >
-                    <i class="icon-info"></i>
-                    {{ warning }}
-                  </div>
-                </div>
-
-                <!-- 期間情報表示 -->
-                <div class="period-summary" *ngIf="getBasicChildcareCalculation(i)">
-                  <div class="summary-item">
-                    <span class="label">申請期間:</span>
-                    <span class="value"
-                      >{{ getBasicChildcareCalculation(i)?.requestedDays }}日間</span
-                    >
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">法定上限:</span>
-                    <span class="value"
-                      >{{ getBasicChildcareCalculation(i)?.maxAllowedDays }}日間</span
-                    >
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">終了時の子の年齢:</span>
-                    <span class="value">{{ getBasicChildcareCalculation(i)?.childAge }}</span>
-                  </div>
-                  <div
-                    class="summary-item"
-                    [class.valid]="getBasicChildcareCalculation(i)?.isWithinLimit"
-                    [class.invalid]="!getBasicChildcareCalculation(i)?.isWithinLimit"
-                  >
-                    <span class="label">判定:</span>
-                    <span class="value">{{
-                      getBasicChildcareCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
-                    }}</span>
-                  </div>
-                  <div class="summary-item" *ngIf="getBasicChildcareCalculation(i)?.canExtend">
-                    <span class="label">延長可能性:</span>
-                    <span class="value extend-available">延長育児休業への移行が可能です</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 延長育児休業（1歳～1歳6か月）の期間チェック結果表示 -->
-            <div
-              class="form-group full-width"
-              *ngIf="
-                specialCase.details.childcareType === 'extended-1-6' &&
-                getExtended16ChildcareValidation(i)
-              "
-            >
-              <div
-                class="validation-result validation-result-unified"
-                [class.error]="!getExtended16ChildcareValidation(i)?.isValid"
-              >
-                <h5>延長育児休業（1歳～1歳6か月） 期間チェック結果</h5>
-
-                <!-- エラー表示 -->
-                <div
-                  class="validation-errors"
-                  *ngIf="(getExtended16ChildcareValidation(i)?.errors?.length || 0) > 0"
-                >
-                  <div
-                    class="error-item"
-                    *ngFor="let error of getExtended16ChildcareValidation(i)?.errors || []"
-                  >
-                    <i class="icon-warning"></i>
-                    {{ error }}
-                  </div>
-                </div>
-
-                <!-- 警告表示 -->
-                <div
-                  class="validation-warnings"
-                  *ngIf="(getExtended16ChildcareValidation(i)?.warnings?.length || 0) > 0"
-                >
-                  <div
-                    class="warning-item"
-                    *ngFor="let warning of getExtended16ChildcareValidation(i)?.warnings || []"
-                  >
-                    <i class="icon-info"></i>
-                    {{ warning }}
-                  </div>
-                </div>
-
-                <!-- 期間情報表示 -->
-                <div class="period-summary" *ngIf="getExtended16ChildcareCalculation(i)">
-                  <div class="summary-item">
-                    <span class="label">申請期間:</span>
-                    <span class="value"
-                      >{{ getExtended16ChildcareCalculation(i)?.requestedDays }}日間</span
-                    >
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">法定上限:</span>
-                    <span class="value"
-                      >{{ getExtended16ChildcareCalculation(i)?.maxAllowedDays }}日間</span
-                    >
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">終了時の子の年齢:</span>
-                    <span class="value">{{ getExtended16ChildcareCalculation(i)?.childAge }}</span>
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">延長理由:</span>
-                    <span class="value">{{
-                      getExtended16ChildcareCalculation(i)?.extensionReason
-                    }}</span>
-                  </div>
-                  <div
-                    class="summary-item"
-                    [class.valid]="getExtended16ChildcareCalculation(i)?.isWithinLimit"
-                    [class.invalid]="!getExtended16ChildcareCalculation(i)?.isWithinLimit"
-                  >
-                    <span class="label">判定:</span>
-                    <span class="value">{{
-                      getExtended16ChildcareCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
-                    }}</span>
-                  </div>
-                  <div
-                    class="summary-item"
-                    *ngIf="getExtended16ChildcareCalculation(i)?.canExtendFurther"
-                  >
-                    <span class="label">さらなる延長可能性:</span>
-                    <span class="value extend-available"
-                      >2歳までの延長育児休業への移行が可能です</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 延長育児休業（1歳6か月～2歳）の期間チェック結果表示 -->
-            <div
-              class="form-group full-width"
-              *ngIf="
-                specialCase.details.childcareType === 'extended-2' &&
-                getExtended2ChildcareValidation(i)
-              "
-            >
-              <div
-                class="validation-result validation-result-unified"
-                [class.error]="!getExtended2ChildcareValidation(i)?.isValid"
-              >
-                <h5>延長育児休業（1歳6か月～2歳） 期間チェック結果</h5>
-
-                <!-- エラー表示 -->
-                <div
-                  class="validation-errors"
-                  *ngIf="(getExtended2ChildcareValidation(i)?.errors?.length || 0) > 0"
-                >
-                  <div
-                    class="error-item"
-                    *ngFor="let error of getExtended2ChildcareValidation(i)?.errors || []"
-                  >
-                    <i class="icon-warning"></i>
-                    {{ error }}
-                  </div>
-                </div>
-
-                <!-- 警告表示 -->
-                <div
-                  class="validation-warnings"
-                  *ngIf="(getExtended2ChildcareValidation(i)?.warnings?.length || 0) > 0"
-                >
-                  <div
-                    class="warning-item"
-                    *ngFor="let warning of getExtended2ChildcareValidation(i)?.warnings || []"
-                  >
-                    <i class="icon-info"></i>
-                    {{ warning }}
-                  </div>
-                </div>
-
-                <!-- 期間情報表示 -->
-                <div class="period-summary" *ngIf="getExtended2ChildcareCalculation(i)">
-                  <div class="summary-item">
-                    <span class="label">申請期間:</span>
-                    <span class="value"
-                      >{{ getExtended2ChildcareCalculation(i)?.requestedDays }}日間</span
-                    >
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">法定上限:</span>
-                    <span class="value"
-                      >{{ getExtended2ChildcareCalculation(i)?.maxAllowedDays }}日間</span
-                    >
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">終了時の子の年齢:</span>
-                    <span class="value">{{ getExtended2ChildcareCalculation(i)?.childAge }}</span>
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">延長理由:</span>
-                    <span class="value">{{
-                      getExtended2ChildcareCalculation(i)?.extensionReason
-                    }}</span>
-                  </div>
-                  <div
-                    class="summary-item"
-                    [class.valid]="getExtended2ChildcareCalculation(i)?.isWithinLimit"
-                    [class.invalid]="!getExtended2ChildcareCalculation(i)?.isWithinLimit"
-                  >
-                    <span class="label">判定:</span>
-                    <span class="value">{{
-                      getExtended2ChildcareCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
-                    }}</span>
-                  </div>
-                  <div class="summary-item max-extension">
-                    <span class="label">延長レベル:</span>
-                    <span class="value final-extension">法定最大延長（2歳まで）</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 育児休業に準ずる措置の期間チェック結果表示 -->
-            <div
-              class="form-group full-width"
-              *ngIf="
-                specialCase.details.childcareType === 'similar-measures' &&
-                getSimilarMeasuresValidation(i)
-              "
-            >
-              <div
-                class="validation-result validation-result-unified"
-                [class.error]="!getSimilarMeasuresValidation(i)?.isValid"
-              >
-                <h5>育児休業に準ずる措置 期間チェック結果</h5>
-
-                <!-- エラー表示 -->
-                <div
-                  class="validation-errors"
-                  *ngIf="(getSimilarMeasuresValidation(i)?.errors?.length || 0) > 0"
-                >
-                  <div
-                    class="error-item"
-                    *ngFor="let error of getSimilarMeasuresValidation(i)?.errors || []"
-                  >
-                    <i class="icon-warning"></i>
-                    {{ error }}
-                  </div>
-                </div>
-
-                <!-- 警告表示 -->
-                <div
-                  class="validation-warnings"
-                  *ngIf="(getSimilarMeasuresValidation(i)?.warnings?.length || 0) > 0"
-                >
-                  <div
-                    class="warning-item"
-                    *ngFor="let warning of getSimilarMeasuresValidation(i)?.warnings || []"
-                  >
-                    <i class="icon-info"></i>
-                    {{ warning }}
-                  </div>
-                </div>
-
-                <!-- 期間情報表示 -->
-                <div class="period-summary" *ngIf="getSimilarMeasuresCalculation(i)">
-                  <div class="summary-item">
-                    <span class="label">申請期間:</span>
-                    <span class="value"
-                      >{{ getSimilarMeasuresCalculation(i)?.requestedDays }}日間</span
-                    >
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">終了時の子の年齢:</span>
-                    <span class="value">{{ getSimilarMeasuresCalculation(i)?.childAge }}</span>
-                  </div>
-                  <div class="summary-item">
-                    <span class="label">措置の種類:</span>
-                    <span class="value">{{ getSimilarMeasuresCalculation(i)?.measureType }}</span>
-                  </div>
-                  <div class="summary-item similar-measures">
-                    <span class="label">制度区分:</span>
-                    <span class="value special-measure">育児休業に準ずる措置</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 計算結果表示（統合版） -->
-            <div class="form-group full-width" *ngIf="getCalculatedChildcarePeriod(i)">
-              <div class="calculated-period">
-                <h5 class="calculated-period-title">社会保険料免除期間の計算結果</h5>
-                <div class="period-info">
-                  <div class="period-item">
-                    <span class="label">月額保険料免除期間:</span>
-                    <span class="value">{{
-                      getCalculatedChildcarePeriod(i)?.monthlyPremiumExemption
-                    }}</span>
-                  </div>
-                  <div class="period-item" *ngIf="getCalculatedChildcarePeriod(i)?.bonusNote">
-                    <span class="label">賞与保険料免除:</span>
-                    <span class="value">{{ getCalculatedChildcarePeriod(i)?.bonusNote }}</span>
-                  </div>
-                  <div
-                    class="period-item special-note"
-                    *ngIf="getCalculatedChildcarePeriod(i)?.specialNote"
-                  >
-                    <span class="label">特記事項:</span>
-                    <span class="value">{{ getCalculatedChildcarePeriod(i)?.specialNote }}</span>
-                  </div>
-                </div>
-
-                <!-- 社会保険料免除期間の表示を統合（育児休業に準ずる措置以外） -->
-                <div
-                  class="exemption-period-display"
-                  *ngIf="specialCase.details.childcareType !== 'similar-measures'"
-                >
-                  <div class="exemption-bar">
-                    <span class="exemption-label">社会保険料免除期間:</span>
-                    <span class="exemption-period">{{ getChildcareExemptionPeriod(i) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group full-width">
-              <label [for]="'childcare-remarks-' + i">備考:</label>
-              <textarea
-                [id]="'childcare-remarks-' + i"
-                [(ngModel)]="specialCase.details.remarks"
-                placeholder="育児休業に関する特記事項など"
-              ></textarea>
             </div>
           </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-1-6'">
+            延長育児休業には特別な理由が必要です。該当する理由を選択してください
+          </div>
+          <div class="field-hint" *ngIf="specialCase.details.childcareType === 'extended-2'">
+            2歳までの延長育児休業には、1歳6か月時点での特別な事情の継続が必要です
+          </div>
+        </div>
 
-          <!-- 育休の保存ボタン -->
-          <div class="case-save-section">
-            <button
-              class="btn-save-case"
-              (click)="saveSpecialCase(i)"
-              [disabled]="!canSaveChildcareCase(i)"
+        <!-- 産後パパ育休の分割取得（産後パパ育休の場合のみ表示） -->
+        <div
+          class="form-group full-width"
+          *ngIf="specialCase.details.childcareType === 'papa-leave'"
+        >
+          <label [for]="'papa-split-' + i">分割取得:</label>
+          <select [id]="'papa-split-' + i" [(ngModel)]="specialCase.details.papaSplit">
+            <option value="">選択してください</option>
+            <option value="no-split">分割なし（一括取得）</option>
+            <option value="split-2">2回に分割</option>
+          </select>
+        </div>
+
+        <!-- 産後パパ育休の期間チェック結果表示 -->
+        <div
+          class="form-group full-width"
+          *ngIf="specialCase.details.childcareType === 'papa-leave' && getPapaLeaveValidation(i)"
+        >
+          <div
+            class="validation-result validation-result-unified"
+            [class.error]="!getPapaLeaveValidation(i)?.isValid"
+          >
+            <h5>産後パパ育休 期間チェック結果</h5>
+
+            <!-- エラー表示 -->
+            <div
+              class="validation-errors"
+              *ngIf="(getPapaLeaveValidation(i)?.errors?.length || 0) > 0"
             >
-              <i class="icon-save"></i>
-              この情報を保存
-            </button>
-            <div class="save-status" *ngIf="specialCase.saveStatus">
-              <span class="status-icon" [class]="specialCase.saveStatus">
-                {{
-                  specialCase.saveStatus === 'saved'
-                    ? '✓'
-                    : specialCase.saveStatus === 'saving'
-                      ? '⏳'
-                      : '✗'
-                }}
-              </span>
-              <span class="status-text">
-                {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
-              </span>
+              <div class="error-item" *ngFor="let error of getPapaLeaveValidation(i)?.errors || []">
+                <i class="icon-warning"></i>
+                {{ error }}
+              </div>
+            </div>
+
+            <!-- 期間情報表示 -->
+            <div class="period-summary" *ngIf="getPapaLeaveCalculation(i)">
+              <div class="summary-item">
+                <span class="label">申請期間:</span>
+                <span class="value">{{ getPapaLeaveCalculation(i)?.requestedDays }}日間</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">法定上限:</span>
+                <span class="value">{{ getPapaLeaveCalculation(i)?.maxAllowedDays }}日間</span>
+              </div>
+              <div
+                class="summary-item"
+                [class.valid]="getPapaLeaveCalculation(i)?.isWithinLimit"
+                [class.invalid]="!getPapaLeaveCalculation(i)?.isWithinLimit"
+              >
+                <span class="label">判定:</span>
+                <span class="value">{{
+                  getPapaLeaveCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
+                }}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- その他の事例の簡易フォーム -->
+        <!-- 基本育児休業の期間チェック結果表示 -->
         <div
-          class="case-details"
-          *ngIf="
-            specialCase.type &&
-            specialCase.type !== 'maternity-leave' &&
-            specialCase.type !== 'childcare-leave'
-          "
+          class="form-group full-width"
+          *ngIf="specialCase.details.childcareType === 'basic' && getBasicChildcareValidation(i)"
         >
-          <!-- 注意書き -->
           <div
-            class="notice-section"
-            *ngIf="
-              specialCase.type === 'other-leave' ||
-              specialCase.type === 'secondment' ||
-              specialCase.type === 'multiple-workplace'
-            "
+            class="validation-result validation-result-unified"
+            [class.error]="!getBasicChildcareValidation(i)?.isValid"
           >
-            <div class="notice-box">
-              <i class="icon-info"></i>
-              <div class="notice-content">
-                <h5>重要なお知らせ</h5>
-                <p>この項目については、詳細な状況を記入の上、必ず人事担当者にご相談ください。</p>
-                <p>適切な社会保険の適用には、個別の検討が必要な場合があります。</p>
+            <h5>基本育児休業 期間チェック結果</h5>
+
+            <!-- エラー表示 -->
+            <div
+              class="validation-errors"
+              *ngIf="(getBasicChildcareValidation(i)?.errors?.length || 0) > 0"
+            >
+              <div
+                class="error-item"
+                *ngFor="let error of getBasicChildcareValidation(i)?.errors || []"
+              >
+                <i class="icon-warning"></i>
+                {{ error }}
+              </div>
+            </div>
+
+            <!-- 警告表示 -->
+            <div
+              class="validation-warnings"
+              *ngIf="(getBasicChildcareValidation(i)?.warnings?.length || 0) > 0"
+            >
+              <div
+                class="warning-item"
+                *ngFor="let warning of getBasicChildcareValidation(i)?.warnings || []"
+              >
+                <i class="icon-info"></i>
+                {{ warning }}
+              </div>
+            </div>
+
+            <!-- 期間情報表示 -->
+            <div class="period-summary" *ngIf="getBasicChildcareCalculation(i)">
+              <div class="summary-item">
+                <span class="label">申請期間:</span>
+                <span class="value">{{ getBasicChildcareCalculation(i)?.requestedDays }}日間</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">法定上限:</span>
+                <span class="value">{{ getBasicChildcareCalculation(i)?.maxAllowedDays }}日間</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">終了時の子の年齢:</span>
+                <span class="value">{{ getBasicChildcareCalculation(i)?.childAge }}</span>
+              </div>
+              <div
+                class="summary-item"
+                [class.valid]="getBasicChildcareCalculation(i)?.isWithinLimit"
+                [class.invalid]="!getBasicChildcareCalculation(i)?.isWithinLimit"
+              >
+                <span class="label">判定:</span>
+                <span class="value">{{
+                  getBasicChildcareCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
+                }}</span>
+              </div>
+              <div class="summary-item" *ngIf="getBasicChildcareCalculation(i)?.canExtend">
+                <span class="label">延長可能性:</span>
+                <span class="value extend-available">延長育児休業への移行が可能です</span>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="form-group full-width">
-            <label [for]="'other-remarks-' + i">詳細・備考:</label>
-            <textarea
-              [id]="'other-remarks-' + i"
-              [(ngModel)]="specialCase.details.remarks"
-              [placeholder]="getPlaceholderText(specialCase.type)"
-            ></textarea>
-          </div>
+        <!-- 延長育児休業（1歳～1歳6か月）の期間チェック結果表示 -->
+        <div
+          class="form-group full-width"
+          *ngIf="
+            specialCase.details.childcareType === 'extended-1-6' &&
+            getExtended16ChildcareValidation(i)
+          "
+        >
+          <div
+            class="validation-result validation-result-unified"
+            [class.error]="!getExtended16ChildcareValidation(i)?.isValid"
+          >
+            <h5>延長育児休業（1歳～1歳6か月） 期間チェック結果</h5>
 
-          <!-- その他の事例の保存ボタン -->
-          <div class="case-save-section">
-            <button
-              class="btn-save-case"
-              (click)="saveSpecialCase(i)"
-              [disabled]="!canSaveOtherCase(i)"
+            <!-- エラー表示 -->
+            <div
+              class="validation-errors"
+              *ngIf="(getExtended16ChildcareValidation(i)?.errors?.length || 0) > 0"
             >
-              <i class="icon-save"></i>
-              この情報を保存
-            </button>
-            <div class="save-status" *ngIf="specialCase.saveStatus">
-              <span class="status-icon" [class]="specialCase.saveStatus">
-                {{
-                  specialCase.saveStatus === 'saved'
-                    ? '✓'
-                    : specialCase.saveStatus === 'saving'
-                      ? '⏳'
-                      : '✗'
-                }}
-              </span>
-              <span class="status-text">
-                {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
-              </span>
+              <div
+                class="error-item"
+                *ngFor="let error of getExtended16ChildcareValidation(i)?.errors || []"
+              >
+                <i class="icon-warning"></i>
+                {{ error }}
+              </div>
             </div>
+
+            <!-- 警告表示 -->
+            <div
+              class="validation-warnings"
+              *ngIf="(getExtended16ChildcareValidation(i)?.warnings?.length || 0) > 0"
+            >
+              <div
+                class="warning-item"
+                *ngFor="let warning of getExtended16ChildcareValidation(i)?.warnings || []"
+              >
+                <i class="icon-info"></i>
+                {{ warning }}
+              </div>
+            </div>
+
+            <!-- 期間情報表示 -->
+            <div class="period-summary" *ngIf="getExtended16ChildcareCalculation(i)">
+              <div class="summary-item">
+                <span class="label">申請期間:</span>
+                <span class="value"
+                  >{{ getExtended16ChildcareCalculation(i)?.requestedDays }}日間</span
+                >
+              </div>
+              <div class="summary-item">
+                <span class="label">法定上限:</span>
+                <span class="value"
+                  >{{ getExtended16ChildcareCalculation(i)?.maxAllowedDays }}日間</span
+                >
+              </div>
+              <div class="summary-item">
+                <span class="label">終了時の子の年齢:</span>
+                <span class="value">{{ getExtended16ChildcareCalculation(i)?.childAge }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">延長理由:</span>
+                <span class="value">{{
+                  getExtended16ChildcareCalculation(i)?.extensionReason
+                }}</span>
+              </div>
+              <div
+                class="summary-item"
+                [class.valid]="getExtended16ChildcareCalculation(i)?.isWithinLimit"
+                [class.invalid]="!getExtended16ChildcareCalculation(i)?.isWithinLimit"
+              >
+                <span class="label">判定:</span>
+                <span class="value">{{
+                  getExtended16ChildcareCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
+                }}</span>
+              </div>
+              <div
+                class="summary-item"
+                *ngIf="getExtended16ChildcareCalculation(i)?.canExtendFurther"
+              >
+                <span class="label">さらなる延長可能性:</span>
+                <span class="value extend-available">2歳までの延長育児休業への移行が可能です</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 延長育児休業（1歳6か月～2歳）の期間チェック結果表示 -->
+        <div
+          class="form-group full-width"
+          *ngIf="
+            specialCase.details.childcareType === 'extended-2' && getExtended2ChildcareValidation(i)
+          "
+        >
+          <div
+            class="validation-result validation-result-unified"
+            [class.error]="!getExtended2ChildcareValidation(i)?.isValid"
+          >
+            <h5>延長育児休業（1歳6か月～2歳） 期間チェック結果</h5>
+
+            <!-- エラー表示 -->
+            <div
+              class="validation-errors"
+              *ngIf="(getExtended2ChildcareValidation(i)?.errors?.length || 0) > 0"
+            >
+              <div
+                class="error-item"
+                *ngFor="let error of getExtended2ChildcareValidation(i)?.errors || []"
+              >
+                <i class="icon-warning"></i>
+                {{ error }}
+              </div>
+            </div>
+
+            <!-- 警告表示 -->
+            <div
+              class="validation-warnings"
+              *ngIf="(getExtended2ChildcareValidation(i)?.warnings?.length || 0) > 0"
+            >
+              <div
+                class="warning-item"
+                *ngFor="let warning of getExtended2ChildcareValidation(i)?.warnings || []"
+              >
+                <i class="icon-info"></i>
+                {{ warning }}
+              </div>
+            </div>
+
+            <!-- 期間情報表示 -->
+            <div class="period-summary" *ngIf="getExtended2ChildcareCalculation(i)">
+              <div class="summary-item">
+                <span class="label">申請期間:</span>
+                <span class="value"
+                  >{{ getExtended2ChildcareCalculation(i)?.requestedDays }}日間</span
+                >
+              </div>
+              <div class="summary-item">
+                <span class="label">法定上限:</span>
+                <span class="value"
+                  >{{ getExtended2ChildcareCalculation(i)?.maxAllowedDays }}日間</span
+                >
+              </div>
+              <div class="summary-item">
+                <span class="label">終了時の子の年齢:</span>
+                <span class="value">{{ getExtended2ChildcareCalculation(i)?.childAge }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">延長理由:</span>
+                <span class="value">{{
+                  getExtended2ChildcareCalculation(i)?.extensionReason
+                }}</span>
+              </div>
+              <div
+                class="summary-item"
+                [class.valid]="getExtended2ChildcareCalculation(i)?.isWithinLimit"
+                [class.invalid]="!getExtended2ChildcareCalculation(i)?.isWithinLimit"
+              >
+                <span class="label">判定:</span>
+                <span class="value">{{
+                  getExtended2ChildcareCalculation(i)?.isWithinLimit ? '適正' : '制限超過'
+                }}</span>
+              </div>
+              <div class="summary-item max-extension">
+                <span class="label">延長レベル:</span>
+                <span class="value final-extension">法定最大延長（2歳まで）</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 育児休業に準ずる措置の期間チェック結果表示 -->
+        <div
+          class="form-group full-width"
+          *ngIf="
+            specialCase.details.childcareType === 'similar-measures' &&
+            getSimilarMeasuresValidation(i)
+          "
+        >
+          <div
+            class="validation-result validation-result-unified"
+            [class.error]="!getSimilarMeasuresValidation(i)?.isValid"
+          >
+            <h5>育児休業に準ずる措置 期間チェック結果</h5>
+
+            <!-- エラー表示 -->
+            <div
+              class="validation-errors"
+              *ngIf="(getSimilarMeasuresValidation(i)?.errors?.length || 0) > 0"
+            >
+              <div
+                class="error-item"
+                *ngFor="let error of getSimilarMeasuresValidation(i)?.errors || []"
+              >
+                <i class="icon-warning"></i>
+                {{ error }}
+              </div>
+            </div>
+
+            <!-- 警告表示 -->
+            <div
+              class="validation-warnings"
+              *ngIf="(getSimilarMeasuresValidation(i)?.warnings?.length || 0) > 0"
+            >
+              <div
+                class="warning-item"
+                *ngFor="let warning of getSimilarMeasuresValidation(i)?.warnings || []"
+              >
+                <i class="icon-info"></i>
+                {{ warning }}
+              </div>
+            </div>
+
+            <!-- 期間情報表示 -->
+            <div class="period-summary" *ngIf="getSimilarMeasuresCalculation(i)">
+              <div class="summary-item">
+                <span class="label">申請期間:</span>
+                <span class="value">{{ getSimilarMeasuresCalculation(i)?.requestedDays }}日間</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">終了時の子の年齢:</span>
+                <span class="value">{{ getSimilarMeasuresCalculation(i)?.childAge }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">措置の種類:</span>
+                <span class="value">{{ getSimilarMeasuresCalculation(i)?.measureType }}</span>
+              </div>
+              <div class="summary-item similar-measures">
+                <span class="label">制度区分:</span>
+                <span class="value special-measure">育児休業に準ずる措置</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 計算結果表示（統合版） -->
+        <div class="form-group full-width" *ngIf="getCalculatedChildcarePeriod(i)">
+          <div class="calculated-period">
+            <h5 class="calculated-period-title">社会保険料免除期間の計算結果</h5>
+            <div class="period-info">
+              <div class="period-item">
+                <span class="label">月額保険料免除期間:</span>
+                <span class="value">{{
+                  getCalculatedChildcarePeriod(i)?.monthlyPremiumExemption
+                }}</span>
+              </div>
+              <div class="period-item" *ngIf="getCalculatedChildcarePeriod(i)?.bonusNote">
+                <span class="label">賞与保険料免除:</span>
+                <span class="value">{{ getCalculatedChildcarePeriod(i)?.bonusNote }}</span>
+              </div>
+              <div
+                class="period-item special-note"
+                *ngIf="getCalculatedChildcarePeriod(i)?.specialNote"
+              >
+                <span class="label">特記事項:</span>
+                <span class="value">{{ getCalculatedChildcarePeriod(i)?.specialNote }}</span>
+              </div>
+            </div>
+
+            <!-- 社会保険料免除期間の表示を統合（育児休業に準ずる措置以外） -->
+            <div
+              class="exemption-period-display"
+              *ngIf="specialCase.details.childcareType !== 'similar-measures'"
+            >
+              <div class="exemption-bar">
+                <span class="exemption-label">社会保険料免除期間:</span>
+                <span class="exemption-period">{{ getChildcareExemptionPeriod(i) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group full-width">
+          <label [for]="'childcare-remarks-' + i">備考:</label>
+          <textarea
+            [id]="'childcare-remarks-' + i"
+            [(ngModel)]="specialCase.details.remarks"
+            placeholder="育児休業に関する特記事項など"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 育休の保存ボタン -->
+      <div class="case-save-section">
+        <button
+          class="btn-save-case"
+          (click)="saveSpecialCase(i)"
+          [disabled]="!canSaveChildcareCase(i)"
+        >
+          <i class="icon-save"></i>
+          この情報を保存
+        </button>
+        <div class="save-status" *ngIf="specialCase.saveStatus">
+          <span class="status-icon" [class]="specialCase.saveStatus">
+            {{
+              specialCase.saveStatus === 'saved'
+                ? '✓'
+                : specialCase.saveStatus === 'saving'
+                  ? '⏳'
+                  : '✗'
+            }}
+          </span>
+          <span class="status-text">
+            {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- その他の事例の簡易フォーム -->
+    <div
+      class="case-details"
+      *ngIf="
+        specialCase.type &&
+        specialCase.type !== 'maternity-leave' &&
+        specialCase.type !== 'childcare-leave'
+      "
+    >
+      <!-- 注意書き -->
+      <div
+        class="notice-section"
+        *ngIf="
+          specialCase.type === 'other-leave' ||
+          specialCase.type === 'secondment' ||
+          specialCase.type === 'multiple-workplace'
+        "
+      >
+        <div class="notice-box">
+          <i class="icon-info"></i>
+          <div class="notice-content">
+            <h5>重要なお知らせ</h5>
+            <p>この項目については、詳細な状況を記入の上、必ず人事担当者にご相談ください。</p>
+            <p>適切な社会保険の適用には、個別の検討が必要な場合があります。</p>
           </div>
         </div>
       </div>
 
-      <div class="add-case-section">
-        <button class="btn-add-case" (click)="addSpecialCase()">
-          <i class="icon-plus"></i>
-          事例を追加
+      <div class="form-group full-width">
+        <label [for]="'other-remarks-' + i">詳細・備考:</label>
+        <textarea
+          [id]="'other-remarks-' + i"
+          [(ngModel)]="specialCase.details.remarks"
+          [placeholder]="getPlaceholderText(specialCase.type)"
+        ></textarea>
+      </div>
+
+      <!-- その他の事例の保存ボタン -->
+      <div class="case-save-section">
+        <button
+          class="btn-save-case"
+          (click)="saveSpecialCase(i)"
+          [disabled]="!canSaveOtherCase(i)"
+        >
+          <i class="icon-save"></i>
+          この情報を保存
         </button>
+        <div class="save-status" *ngIf="specialCase.saveStatus">
+          <span class="status-icon" [class]="specialCase.saveStatus">
+            {{
+              specialCase.saveStatus === 'saved'
+                ? '✓'
+                : specialCase.saveStatus === 'saving'
+                  ? '⏳'
+                  : '✗'
+            }}
+          </span>
+          <span class="status-text">
+            {{ getSpecialCaseSaveStatusText(specialCase.saveStatus) }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- アクションボタン -->
-  <div class="action-buttons" *ngIf="!judgmentResult">
-    <!-- 判定結果がない時のみ表示 -->
+  <div class="add-case-section">
+    <button class="btn-add-case" (click)="addSpecialCase()">
+      <i class="icon-plus"></i>
+      事例を追加
+    </button>
   </div>
 </div>
+-->
+
+<!--
+  <div class="action-buttons" *ngIf="!judgmentResult">
+  </div>
+    <!-- 判定結果がない時のみ表示 -->
