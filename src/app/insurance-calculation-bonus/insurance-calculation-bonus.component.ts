@@ -772,6 +772,12 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
   async addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
     if (!this.employeeInfo) return;
+
+    // 年3回までの制限チェック
+    if (this.bonusDataList.length >= 3) {
+      this.errorMessage = '年間3回までしか賞与を追加できません。';
+      return;
+    }
     if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
       // 産休・育休の場合は計算せず0で登録
       this.bonusDataList.push({
@@ -987,6 +993,14 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     this.showEditBonusForm = false;
     this.editBonusTargetKey = null;
     this.editBonusInitialData = null;
+  }
+
+  onAddBonusClosed() {
+    this.showAddBonusForm = false;
+    // 賞与制限エラーメッセージをクリア
+    if (this.errorMessage === '年間3回までしか賞与を追加できません。') {
+      this.errorMessage = '';
+    }
   }
 
   // 削除ボタン押下時の処理

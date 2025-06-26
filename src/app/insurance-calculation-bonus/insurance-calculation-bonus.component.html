@@ -73,14 +73,24 @@
           <span *ngIf="!isLoading">📥 賞与データ取り込み</span>
         </button>
         -->
-        <button class="add-bonus-btn" (click)="showAddBonusForm = true">＋ 賞与情報追加</button>
+        <button
+          class="add-bonus-btn"
+          (click)="showAddBonusForm = true"
+          [disabled]="bonusDataList.length >= 3"
+          [title]="bonusDataList.length >= 3 ? '年間3回までしか賞与を追加できません' : ''"
+        >
+          ＋ 賞与情報追加
+        </button>
+        <div *ngIf="bonusDataList.length >= 3" class="bonus-limit-message">
+          年間3回までしか賞与を追加できません（現在: {{ bonusDataList.length }}回）
+        </div>
       </div>
     </div>
 
     <app-bonus-add-form
       *ngIf="showAddBonusForm"
       (save)="addBonus($event)"
-      (closed)="showAddBonusForm = false"
+      (closed)="onAddBonusClosed()"
     ></app-bonus-add-form>
 
     <app-bonus-add-form
