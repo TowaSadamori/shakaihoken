@@ -16,6 +16,7 @@ import {
   MonthlyInsuranceFee,
 } from '../services/insurance-calculation.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
+import { Decimal } from 'decimal.js';
 
 // ユーザープロフィール型定義
 interface UserProfileWithRole {
@@ -417,8 +418,30 @@ export class HomeComponent implements OnInit {
       currentMonthData.pensionInsuranceEmployee
     );
 
-    // 会社負担合計は従業員負担と同額（従来の社会保険制度）
-    currentMonthData.totalCompany = currentMonthData.totalEmployee;
+    // 会社負担合計（参考値）
+    // 健康保険会社負担 = 健康保険全額 - 健康保険本人
+    // 介護保険会社負担 = 介護保険全額 - 介護保険本人
+    // 厚生年金会社負担 = 厚生年金全額 - 厚生年金本人
+    // (健康保険会社負担 + 介護保険会社負担)を合算し1円未満切り捨て、厚生年金会社負担も1円未満切り捨て、その合計
+    const healthCompany = SocialInsuranceCalculator.subtractAmounts(
+      currentMonthData.healthInsuranceCompany,
+      currentMonthData.healthInsuranceEmployee
+    );
+    const careCompany = SocialInsuranceCalculator.subtractAmounts(
+      currentMonthData.careInsuranceCompany,
+      currentMonthData.careInsuranceEmployee
+    );
+    const pensionCompany = SocialInsuranceCalculator.subtractAmounts(
+      currentMonthData.pensionInsuranceCompany,
+      currentMonthData.pensionInsuranceEmployee
+    );
+    // 健康＋介護を合算し1円未満切り捨て
+    const healthCareSum = new Decimal(healthCompany).add(new Decimal(careCompany)).floor();
+    // 厚生年金は単独で1円未満切り捨て
+    const pensionFloor = new Decimal(pensionCompany).floor();
+    // 合算
+    const totalCompanyValue = healthCareSum.add(pensionFloor);
+    currentMonthData.totalCompany = totalCompanyValue.isZero() ? '-' : totalCompanyValue.toString();
 
     return {
       employeeNumber: user.employeeNumber || '',
