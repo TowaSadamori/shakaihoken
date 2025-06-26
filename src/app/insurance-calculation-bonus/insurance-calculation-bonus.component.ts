@@ -767,7 +767,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
   showAddBonusForm = false;
   showEditBonusForm = false;
-  editBonusIndex: number | null = null;
+  editBonusTargetKey: { originalKey: string; amount: string; paymentDate: string } | null = null;
   editBonusInitialData: { paymentDate: string; amount: number; leaveType: string } | null = null;
 
   async addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
@@ -878,7 +878,11 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   // 編集ボタン押下時の処理（今はアラートのみ）
   onEditBonus(index: number): void {
     const item = this.bonusDataList[index];
-    this.editBonusIndex = index;
+    this.editBonusTargetKey = {
+      originalKey: item.originalKey,
+      amount: item.amount,
+      paymentDate: item.paymentDate || '',
+    };
     this.editBonusInitialData = {
       paymentDate: item.paymentDate || '',
       amount: Number(item.amount),
@@ -888,103 +892,100 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   }
 
   async onEditBonusSave(bonus: { paymentDate: string; amount: number; leaveType: string }) {
-    if (
-      this.editBonusIndex !== null &&
-      this.bonusDataList[this.editBonusIndex] &&
-      this.employeeInfo
-    ) {
-      if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
-        // 産休・育休の場合は計算せず0で登録
-        const newItem: DisplayBonusHistoryItem = {
-          amount: bonus.amount.toString(),
-          paymentDate: bonus.paymentDate,
-          month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
-          year: BigInt(new Date(bonus.paymentDate).getFullYear()),
-          type: 'bonus',
-          originalKey: '',
-          calculationResult: {
-            standardBonusAmount: '0',
-            cappedPensionStandardAmount: '0',
-            isPensionLimitApplied: false,
-            applicableHealthStandardAmount: '0',
-            isHealthLimitApplied: false,
-            healthInsurance: { employeeBurden: '0', companyBurden: '0' },
-            careInsurance: { employeeBurden: '0', companyBurden: '0' },
-            pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
-            healthInsuranceRate: '',
-            careInsuranceRate: '',
-            combinedHealthAndCareRate: '',
-            pensionInsuranceRate: '',
-          },
-          leaveType: bonus.leaveType || 'excluded',
-        };
-        this.bonusDataList.splice(this.editBonusIndex, 1);
-        this.bonusDataList.push(newItem);
-        this.sortBonusList();
-        this.createPivotedTable();
-        this.saveBonusResults();
-        this.showEditBonusForm = false;
-        this.editBonusIndex = null;
-        this.editBonusInitialData = null;
-        return;
-      }
-      // 対象外に戻した場合はoriginalCalculationResultを必ず削除し、再計算で必ず上書き
-      if (this.bonusDataList[this.editBonusIndex].originalCalculationResult) {
-        delete this.bonusDataList[this.editBonusIndex].originalCalculationResult;
-      }
-      // 年間累計標準賞与額を再計算（自分以外の分のみ合計）
-      const cumulativeHealthBonus = this.bonusDataList
-        .filter((_, idx) => idx !== this.editBonusIndex)
-        .reduce(
-          (acc, item) =>
-            acc.add(new Decimal(item.calculationResult.applicableHealthStandardAmount)),
-          new Decimal('0')
-        )
-        .toString();
-
-      // 再計算
-      const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
-        {
-          amount: bonus.amount.toString(),
-          paymentDate: bonus.paymentDate,
-          month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
-          year: BigInt(new Date(bonus.paymentDate).getFullYear()),
-          type: 'bonus',
-          originalKey: '',
-          fiscalYear: this.targetYear,
+    if (!this.editBonusTargetKey || !this.employeeInfo) return;
+    // 一意なキーで該当データを検索
+    const idx = this.bonusDataList.findIndex(
+      (item) =>
+        item.originalKey === this.editBonusTargetKey!.originalKey &&
+        item.amount === this.editBonusTargetKey!.amount &&
+        item.paymentDate === this.editBonusTargetKey!.paymentDate
+    );
+    if (idx === -1) return;
+    // 以降は従来の編集ロジック
+    if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
+      const newItem: DisplayBonusHistoryItem = {
+        amount: bonus.amount.toString(),
+        paymentDate: bonus.paymentDate,
+        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+        type: 'bonus',
+        originalKey: this.bonusDataList[idx].originalKey,
+        calculationResult: {
+          standardBonusAmount: '0',
+          cappedPensionStandardAmount: '0',
+          isPensionLimitApplied: false,
+          applicableHealthStandardAmount: '0',
+          isHealthLimitApplied: false,
+          healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+          careInsurance: { employeeBurden: '0', companyBurden: '0' },
+          pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+          healthInsuranceRate: '',
+          careInsuranceRate: '',
+          combinedHealthAndCareRate: '',
+          pensionInsuranceRate: '',
         },
-        {
-          age: this.employeeInfo.age,
-          addressPrefecture: this.employeeInfo.addressPrefecture,
-          companyId: this.employeeInfo.companyId,
-          birthDate: this.employeeInfo.birthDate,
-        },
-        cumulativeHealthBonus
-      );
-
-      if (calculated) {
-        const newItem: DisplayBonusHistoryItem = {
-          ...calculated,
-          leaveType: bonus.leaveType || 'excluded',
-        };
-        if (newItem.originalCalculationResult) {
-          delete newItem.originalCalculationResult;
-        }
-        this.bonusDataList.splice(this.editBonusIndex, 1);
-        this.bonusDataList.push(newItem);
-        this.sortBonusList();
-        this.createPivotedTable();
-        this.saveBonusResults();
-      }
+        leaveType: bonus.leaveType || 'excluded',
+      };
+      this.bonusDataList.splice(idx, 1);
+      this.bonusDataList.push(newItem);
+      this.sortBonusList();
+      this.createPivotedTable();
+      this.saveBonusResults();
+      this.showEditBonusForm = false;
+      this.editBonusTargetKey = null;
+      this.editBonusInitialData = null;
+      return;
     }
-    this.showEditBonusForm = false;
-    this.editBonusIndex = null;
-    this.editBonusInitialData = null;
+    if (this.bonusDataList[idx].originalCalculationResult) {
+      delete this.bonusDataList[idx].originalCalculationResult;
+    }
+    const cumulativeHealthBonus = this.bonusDataList
+      .filter((_, i) => i !== idx)
+      .reduce(
+        (acc, item) => acc.add(new Decimal(item.calculationResult.applicableHealthStandardAmount)),
+        new Decimal('0')
+      )
+      .toString();
+    const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
+      {
+        amount: bonus.amount.toString(),
+        paymentDate: bonus.paymentDate,
+        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+        type: 'bonus',
+        originalKey: this.bonusDataList[idx].originalKey,
+        fiscalYear: this.targetYear,
+      },
+      {
+        age: this.employeeInfo.age,
+        addressPrefecture: this.employeeInfo.addressPrefecture,
+        companyId: this.employeeInfo.companyId,
+        birthDate: this.employeeInfo.birthDate,
+      },
+      cumulativeHealthBonus
+    );
+    if (calculated) {
+      const newItem: DisplayBonusHistoryItem = {
+        ...calculated,
+        leaveType: bonus.leaveType || 'excluded',
+      };
+      if (newItem.originalCalculationResult) {
+        delete newItem.originalCalculationResult;
+      }
+      this.bonusDataList.splice(idx, 1);
+      this.bonusDataList.push(newItem);
+      this.sortBonusList();
+      this.createPivotedTable();
+      this.saveBonusResults();
+      this.showEditBonusForm = false;
+      this.editBonusTargetKey = null;
+      this.editBonusInitialData = null;
+    }
   }
 
   onEditBonusClosed() {
     this.showEditBonusForm = false;
-    this.editBonusIndex = null;
+    this.editBonusTargetKey = null;
     this.editBonusInitialData = null;
   }
 
