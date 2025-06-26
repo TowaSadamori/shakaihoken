@@ -1,12 +1,28 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-bonus-add-form',
   standalone: true,
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './bonus-add-form.component.html',
-  styleUrl: './bonus-add-form.component.scss'
+  styleUrl: './bonus-add-form.component.scss',
 })
 export class BonusAddFormComponent {
+  paymentDate = '';
+  amount: number | null = null;
 
+  @Output() save = new EventEmitter<{ paymentDate: string; amount: number }>();
+  @Output() closed = new EventEmitter<void>();
+
+  onSave() {
+    if (this.paymentDate && this.amount && this.amount > 0) {
+      this.save.emit({ paymentDate: this.paymentDate, amount: this.amount });
+      this.closed.emit();
+    }
+  }
+
+  onCancel() {
+    this.closed.emit();
+  }
 }

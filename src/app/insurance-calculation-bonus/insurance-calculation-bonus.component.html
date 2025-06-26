@@ -58,7 +58,8 @@
 
     <app-bonus-add-form
       *ngIf="showAddBonusForm"
-      (close)="showAddBonusForm = false"
+      (save)="addBonus($event)"
+      (closed)="showAddBonusForm = false"
     ></app-bonus-add-form>
   </div>
 

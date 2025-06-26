@@ -707,4 +707,37 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   }
 
   showAddBonusForm = false;
+
+  addBonus(bonus: { paymentDate: string; amount: number }) {
+    // 新しい賞与データをリストに追加
+    this.bonusDataList.push({
+      amount: bonus.amount.toString(),
+      paymentDate: bonus.paymentDate,
+      month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+      year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+      type: 'bonus',
+      originalKey: '',
+      calculationResult: {
+        standardBonusAmount: bonus.amount.toString(),
+        cappedPensionStandardAmount: bonus.amount.toString(),
+        isPensionLimitApplied: false,
+        applicableHealthStandardAmount: bonus.amount.toString(),
+        isHealthLimitApplied: false,
+        healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+        careInsurance: { employeeBurden: '0', companyBurden: '0' },
+        pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+        healthInsuranceRate: '',
+        careInsuranceRate: '',
+        combinedHealthAndCareRate: '',
+        pensionInsuranceRate: '',
+      },
+      leaveType: 'none',
+    });
+    // 支給日で昇順ソート
+    this.bonusDataList.sort((a, b) => {
+      if (!a.paymentDate || !b.paymentDate) return 0;
+      return new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime();
+    });
+    this.createPivotedTable();
+  }
 }
