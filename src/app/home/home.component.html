@@ -45,7 +45,7 @@
       </div>
       <mat-card-content>
         <div class="summary-row">
-          <span class="summary-label">健康保険料（会社負担分）合計</span>
+          <span class="summary-label">健康保険料・介護保険料（会社負担分）合計</span>
           <span class="summary-amount">
             {{
               getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].healthInsuranceTotal
