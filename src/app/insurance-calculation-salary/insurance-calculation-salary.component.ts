@@ -51,11 +51,14 @@ interface InsuranceRateData {
     standardSalary: string;
     nursingHalf: string;
     nonNursingHalf: string;
+    nursingTotal: string; // 介護保険該当全額
+    nonNursingTotal: string; // 介護保険非該当全額
   }[];
   pensionTable: {
     grade: number;
     standardSalary: string;
     pensionHalf: string;
+    pensionTotal: string; // 厚生年金全額
   }[];
 }
 
@@ -380,17 +383,19 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
               if (healthGradeInfo) {
                 const nonNursingHalf = healthGradeInfo.nonNursingHalf;
                 const nursingHalf = healthGradeInfo.nursingHalf;
+                const nonNursingTotal = healthGradeInfo.nonNursingTotal;
+                const nursingTotal = healthGradeInfo.nursingTotal;
 
                 if (isCareInsuranceApplicable) {
                   // 介護保険対象者：介護保険料の欄にnursingHalfをセット、健康保険料は空
                   result.healthInsuranceFeeEmployee = null;
                   result.healthInsuranceFeeCompany = null;
                   result.careInsuranceFeeEmployee = nursingHalf;
-                  result.careInsuranceFeeCompany = nursingHalf;
+                  result.careInsuranceFeeCompany = nursingTotal; // 全額を保険料マスタから取得
                 } else {
                   // 非対象者：健康保険料の欄にnonNursingHalfをセット、介護保険料は空
                   result.healthInsuranceFeeEmployee = nonNursingHalf;
-                  result.healthInsuranceFeeCompany = nonNursingHalf;
+                  result.healthInsuranceFeeCompany = nonNursingTotal; // 全額を保険料マスタから取得
                   result.careInsuranceFeeEmployee = null;
                   result.careInsuranceFeeCompany = null;
                 }
@@ -402,8 +407,9 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
               );
               if (pensionGradeInfo) {
                 const pensionHalf = pensionGradeInfo.pensionHalf;
+                const pensionTotal = pensionGradeInfo.pensionTotal;
                 result.pensionInsuranceFeeEmployee = pensionHalf;
-                result.pensionInsuranceFeeCompany = pensionHalf;
+                result.pensionInsuranceFeeCompany = pensionTotal; // 全額を保険料マスタから取得
               }
             }
           }
@@ -634,5 +640,25 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
     return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+  }
+
+  /**
+   * 保険料マスタから取得した全額を小数点まで表示用にフォーマット
+   */
+  formatAmountWithDecimal(amount: string | null): string {
+    if (!amount || amount === '0' || amount === '' || amount === '-') {
+      return '';
+    }
+
+    try {
+      const decimal = new Decimal(amount);
+      return decimal.toNumber().toLocaleString('ja-JP', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+    } catch (error) {
+      console.error('金額フォーマットエラー:', error);
+      return String(amount);
+    }
   }
 }

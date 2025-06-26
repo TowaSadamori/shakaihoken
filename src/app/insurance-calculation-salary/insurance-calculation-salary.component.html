@@ -85,12 +85,12 @@
           <tr>
             <th>健康保険<br />介護保険<br />等級</th>
             <th>健康保険料(本人)<br />（介護保険非該当）</th>
-            <th>健康保険料(会社)<br />（介護保険非該当）</th>
+            <th>健康保険料(全額)<br />（介護保険非該当）</th>
             <th>健康保険料(本人)<br />（介護保険該当）</th>
-            <th>健康保険料(会社)<br />（介護保険該当）</th>
+            <th>健康保険料(全額)<br />（介護保険該当）</th>
             <th>厚生年金等級</th>
             <th>厚生年金保険料(本人)</th>
-            <th>厚生年金保険料(会社)</th>
+            <th>厚生年金保険料(全額)</th>
           </tr>
         </thead>
         <tbody>
@@ -106,7 +106,7 @@
                 {{ result.healthInsuranceFeeEmployee | roundForEmployeeBurden }}
               </ng-container>
             </td>
-            <td>{{ result.healthInsuranceFeeCompany }}</td>
+            <td>{{ formatAmountWithDecimal(result.healthInsuranceFeeCompany) }}</td>
             <td>
               <ng-container
                 *ngIf="result.careInsuranceFeeEmployee && result.careInsuranceFeeEmployee !== '0'"
@@ -114,7 +114,7 @@
                 {{ result.careInsuranceFeeEmployee | roundForEmployeeBurden }}
               </ng-container>
             </td>
-            <td>{{ result.careInsuranceFeeCompany }}</td>
+            <td>{{ formatAmountWithDecimal(result.careInsuranceFeeCompany) }}</td>
             <td>{{ result.pensionInsuranceGrade }}</td>
             <td>
               <ng-container
@@ -125,7 +125,7 @@
                 {{ result.pensionInsuranceFeeEmployee | roundForEmployeeBurden }}
               </ng-container>
             </td>
-            <td>{{ result.pensionInsuranceFeeCompany }}</td>
+            <td>{{ formatAmountWithDecimal(result.pensionInsuranceFeeCompany) }}</td>
           </tr>
         </tbody>
       </table>
