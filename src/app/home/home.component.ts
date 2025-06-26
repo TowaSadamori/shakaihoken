@@ -17,6 +17,7 @@ import {
 } from '../services/insurance-calculation.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { Decimal } from 'decimal.js';
+import { BonusCalculationService } from '../services/bonus-calculation.service';
 
 // ユーザープロフィール型定義
 interface UserProfileWithRole {
@@ -63,6 +64,26 @@ interface UserWithJudgment extends User {
   judgmentResult?: InsuranceEligibility | null;
 }
 
+// 賞与データ表示用の型
+export interface EmployeeBonusData {
+  employeeNumber: string;
+  officeNumber: string;
+  employeeName: string;
+  leaveStatus?: string;
+  paymentInfo: string; // 支給回数・支給日
+  paymentAmount: string;
+  standardBonusAmount: string;
+  healthInsuranceRate?: string;
+  healthInsuranceEmployee?: string;
+  healthInsuranceCompany?: string;
+  careInsuranceRate?: string;
+  careInsuranceEmployee?: string;
+  careInsuranceCompany?: string;
+  pensionInsuranceRate?: string;
+  pensionInsuranceEmployee?: string;
+  pensionInsuranceCompany?: string;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -81,6 +102,7 @@ interface UserWithJudgment extends User {
   styleUrl: './home.component.scss',
 })
 export class HomeComponent implements OnInit {
+  public SocialInsuranceCalculator = SocialInsuranceCalculator;
   currentUser: UserProfileWithRole | null = null;
   isAdmin = false;
   private firestore = getFirestore();
@@ -110,6 +132,11 @@ export class HomeComponent implements OnInit {
     { value: 14, display: '賞与2回目' },
     { value: 15, display: '賞与3回目' },
   ];
+
+  // 賞与月を除外した月リスト
+  get monthsFiltered() {
+    return this.months.filter((m) => m.value < 13);
+  }
 
   // 現在のユーザーの保険料データ
   currentUserInsurance: MonthlyInsuranceFee = {
@@ -171,6 +198,7 @@ export class HomeComponent implements OnInit {
   // 賞与表示用の列定義
   displayedColumnsAdminBonus: string[] = [
     'employeeNumber',
+    'officeNumber',
     'employeeName',
     'leaveStatus',
     'standardBonusAmount',
@@ -187,10 +215,14 @@ export class HomeComponent implements OnInit {
     'totalCompany',
   ];
 
+  // 賞与データ一覧
+  allEmployeesBonusData: EmployeeBonusData[] = [];
+
   constructor(
     private authService: AuthService,
     private userService: UserService,
-    private insuranceCalculationService: InsuranceCalculationService
+    private insuranceCalculationService: InsuranceCalculationService,
+    private bonusCalculationService: BonusCalculationService
   ) {}
 
   async ngOnInit() {
@@ -248,8 +280,11 @@ export class HomeComponent implements OnInit {
       // 年次切り替え用の年リストを生成
       const currentYear = new Date().getFullYear();
       this.years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+
+      // 賞与データ取得処理の呼び出し（実装は後続で追加）
+      await this.loadAllEmployeesBonusData();
     } catch (error) {
-      console.error('An error occurred during ngOnInit:', error);
+      console.error('初期化エラー:', error);
     }
   }
 
@@ -875,5 +910,89 @@ export class HomeComponent implements OnInit {
     }
     // それ以外は通常の金額表示
     return this.formatNumberWithDecimal(String(amount)) + '円';
+  }
+
+  // 全従業員分の賞与データを取得してallEmployeesBonusDataに格納する
+  private async loadAllEmployeesBonusData() {
+    this.allEmployeesBonusData = [];
+    try {
+      const companyId = await this.authService.getCurrentUserCompanyId();
+      if (!companyId) return;
+      const employees = await this.userService.getUsersByCompanyId(companyId);
+      // 判定が「対象」の従業員のみ
+      const usersWithJudgment: UserWithJudgment[] = employees as UserWithJudgment[];
+      await this.loadJudgmentResults(usersWithJudgment);
+      const targetEmployees = usersWithJudgment.filter((u) => this.getJudgmentStatus(u) === '対象');
+      const fiscalYear = this.selectedMonth < 4 ? this.selectedYear - 1 : this.selectedYear;
+      const bonusDataList: EmployeeBonusData[] = [];
+      for (const user of targetEmployees) {
+        // ユーザー情報
+        const employeeNumber = user.employeeNumber || '';
+        const officeNumber = user.branchNumber || '';
+        const employeeName = `${user.lastName || ''} ${user.firstName || ''}`.trim();
+        const leaveStatus = this.getLeaveStatus(employeeNumber);
+        // 賞与履歴取得
+        const bonusHistory = await this.bonusCalculationService.getFiscalYearBonusHistory(
+          employeeNumber,
+          BigInt(fiscalYear),
+          companyId
+        );
+        // 1人最大3回分
+        for (let i = 0; i < Math.min(bonusHistory.length, 3); i++) {
+          const bonusItem = bonusHistory[i];
+          // 計算結果取得
+          const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
+            bonusItem,
+            {
+              age: BigInt(0), // 年齢は不要（計算サービス内で支給日から算出）
+              addressPrefecture: user.prefectureCity || '',
+              companyId: user.companyId,
+              birthDate: user.birthDate || '',
+            }
+          );
+          if (!calculated) continue;
+          const result = calculated.calculationResult;
+          // 支給回数・支給日
+          const paymentInfo = `第${i + 1}回（${bonusItem.paymentDate || '-'}）`;
+          // 支給額
+          const paymentAmount = bonusItem.amount || '-';
+          // 標準賞与額
+          const standardBonusAmount = result.standardBonusAmount || '-';
+          // 各種保険料率
+          const healthInsuranceRate = result.healthInsuranceRate || '-';
+          const careInsuranceRate = result.careInsuranceRate || '-';
+          const pensionInsuranceRate = result.pensionInsuranceRate || '-';
+          // 各種保険料（本人・全額）
+          const healthInsuranceEmployee = result.healthInsurance.employeeBurden || '-';
+          const healthInsuranceCompany = result.healthInsurance.companyBurden || '-';
+          const careInsuranceEmployee = result.careInsurance?.employeeBurden || '-';
+          const careInsuranceCompany = result.careInsurance?.companyBurden || '-';
+          const pensionInsuranceEmployee = result.pensionInsurance.employeeBurden || '-';
+          const pensionInsuranceCompany = result.pensionInsurance.companyBurden || '-';
+          bonusDataList.push({
+            employeeNumber,
+            officeNumber,
+            employeeName,
+            leaveStatus,
+            paymentInfo,
+            paymentAmount,
+            standardBonusAmount,
+            healthInsuranceRate,
+            healthInsuranceEmployee,
+            healthInsuranceCompany,
+            careInsuranceRate,
+            careInsuranceEmployee,
+            careInsuranceCompany,
+            pensionInsuranceRate,
+            pensionInsuranceEmployee,
+            pensionInsuranceCompany,
+          });
+        }
+      }
+      this.allEmployeesBonusData = bonusDataList;
+    } catch (error) {
+      console.error('賞与データ取得エラー:', error);
+      this.allEmployeesBonusData = [];
+    }
   }
 }
