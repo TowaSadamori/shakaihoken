@@ -36,7 +36,7 @@ export class SidebarComponent implements OnChanges {
   navItems: NavItem[] = [
     { label: 'ホーム', path: '/', icon: 'home' },
     { label: '従業員手続き', path: '/employee-procedures', icon: 'person' },
-    { label: '給与賞与情報', path: '/employee-salary-bonus' },
+    { label: '社会保険料情報', path: '/employee-salary-bonus' },
     { label: '本人情報', path: '#' },
     { label: '被扶養者情報', path: '#' },
     { label: 'その他申請', path: '#' },
