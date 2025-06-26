@@ -512,13 +512,11 @@ export class HomeComponent implements OnInit {
   }
 
   // 金額を安全に取得するヘルパー関数
-  private safeGetAmount(value: string | number | null | undefined): string {
+  public safeGetAmount(value: string | number | null | undefined): string {
     if (value === null || typeof value === 'undefined') {
       return '0';
     }
-
     const strValue = String(value).replace(/,/g, '').trim();
-
     // 値が空、ハイフン、または無効な数値の場合は '0' を返す
     if (strValue === '' || strValue === '-' || isNaN(parseFloat(strValue))) {
       // 予期しない値の場合のみ警告
@@ -527,7 +525,6 @@ export class HomeComponent implements OnInit {
       }
       return '0';
     }
-
     return strValue;
   }
 
@@ -699,6 +696,8 @@ export class HomeComponent implements OnInit {
           this.monthlyData = this.generateMonthlyData(currentUserData);
         }
       }
+      // --- ここで賞与データも更新する ---
+      await this.loadAllEmployeesBonusData();
     } catch (error) {
       console.error('データ更新エラー:', error);
     }
@@ -941,12 +940,29 @@ export class HomeComponent implements OnInit {
         // 1人最大3回分
         for (let i = 0; i < Math.min(bonusHistory.length, 3); i++) {
           const bonusItem = bonusHistory[i];
+          // --- 都道府県情報の取得 ---
+          let addressPrefecture =
+            (user as User & { addressPrefecture?: string; prefectureCity?: string })
+              .addressPrefecture ||
+            (user as User & { addressPrefecture?: string; prefectureCity?: string })
+              .prefectureCity ||
+            '';
+          if (!addressPrefecture && user.branchNumber) {
+            // 事業所情報から取得
+            const office = this.offices.find((o) => o.branchNumber === user.branchNumber);
+            if (office && (office as { addressPrefecture?: string }).addressPrefecture) {
+              addressPrefecture = (office as { addressPrefecture?: string }).addressPrefecture!;
+            }
+          }
+          if (!addressPrefecture) {
+            addressPrefecture = '東京'; // デフォルト
+          }
           // 計算結果取得
           const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
             bonusItem,
             {
               age: BigInt(0), // 年齢は不要（計算サービス内で支給日から算出）
-              addressPrefecture: user.prefectureCity || '',
+              addressPrefecture,
               companyId: user.companyId,
               birthDate: user.birthDate || '',
             }

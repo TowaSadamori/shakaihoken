@@ -552,3 +552,31 @@
 .admin-section {
   margin-top: 24px;
 }
+
+/* 賞与テーブルの支給回数・支給日カラムの幅を調整 */
+.employees-table th.payment-info,
+.employees-table td.payment-info {
+  min-width: 90px;
+  max-width: 120px;
+  white-space: normal;
+  word-break: break-all;
+  text-align: center;
+}
+
+/* テーブル全体の横スクロールを調整 */
+.table-container {
+  overflow-x: auto;
+}
+
+/* テーブルヘッダーの固定や見やすさ向上 */
+.employees-table th {
+  background: #f5f7fa;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.employees-table td {
+  text-align: center;
+  vertical-align: middle;
+}
