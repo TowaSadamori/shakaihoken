@@ -21,6 +21,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { AuthService } from '../services/auth.service';
 import { Decimal } from 'decimal.js';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
+import { BonusAddFormComponent } from '../bonus-add-form/bonus-add-form.component';
 
 interface EmployeeInfo {
   uid: string;
@@ -61,7 +62,7 @@ type DisplayBonusHistoryItem = CalculatedBonusHistoryItem & {
   templateUrl: './insurance-calculation-bonus.component.html',
   styleUrls: ['./insurance-calculation-bonus.component.scss'],
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, BonusAddFormComponent],
 })
 export class InsuranceCalculationBonusComponent implements OnInit {
   // 従業員情報
