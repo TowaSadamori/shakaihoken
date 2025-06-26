@@ -993,7 +993,7 @@ export class InsuranceJudgmentComponent implements OnInit {
   }
 
   getQuestionNumber(): number {
-    return Object.keys(this.answers).length + 1;
+    return this.questionHistory.length + 1;
   }
 
   startAttributeEdit() {
@@ -1229,6 +1229,11 @@ export class InsuranceJudgmentComponent implements OnInit {
     if (previousQuestionId) {
       this.currentQuestionId = previousQuestionId;
       this.currentQuestion = this.allQuestions[previousQuestionId];
+      // 戻った先のanswersもクリア
+      delete this.answers[previousQuestionId];
+      if (this.dateRangeAnswers[previousQuestionId]) {
+        delete this.dateRangeAnswers[previousQuestionId];
+      }
     }
 
     // 判定結果をクリア
