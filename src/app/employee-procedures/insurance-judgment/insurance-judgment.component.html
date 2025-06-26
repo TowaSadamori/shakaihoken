@@ -203,7 +203,7 @@
 
     <div class="result-cards">
       <div class="result-card">
-        <h4>健康保険料</h4>
+        <h4>健康保険料・介護保険料</h4>
         <div
           class="status"
           [class]="judgmentResult.healthInsurance.eligible ? 'eligible' : 'not-eligible'"
@@ -211,17 +211,6 @@
           {{ judgmentResult.healthInsurance.eligible ? '加入対象' : '加入対象外' }}
         </div>
         <p>{{ judgmentResult.healthInsurance.reason }}</p>
-      </div>
-
-      <div class="result-card">
-        <h4>介護保険料</h4>
-        <div
-          class="status"
-          [class]="judgmentResult.careInsurance?.eligible ? 'eligible' : 'not-eligible'"
-        >
-          {{ judgmentResult.careInsurance?.eligible ? '加入対象' : '加入対象外' }}
-        </div>
-        <p>{{ judgmentResult.careInsurance?.reason }}</p>
       </div>
 
       <div class="result-card">
