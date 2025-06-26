@@ -53,6 +53,7 @@
         <i class="icon-edit"></i>
         手入力で追加
       </button>
+      <!--
       <button class="btn btn-success" (click)="navigateToRegularDeterminationAdd()">
         <i class="icon-calendar"></i>
         定時決定情報を追加
@@ -61,6 +62,7 @@
         <i class="icon-refresh"></i>
         随時改定情報を追加
       </button>
+      -->
     </div>
   </div>
 
@@ -81,6 +83,7 @@
       <table class="history-table" *ngIf="judgmentRecords.length > 0">
         <thead>
           <tr>
+            <th>最終更新日時</th>
             <th>判定方法</th>
             <th>適用期間</th>
             <th>健康保険・介護保険等級</th>
@@ -90,6 +93,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let record of judgmentRecords" [class]="'type-' + record.judgmentType">
+            <td class="updated-at">{{ formatDate(record.updatedAt) }}</td>
             <td class="judgment-type">{{ getJudgmentTypeLabel(record.judgmentType) }}</td>
             <td class="period">
               {{ formatDate(record.effectiveDate) }}

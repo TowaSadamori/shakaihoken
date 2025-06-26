@@ -306,17 +306,17 @@ export class ManualGradeAddComponent implements OnInit {
   async calculateGrade(): Promise<void> {
     if (
       this.judgmentReason === 'new_employee' ||
+      this.judgmentReason === 'normal_work' ||
       this.judgmentReason === 'other' ||
       !this.judgmentReason
     ) {
-      // リアルタイム判定と同じロジックを使用
+      // 「通常業務」も「新入社員」と同じロジック
       this.calculateGradeFromAmount();
     } else if (this.judgmentReason === 'maternity_leave') {
       this.judgmentResult = { isMaternityLeave: true };
     } else if (this.judgmentReason === 'childcare_leave') {
       this.judgmentResult = { isChildcareLeave: true };
     } else {
-      // 他の選択肢の場合は一旦リセット
       this.judgmentResult = null;
       console.log(`判定ロジックが未実装の理由: ${this.judgmentReason}`);
     }
@@ -808,6 +808,11 @@ export class ManualGradeAddComponent implements OnInit {
       this.errorMessage = '保存に必要な情報が不足しています。';
       return;
     }
+    // 変更がない場合は goBack() と同じ挙動にする
+    if (this.isEditMode && this.savedGradeData && !this.hasGradeDataChanged()) {
+      this.goBack();
+      return;
+    }
     this.isSaving = true;
     this.errorMessage = '';
 
@@ -832,7 +837,10 @@ export class ManualGradeAddComponent implements OnInit {
 
     try {
       const docRef = doc(this.firestore, 'employee_grades', docId);
-      const dataForFirestore = this.deepConvertBigIntToString(gradeData);
+      // undefinedをnullに変換
+      const dataForFirestore = this.deepConvertBigIntToString(
+        this.replaceUndefinedWithNull(gradeData)
+      );
       await setDoc(docRef, dataForFirestore);
 
       await this.saveToGradeJudgmentHistory();
@@ -1084,5 +1092,60 @@ export class ManualGradeAddComponent implements OnInit {
       }
     }
     return newObj;
+  }
+
+  /**
+   * オブジェクト内のundefinedをすべてnullに変換（再帰的）
+   */
+  private replaceUndefinedWithNull(obj: unknown): unknown {
+    if (Array.isArray(obj)) {
+      return obj.map((v) => this.replaceUndefinedWithNull(v));
+    } else if (obj && typeof obj === 'object') {
+      const newObj: Record<string, unknown> = {};
+      for (const key of Object.keys(obj)) {
+        const value = (obj as Record<string, unknown>)[key];
+        newObj[key] = value === undefined ? null : this.replaceUndefinedWithNull(value);
+      }
+      return newObj;
+    }
+    return obj;
+  }
+
+  /**
+   * 現在のフォーム内容と savedGradeData を比較し、変更があれば true を返す
+   */
+  private hasGradeDataChanged(): boolean {
+    if (!this.savedGradeData) return true;
+    // 基本項目比較
+    if (
+      String(this.savedGradeData.monthlyAmount) !== String(this.monthlyAmount) ||
+      String(this.savedGradeData.applicableYear) !== String(this.applicableYear) ||
+      String(this.savedGradeData.applicableMonth) !== String(this.applicableMonth) ||
+      String(this.savedGradeData.endYear ?? '') !== String(this.endYear ?? '') ||
+      String(this.savedGradeData.endMonth ?? '') !== String(this.endMonth ?? '')
+    ) {
+      return true;
+    }
+    // judgmentResultのdeep比較（undefinedとnullは同一視）
+    const a = this.savedGradeData.judgmentResult;
+    const b = this.judgmentResult;
+    const keys = [
+      'healthInsuranceGrade',
+      'healthInsuranceStandardSalary',
+      'pensionInsuranceGrade',
+      'pensionInsuranceStandardSalary',
+      'careInsuranceGrade',
+      'careInsuranceStandardSalary',
+      'isMaternityLeave',
+      'isChildcareLeave',
+    ];
+    for (const k of keys as (keyof GradeJudgmentResult)[]) {
+      const aVal = a && a[k] !== undefined ? a[k] : null;
+      const bVal = b && b[k] !== undefined ? b[k] : null;
+      if (aVal !== bVal) {
+        return true;
+      }
+    }
+    return false;
   }
 }

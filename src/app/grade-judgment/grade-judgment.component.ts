@@ -520,7 +520,13 @@ export class GradeJudgmentComponent implements OnInit {
     }
     const year = date.getFullYear();
     const month = date.getMonth() + 1; // getMonth()は0から始まるため+1する
-    return `${year}年${month}月`;
+    const day = date.getDate();
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    const second = date.getSeconds();
+    return `${year}年${month}月${day}日 ${hour.toString().padStart(2, '0')}:${minute
+      .toString()
+      .padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
   }
 
   formatCurrency(amount: string): string {
