@@ -416,13 +416,9 @@ export class HomeComponent implements OnInit {
       ),
       currentMonthData.pensionInsuranceEmployee
     );
-    currentMonthData.totalCompany = SocialInsuranceCalculator.addAmounts(
-      SocialInsuranceCalculator.addAmounts(
-        currentMonthData.healthInsuranceCompany,
-        currentMonthData.careInsuranceCompany
-      ),
-      currentMonthData.pensionInsuranceCompany
-    );
+
+    // 会社負担合計は従業員負担と同額（従来の社会保険制度）
+    currentMonthData.totalCompany = currentMonthData.totalEmployee;
 
     return {
       employeeNumber: user.employeeNumber || '',
@@ -771,5 +767,90 @@ export class HomeComponent implements OnInit {
     }
     const office = this.offices.find((o) => o.branchNumber === this.selectedOffice);
     return office ? office.name : '';
+  }
+
+  /**
+   * 従業員負担と会社負担の合計額を計算
+   */
+  calculateTotalAmount(employeeAmount: string, companyAmount: string): string {
+    if (!employeeAmount || !companyAmount || employeeAmount === '0' || companyAmount === '0') {
+      return '0';
+    }
+
+    try {
+      return SocialInsuranceCalculator.addAmounts(employeeAmount, companyAmount);
+    } catch (error) {
+      console.error('金額計算エラー:', error);
+      return '0';
+    }
+  }
+
+  /**
+   * 小数点まで表示用にフォーマット
+   */
+  formatNumberWithDecimal(amount: string): string {
+    if (!amount || amount === '0' || amount === '' || amount === '-') {
+      return '0';
+    }
+
+    try {
+      const num = parseFloat(amount);
+      return num.toLocaleString('ja-JP', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+    } catch (error) {
+      console.error('金額フォーマットエラー:', error);
+      return amount;
+    }
+  }
+
+  /**
+   * 等級の表示フォーマット（産休・育休以外で0や空の場合は"-"表示）
+   */
+  formatGrade(grade: number | string | null | undefined): string {
+    if (grade === null || grade === undefined || grade === '') {
+      return '-';
+    }
+
+    const strGrade = String(grade);
+
+    // 産休・育休の場合はそのまま表示
+    if (strGrade === '産休' || strGrade === '育休') {
+      return strGrade;
+    }
+
+    // 数値の場合、0は"-"表示
+    if (strGrade === '0') {
+      return '-';
+    }
+
+    return strGrade;
+  }
+
+  /**
+   * 金額セルの表示フォーマット（等級または産休・育休なら0円表示、それ以外で0円は「-」表示）
+   */
+  formatMoneyCell(
+    amount: string | number | null | undefined,
+    leaveStatus?: string,
+    grade?: string | number | null | undefined
+  ): string {
+    const gradeStr = grade != null ? String(grade) : '';
+    // 等級またはleaveStatusが産休・育休の場合は0円でも0円表示
+    if (
+      gradeStr === '産休' ||
+      gradeStr === '育休' ||
+      leaveStatus === '産休' ||
+      leaveStatus === '育休'
+    ) {
+      return this.formatNumberWithDecimal(String(amount)) + '円';
+    }
+    // 0, null, 空文字, - の場合は「-」
+    if (!amount || amount === '0' || amount === '-' || amount === '') {
+      return '-';
+    }
+    // それ以外は通常の金額表示
+    return this.formatNumberWithDecimal(String(amount)) + '円';
   }
 }

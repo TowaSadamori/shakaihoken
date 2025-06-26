@@ -178,7 +178,7 @@
             <ng-container matColumnDef="healthInsuranceGrade">
               <th mat-header-cell *matHeaderCellDef>健康保険<br />介護保険<br />等級</th>
               <td mat-cell *matCellDef="let employee">
-                {{ employee.healthInsuranceGrade || '-' }}
+                {{ formatGrade(employee.healthInsuranceGrade) }}
               </td>
             </ng-container>
 
@@ -188,17 +188,27 @@
                 健康保険料 <br />（介護保険非該当）<br />(本人)
               </th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.healthInsuranceEmployee) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.healthInsuranceEmployee,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
-            <!-- Col: 健康保険料(会社) -->
+            <!-- Col: 健康保険料(全額) -->
             <ng-container matColumnDef="healthInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>
-                健康保険料 <br />（介護保険非該当）<br />(会社)
+                健康保険料 <br />（介護保険非該当）<br />(全額)
               </th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.healthInsuranceCompany) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.healthInsuranceCompany,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
@@ -208,17 +218,27 @@
                 健康保険料 <br />（介護保険該当）<br />(本人)
               </th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.careInsuranceEmployee) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.careInsuranceEmployee,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
-            <!-- Col: 介護保険料(会社) -->
+            <!-- Col: 介護保険料(全額) -->
             <ng-container matColumnDef="careInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>
-                健康保険料 <br />（介護保険該当）<br />(会社)
+                健康保険料 <br />（介護保険該当）<br />(全額)
               </th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.careInsuranceCompany) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.careInsuranceCompany,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
@@ -226,7 +246,7 @@
             <ng-container matColumnDef="pensionInsuranceGrade">
               <th mat-header-cell *matHeaderCellDef>厚生年金<br />等級</th>
               <td mat-cell *matCellDef="let employee">
-                {{ employee.pensionInsuranceGrade || '-' }}
+                {{ formatGrade(employee.pensionInsuranceGrade) }}
               </td>
             </ng-container>
 
@@ -234,15 +254,25 @@
             <ng-container matColumnDef="pensionInsuranceEmployee">
               <th mat-header-cell *matHeaderCellDef>厚生年金保険料<br />(本人)</th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.pensionInsuranceEmployee) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.pensionInsuranceEmployee,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
-            <!-- Col: 厚生年金保険料(会社) -->
+            <!-- Col: 厚生年金保険料(全額) -->
             <ng-container matColumnDef="pensionInsuranceCompany">
-              <th mat-header-cell *matHeaderCellDef>厚生年金保険料<br />(会社)</th>
+              <th mat-header-cell *matHeaderCellDef>厚生年金保険料<br />(全額)</th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.pensionInsuranceCompany) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.pensionInsuranceCompany,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
@@ -256,7 +286,7 @@
 
             <!-- Col: 会社負担合計 -->
             <ng-container matColumnDef="totalCompany">
-              <th mat-header-cell *matHeaderCellDef>会社負担合計</th>
+              <th mat-header-cell *matHeaderCellDef>会社負担合計（参考値）</th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.totalCompany) }}円
               </td>
@@ -318,13 +348,13 @@
               </td>
             </ng-container>
 
-            <!-- Col: 健康保険料(会社) -->
+            <!-- Col: 健康保険料(全額) -->
             <ng-container matColumnDef="healthInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>
-                健康保険料 <br />（介護保険非該当）<br />(会社)
+                健康保険料 <br />（介護保険非該当）<br />(全額)
               </th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.healthInsuranceCompany) }}円
+                {{ formatNumberWithDecimal(employee.currentMonth.healthInsuranceCompany) }}円
               </td>
             </ng-container>
 
@@ -344,13 +374,13 @@
               </td>
             </ng-container>
 
-            <!-- Col: 介護保険料(会社) -->
+            <!-- Col: 介護保険料(全額) -->
             <ng-container matColumnDef="careInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>
-                健康保険料 <br />（介護保険該当）<br />(会社)
+                健康保険料 <br />（介護保険該当）<br />(全額)
               </th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.careInsuranceCompany) }}円
+                {{ formatNumberWithDecimal(employee.currentMonth.careInsuranceCompany) }}円
               </td>
             </ng-container>
 
@@ -364,15 +394,25 @@
             <ng-container matColumnDef="pensionInsuranceEmployee">
               <th mat-header-cell *matHeaderCellDef>厚生年金保険料<br />(本人)</th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.pensionInsuranceEmployee) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.pensionInsuranceEmployee,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
-            <!-- Col: 厚生年金保険料(会社) -->
+            <!-- Col: 厚生年金保険料(全額) -->
             <ng-container matColumnDef="pensionInsuranceCompany">
-              <th mat-header-cell *matHeaderCellDef>厚生年金保険料<br />(会社)</th>
+              <th mat-header-cell *matHeaderCellDef>厚生年金保険料<br />(全額)</th>
               <td mat-cell *matCellDef="let employee">
-                {{ formatNumber(employee.currentMonth.pensionInsuranceCompany) }}円
+                {{
+                  formatMoneyCell(
+                    employee.currentMonth.pensionInsuranceCompany,
+                    getLeaveStatusLabel(employee.leaveStatus)
+                  )
+                }}
               </td>
             </ng-container>
 
@@ -386,7 +426,7 @@
 
             <!-- Col: 会社負担合計 -->
             <ng-container matColumnDef="totalCompany">
-              <th mat-header-cell *matHeaderCellDef>会社負担合計</th>
+              <th mat-header-cell *matHeaderCellDef>会社負担合計（参考値）</th>
               <td mat-cell *matCellDef="let employee">
                 {{ formatNumber(employee.currentMonth.totalCompany) }}円
               </td>
