@@ -293,12 +293,7 @@ export class BonusCalculationService {
         );
         const pensionEmployeeDecimal = pensionTotalDecimal.div(2);
         pensionEmployee = SocialInsuranceCalculator.roundForEmployeeBurden(pensionEmployeeDecimal);
-
-        const pensionTotalRounded = pensionTotalDecimal.toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
-        pensionCompany = SocialInsuranceCalculator.subtract(
-          pensionTotalRounded.toString(),
-          pensionEmployee
-        );
+        pensionCompany = pensionTotalDecimal.div(2).toString();
       } else {
         // 70歳以上は厚生年金の計算対象外
         isPensionLimitApplied = false;
@@ -332,13 +327,9 @@ export class BonusCalculationService {
       const healthEmployeeDecimal = healthTotalDecimal.div(2);
       const healthInsuranceEmployee =
         SocialInsuranceCalculator.roundForEmployeeBurden(healthEmployeeDecimal);
-
       const healthInsurance = {
         employeeBurden: healthInsuranceEmployee,
-        companyBurden: SocialInsuranceCalculator.subtract(
-          healthTotalDecimal.toFixed(0, Decimal.ROUND_HALF_UP),
-          healthInsuranceEmployee
-        ),
+        companyBurden: healthTotalDecimal.div(2).toString(),
       };
 
       // --- 介護保険料の計算 ---
@@ -354,13 +345,9 @@ export class BonusCalculationService {
         const careEmployeeDecimal = careTotalDecimal.div(2);
         const careInsuranceEmployee =
           SocialInsuranceCalculator.roundForEmployeeBurden(careEmployeeDecimal);
-
         careInsurance = {
           employeeBurden: careInsuranceEmployee,
-          companyBurden: SocialInsuranceCalculator.subtract(
-            careTotalDecimal.toFixed(0, Decimal.ROUND_HALF_UP),
-            careInsuranceEmployee
-          ),
+          companyBurden: careTotalDecimal.div(2).toString(),
         };
         careInsuranceRate = new Decimal(careInsuranceRateDecimal).times(100).toFixed(3);
         combinedHealthAndCareRate = rates.nursingRate;

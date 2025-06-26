@@ -770,34 +770,75 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   editBonusIndex: number | null = null;
   editBonusInitialData: { paymentDate: string; amount: number; leaveType: string } | null = null;
 
-  addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
-    // 新しい賞与データをリストに追加
-    this.bonusDataList.push({
-      amount: bonus.amount.toString(),
-      paymentDate: bonus.paymentDate,
-      month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
-      year: BigInt(new Date(bonus.paymentDate).getFullYear()),
-      type: 'bonus',
-      originalKey: '',
-      calculationResult: {
-        standardBonusAmount: bonus.amount.toString(),
-        cappedPensionStandardAmount: bonus.amount.toString(),
-        isPensionLimitApplied: false,
-        applicableHealthStandardAmount: bonus.amount.toString(),
-        isHealthLimitApplied: false,
-        healthInsurance: { employeeBurden: '0', companyBurden: '0' },
-        careInsurance: { employeeBurden: '0', companyBurden: '0' },
-        pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
-        healthInsuranceRate: '',
-        careInsuranceRate: '',
-        combinedHealthAndCareRate: '',
-        pensionInsuranceRate: '',
+  async addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
+    if (!this.employeeInfo) return;
+    if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
+      // 産休・育休の場合は計算せず0で登録
+      this.bonusDataList.push({
+        amount: bonus.amount.toString(),
+        paymentDate: bonus.paymentDate,
+        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+        type: 'bonus',
+        originalKey: '',
+        calculationResult: {
+          standardBonusAmount: '0',
+          cappedPensionStandardAmount: '0',
+          isPensionLimitApplied: false,
+          applicableHealthStandardAmount: '0',
+          isHealthLimitApplied: false,
+          healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+          careInsurance: { employeeBurden: '0', companyBurden: '0' },
+          pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+          healthInsuranceRate: '',
+          careInsuranceRate: '',
+          combinedHealthAndCareRate: '',
+          pensionInsuranceRate: '',
+        },
+        leaveType: bonus.leaveType || 'excluded',
+      });
+      this.sortBonusList();
+      this.createPivotedTable();
+      this.saveBonusResults();
+      return;
+    }
+    // 年間累計標準賞与額を計算
+    const cumulativeHealthBonus = this.bonusDataList
+      .reduce(
+        (acc, item) => acc.add(new Decimal(item.calculationResult.applicableHealthStandardAmount)),
+        new Decimal('0')
+      )
+      .toString();
+
+    // サービスで計算
+    const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
+      {
+        amount: bonus.amount.toString(),
+        paymentDate: bonus.paymentDate,
+        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+        type: 'bonus',
+        originalKey: '',
+        fiscalYear: this.targetYear,
       },
-      leaveType: bonus.leaveType || 'excluded',
-    });
-    this.sortBonusList();
-    this.createPivotedTable();
-    this.saveBonusResults();
+      {
+        age: this.employeeInfo.age,
+        addressPrefecture: this.employeeInfo.addressPrefecture,
+        companyId: this.employeeInfo.companyId,
+        birthDate: this.employeeInfo.birthDate,
+      },
+      cumulativeHealthBonus
+    );
+
+    if (calculated) {
+      this.bonusDataList.push({
+        ...calculated,
+        leaveType: bonus.leaveType || 'excluded',
+      });
+      this.sortBonusList();
+      this.createPivotedTable();
+      this.saveBonusResults();
+    }
   }
 
   // FirestoreのinsuranceJudgmentsから保険期間情報を取得
@@ -846,20 +887,84 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     this.showEditBonusForm = true;
   }
 
-  onEditBonusSave(bonus: { paymentDate: string; amount: number; leaveType: string }) {
-    if (this.editBonusIndex !== null && this.bonusDataList[this.editBonusIndex]) {
-      this.bonusDataList[this.editBonusIndex].paymentDate = bonus.paymentDate;
-      this.bonusDataList[this.editBonusIndex].amount = bonus.amount.toString();
-      this.bonusDataList[this.editBonusIndex].month = BigInt(
-        new Date(bonus.paymentDate).getMonth() + 1
+  async onEditBonusSave(bonus: { paymentDate: string; amount: number; leaveType: string }) {
+    if (
+      this.editBonusIndex !== null &&
+      this.bonusDataList[this.editBonusIndex] &&
+      this.employeeInfo
+    ) {
+      if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
+        // 産休・育休の場合は計算せず0で登録
+        this.bonusDataList[this.editBonusIndex] = {
+          amount: bonus.amount.toString(),
+          paymentDate: bonus.paymentDate,
+          month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+          year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+          type: 'bonus',
+          originalKey: '',
+          calculationResult: {
+            standardBonusAmount: '0',
+            cappedPensionStandardAmount: '0',
+            isPensionLimitApplied: false,
+            applicableHealthStandardAmount: '0',
+            isHealthLimitApplied: false,
+            healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+            careInsurance: { employeeBurden: '0', companyBurden: '0' },
+            pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+            healthInsuranceRate: '',
+            careInsuranceRate: '',
+            combinedHealthAndCareRate: '',
+            pensionInsuranceRate: '',
+          },
+          leaveType: bonus.leaveType || 'excluded',
+        };
+        this.sortBonusList();
+        this.createPivotedTable();
+        this.saveBonusResults();
+        this.showEditBonusForm = false;
+        this.editBonusIndex = null;
+        this.editBonusInitialData = null;
+        return;
+      }
+      // 年間累計標準賞与額を再計算（自分以外の分のみ合計）
+      const cumulativeHealthBonus = this.bonusDataList
+        .filter((_, idx) => idx !== this.editBonusIndex)
+        .reduce(
+          (acc, item) =>
+            acc.add(new Decimal(item.calculationResult.applicableHealthStandardAmount)),
+          new Decimal('0')
+        )
+        .toString();
+
+      // 再計算
+      const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
+        {
+          amount: bonus.amount.toString(),
+          paymentDate: bonus.paymentDate,
+          month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+          year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+          type: 'bonus',
+          originalKey: '',
+          fiscalYear: this.targetYear,
+        },
+        {
+          age: this.employeeInfo.age,
+          addressPrefecture: this.employeeInfo.addressPrefecture,
+          companyId: this.employeeInfo.companyId,
+          birthDate: this.employeeInfo.birthDate,
+        },
+        cumulativeHealthBonus
       );
-      this.bonusDataList[this.editBonusIndex].year = BigInt(
-        new Date(bonus.paymentDate).getFullYear()
-      );
-      this.bonusDataList[this.editBonusIndex].leaveType = bonus.leaveType;
-      this.sortBonusList();
-      this.createPivotedTable();
-      this.saveBonusResults();
+
+      if (calculated) {
+        this.bonusDataList[this.editBonusIndex] = {
+          ...calculated,
+          leaveType: bonus.leaveType || 'excluded',
+        };
+        this.sortBonusList();
+        this.createPivotedTable();
+        this.saveBonusResults();
+      }
     }
     this.showEditBonusForm = false;
     this.editBonusIndex = null;
