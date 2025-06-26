@@ -10,8 +10,16 @@
         <label for="amount">支給金額（社会保険対象分）</label>
         <input id="amount" name="amount" type="number" min="1" [(ngModel)]="amount" required />
       </div>
+      <div class="form-group">
+        <label for="leaveType">産休育休の有無</label>
+        <select id="leaveType" name="leaveType" [(ngModel)]="leaveType" required>
+          <option value="none">対象外</option>
+          <option value="maternity">産休</option>
+          <option value="childcare">育休</option>
+        </select>
+      </div>
       <div class="dialog-actions">
-        <button type="submit" [disabled]="!bonusForm.form.valid">保存</button>
+        <button type="submit" [disabled]="!bonusForm.form.valid">登録</button>
         <button type="button" (click)="onCancel()">キャンセル</button>
       </div>
     </form>

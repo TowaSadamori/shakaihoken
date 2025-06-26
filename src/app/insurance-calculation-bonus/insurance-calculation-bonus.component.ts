@@ -57,6 +57,13 @@ type DisplayBonusHistoryItem = CalculatedBonusHistoryItem & {
   originalCalculationResult?: BonusPremiumResult;
 };
 
+// 保険期間情報の型
+interface InsurancePeriods {
+  careInsurancePeriod?: { start: string; end: string };
+  healthInsurancePeriod?: { start: string; end: string };
+  pensionInsurancePeriod?: { start: string; end: string };
+}
+
 @Component({
   selector: 'app-insurance-calculation-bonus',
   templateUrl: './insurance-calculation-bonus.component.html',
@@ -188,6 +195,9 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     }
   }
 
+  // 保険期間情報
+  employeeInsurancePeriods: InsurancePeriods = {};
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -206,8 +216,9 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (employeeId) {
       this.employeeId = employeeId;
       await this.loadEmployeeInfo();
-      // 従業員情報読み込み後に、賞与データを読み込む
+      // Firestoreから保険期間情報を取得
       if (this.employeeInfo) {
+        await this.loadEmployeeInsurancePeriods();
         await this.loadBonusData();
       }
     } else {
@@ -708,7 +719,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
   showAddBonusForm = false;
 
-  addBonus(bonus: { paymentDate: string; amount: number }) {
+  addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
     // 新しい賞与データをリストに追加
     this.bonusDataList.push({
       amount: bonus.amount.toString(),
@@ -731,7 +742,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         combinedHealthAndCareRate: '',
         pensionInsuranceRate: '',
       },
-      leaveType: 'none',
+      leaveType: bonus.leaveType,
     });
     // 支給日で昇順ソート
     this.bonusDataList.sort((a, b) => {
@@ -739,5 +750,39 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       return new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime();
     });
     this.createPivotedTable();
+  }
+
+  // FirestoreのinsuranceJudgmentsから保険期間情報を取得
+  async loadEmployeeInsurancePeriods() {
+    if (!this.employeeInfo?.uid) return;
+    try {
+      const db = this.firestore;
+      const docRef = doc(db, 'insuranceJudgments', this.employeeInfo.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        this.employeeInsurancePeriods = {
+          careInsurancePeriod: data['careInsurancePeriod'],
+          healthInsurancePeriod: data['healthInsurancePeriod'],
+          pensionInsurancePeriod: data['pensionInsurancePeriod'],
+        };
+      }
+    } catch (e) {
+      console.error('保険期間情報の取得に失敗:', e);
+    }
+  }
+
+  // 日付を「YYYY年MM月DD日」形式に変換
+  formatJapaneseDate(dateStr?: string): string {
+    if (!dateStr) return '';
+    // YYYY-MM or YYYY-MM-DD
+    const parts = dateStr.split('-');
+    if (parts.length === 2) {
+      // YYYY-MM → YYYY-MM-01
+      dateStr = `${parts[0]}-${parts[1]}-01`;
+    }
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
   }
 }

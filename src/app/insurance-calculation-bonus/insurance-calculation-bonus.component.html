@@ -23,6 +23,27 @@
         <span class="info-label">事業所所在地:</span>
         <span>{{ employeeInfo.addressPrefecture }}</span>
       </div>
+      <div class="info-item" *ngIf="employeeInsurancePeriods.careInsurancePeriod">
+        <span class="info-label">介護保険対象期間:</span>
+        <span>
+          {{ formatJapaneseDate(employeeInsurancePeriods.careInsurancePeriod.start) }} ～
+          {{ formatJapaneseDate(employeeInsurancePeriods.careInsurancePeriod.end) }}
+        </span>
+      </div>
+      <div class="info-item" *ngIf="employeeInsurancePeriods.healthInsurancePeriod">
+        <span class="info-label">健康保険対象期間:</span>
+        <span>
+          {{ formatJapaneseDate(employeeInsurancePeriods.healthInsurancePeriod.start) }} ～
+          {{ formatJapaneseDate(employeeInsurancePeriods.healthInsurancePeriod.end) }}
+        </span>
+      </div>
+      <div class="info-item" *ngIf="employeeInsurancePeriods.pensionInsurancePeriod">
+        <span class="info-label">厚生年金保険対象期間:</span>
+        <span>
+          {{ formatJapaneseDate(employeeInsurancePeriods.pensionInsurancePeriod.start) }} ～
+          {{ formatJapaneseDate(employeeInsurancePeriods.pensionInsurancePeriod.end) }}
+        </span>
+      </div>
     </div>
   </div>
 

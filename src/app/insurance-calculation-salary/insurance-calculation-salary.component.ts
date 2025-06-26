@@ -87,6 +87,13 @@ interface MonthlyCalculationResultForDb {
   pensionInsuranceFeeCompany: string;
 }
 
+// 保険期間情報の型
+interface InsurancePeriods {
+  careInsurancePeriod?: { start: string; end: string };
+  healthInsurancePeriod?: { start: string; end: string };
+  pensionInsurancePeriod?: { start: string; end: string };
+}
+
 @Component({
   selector: 'app-insurance-calculation-salary',
   standalone: true,
@@ -101,6 +108,9 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
 
   targetYear: number | null = null;
   monthlyResults: MonthlyCalculationResult[] = [];
+
+  // 保険期間情報
+  employeeInsurancePeriods: InsurancePeriods = {};
 
   private employeeId: string | null = null;
   private uid: string | null = null;
@@ -170,6 +180,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           branchNumber: userData['branchNumber'] || '',
           addressPrefecture: addressPrefecture,
         };
+        await this.loadEmployeeInsurancePeriods();
       } else {
         this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
       }
@@ -591,5 +602,37 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       return ym >= period.start;
     }
     return ym >= period.start && ym <= period.end;
+  }
+
+  // FirestoreのinsuranceJudgmentsから保険期間情報を取得
+  async loadEmployeeInsurancePeriods() {
+    if (!this.uid) return;
+    try {
+      const db = this.firestore;
+      const docRef = doc(db, 'insuranceJudgments', this.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        this.employeeInsurancePeriods = {
+          careInsurancePeriod: data['careInsurancePeriod'],
+          healthInsurancePeriod: data['healthInsurancePeriod'],
+          pensionInsurancePeriod: data['pensionInsurancePeriod'],
+        };
+      }
+    } catch (e) {
+      console.error('保険期間情報の取得に失敗:', e);
+    }
+  }
+
+  // 日付を「YYYY年MM月DD日」形式に変換
+  formatJapaneseDate(dateStr?: string): string {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 2) {
+      dateStr = `${parts[0]}-${parts[1]}-01`;
+    }
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
   }
 }

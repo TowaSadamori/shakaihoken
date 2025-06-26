@@ -11,13 +11,18 @@ import { FormsModule } from '@angular/forms';
 export class BonusAddFormComponent {
   paymentDate = '';
   amount: number | null = null;
+  leaveType: 'none' | 'maternity' | 'childcare' = 'none';
 
-  @Output() save = new EventEmitter<{ paymentDate: string; amount: number }>();
+  @Output() save = new EventEmitter<{ paymentDate: string; amount: number; leaveType: string }>();
   @Output() closed = new EventEmitter<void>();
 
   onSave() {
     if (this.paymentDate && this.amount && this.amount > 0) {
-      this.save.emit({ paymentDate: this.paymentDate, amount: this.amount });
+      this.save.emit({
+        paymentDate: this.paymentDate,
+        amount: this.amount,
+        leaveType: this.leaveType,
+      });
       this.closed.emit();
     }
   }
