@@ -3100,6 +3100,10 @@ export class InsuranceJudgmentComponent implements OnInit {
   // 2日以降の場合は誕生日の属する月が資格喪失月となる（例：5月2日生まれ→5月が資格喪失月）。
   getPensionInsurancePeriod(birthDate: string): { start: string; end: string } | null {
     if (!birthDate) return null;
+
+    const bd = new Date(birthDate);
+    const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
+
     // 手入力かつ70歳以上かつ「厚生年金加入対象」選択時は上限なし
     if (
       this.answers &&
@@ -3107,19 +3111,43 @@ export class InsuranceJudgmentComponent implements OnInit {
       this.age >= 70 &&
       this.answers['manualPensionInsurance'] === 'eligible'
     ) {
-      const bd = new Date(birthDate);
-      const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
       return { start, end: '' };
     }
+
     // 通常のロジック
-    const bd = new Date(birthDate);
-    const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
-    const seventiethBirthday = new Date(bd);
-    seventiethBirthday.setFullYear(bd.getFullYear() + 70);
-    const endDatePrevMonth = new Date(seventiethBirthday);
-    endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
-    const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
-    return { start, end };
+    if (bd.getDate() === 1) {
+      // 1日生まれの場合：70歳の誕生日の前日が属する月の前月が終了月
+      // 例：1985年1月1日生まれ → 2055年1月1日の前日は2054年12月31日 → その前月は11月
+      const year70 = bd.getFullYear() + 70;
+      const month70 = bd.getMonth(); // 70歳の誕生月（0始まり）
+
+      // 70歳の誕生日の前日が属する月（=前月）を求める
+      let prevYear = year70;
+      let prevMonth = month70 - 1;
+      if (prevMonth < 0) {
+        prevYear -= 1;
+        prevMonth = 11; // 12月
+      }
+
+      // その前月を求める
+      let endYear = prevYear;
+      let endMonth = prevMonth - 1;
+      if (endMonth < 0) {
+        endYear -= 1;
+        endMonth = 11; // 12月
+      }
+
+      const end = `${endYear}-${('0' + (endMonth + 1)).slice(-2)}`;
+      return { start, end };
+    } else {
+      // 2日以降生まれの場合は従来通り
+      const seventiethBirthday = new Date(bd);
+      seventiethBirthday.setFullYear(bd.getFullYear() + 70);
+      const endDatePrevMonth = new Date(seventiethBirthday);
+      endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
+      const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
+      return { start, end };
+    }
   }
 
   // YYYY-MM → YYYY年M月 形式に変換
