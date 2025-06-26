@@ -211,6 +211,16 @@
           {{ judgmentResult.healthInsurance.eligible ? '加入対象' : '加入対象外' }}
         </div>
         <p>{{ judgmentResult.healthInsurance.reason }}</p>
+        <div *ngIf="judgmentResult.healthInsurance.eligible && careInsurancePeriod">
+          <span style="font-weight: bold">介護保険料該当期間:</span>
+          {{ formatJapaneseYearMonth(careInsurancePeriod.start) }} ～
+          {{ formatJapaneseYearMonth(careInsurancePeriod.end) }}
+        </div>
+        <div *ngIf="judgmentResult.healthInsurance.eligible && healthInsurancePeriod">
+          <span style="font-weight: bold">健康保険料該当期間:</span>
+          {{ formatJapaneseYearMonth(healthInsurancePeriod.start) }} ～
+          {{ formatJapaneseYearMonth(healthInsurancePeriod.end) }}
+        </div>
       </div>
 
       <div class="result-card">
@@ -222,6 +232,11 @@
           {{ judgmentResult.pensionInsurance.eligible ? '加入対象' : '加入対象外' }}
         </div>
         <p>{{ judgmentResult.pensionInsurance.reason }}</p>
+        <div *ngIf="judgmentResult.pensionInsurance.eligible && pensionInsurancePeriod">
+          <span style="font-weight: bold">厚生年金保険料該当期間:</span>
+          {{ formatJapaneseYearMonth(pensionInsurancePeriod.start) }} ～
+          {{ formatJapaneseYearMonth(pensionInsurancePeriod.end) }}
+        </div>
       </div>
     </div>
   </div>

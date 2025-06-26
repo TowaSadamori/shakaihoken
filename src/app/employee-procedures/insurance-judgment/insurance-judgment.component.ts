@@ -63,6 +63,9 @@ interface SavedJudgmentData {
   officeNumber: string;
   officePrefecture: string;
   specialCases?: SpecialCase[];
+  careInsurancePeriod?: { start: string; end: string };
+  healthInsurancePeriod?: { start: string; end: string };
+  pensionInsurancePeriod?: { start: string; end: string };
 }
 
 interface SpecialCase {
@@ -631,6 +634,10 @@ export class InsuranceJudgmentComponent implements OnInit {
     },
   };
 
+  careInsurancePeriod?: { start: string; end: string };
+  healthInsurancePeriod?: { start: string; end: string };
+  pensionInsurancePeriod?: { start: string; end: string };
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -1009,10 +1016,12 @@ export class InsuranceJudgmentComponent implements OnInit {
 
   async saveJudgment() {
     const hasResult = !!this.judgmentResult;
-
     if (hasResult && this.currentUid) {
       try {
         const firestore = getFirestore();
+        const careInsurancePeriod = this.getCareInsurancePeriod(this.birthDate);
+        const healthInsurancePeriod = this.getHealthInsurancePeriod(this.birthDate);
+        const pensionInsurancePeriod = this.getPensionInsurancePeriod(this.birthDate);
         const judgmentData: SavedJudgmentData = {
           uid: this.currentUid,
           employeeName: this.employeeName,
@@ -1025,11 +1034,12 @@ export class InsuranceJudgmentComponent implements OnInit {
           officeNumber: this.officeNumber,
           officePrefecture: this.officePrefecture,
           specialCases: this.selectedSpecialCases,
+          careInsurancePeriod: careInsurancePeriod || undefined,
+          healthInsurancePeriod: healthInsurancePeriod || undefined,
+          pensionInsurancePeriod: pensionInsurancePeriod || undefined,
         };
-
         const docRef = doc(firestore, 'insuranceJudgments', this.currentUid);
         await setDoc(docRef, judgmentData);
-
         this.isJudgmentSaved = true;
         console.log('判定結果を保存しました:', judgmentData);
         alert('判定結果を保存しました');
@@ -1062,6 +1072,21 @@ export class InsuranceJudgmentComponent implements OnInit {
         }
         if (savedData.specialCases) {
           this.selectedSpecialCases = savedData.specialCases;
+        }
+        if (savedData.careInsurancePeriod) {
+          this.careInsurancePeriod = savedData.careInsurancePeriod;
+        } else {
+          this.careInsurancePeriod = undefined;
+        }
+        if (savedData.healthInsurancePeriod) {
+          this.healthInsurancePeriod = savedData.healthInsurancePeriod;
+        } else {
+          this.healthInsurancePeriod = undefined;
+        }
+        if (savedData.pensionInsurancePeriod) {
+          this.pensionInsurancePeriod = savedData.pensionInsurancePeriod;
+        } else {
+          this.pensionInsurancePeriod = undefined;
         }
         this.isJudgmentSaved = true;
 
@@ -2948,5 +2973,67 @@ export class InsuranceJudgmentComponent implements OnInit {
       childAge,
       measureType,
     };
+  }
+
+  // 生年月日から介護保険料該当期間（開始月・終了月）を計算する関数
+  getCareInsurancePeriod(birthDate: string): { start: string; end: string } | null {
+    if (!birthDate) return null;
+    const bd = new Date(birthDate);
+    // 40歳の誕生日の前日
+    const startDate = new Date(bd);
+    startDate.setFullYear(bd.getFullYear() + 40);
+    startDate.setDate(startDate.getDate() - 1);
+    // 65歳の誕生日の前日
+    const endDate = new Date(bd);
+    endDate.setFullYear(bd.getFullYear() + 65);
+    endDate.setDate(endDate.getDate() - 1);
+    // 開始月（YYYY-MM）
+    const start = `${startDate.getFullYear()}-${('0' + (startDate.getMonth() + 1)).slice(-2)}`;
+    // 終了月（65歳の誕生日の前日が属する月の前月）
+    const endDatePrevMonth = new Date(endDate);
+    endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
+    const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
+    return { start, end };
+  }
+
+  // 生年月日から健康保険該当期間（開始月・終了月）を計算する関数
+  getHealthInsurancePeriod(birthDate: string): { start: string; end: string } | null {
+    if (!birthDate) return null;
+    const bd = new Date(birthDate);
+    // 開始月（生まれた月）
+    const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
+    // 75歳の誕生日
+    const seventyFifthBirthday = new Date(bd);
+    seventyFifthBirthday.setFullYear(bd.getFullYear() + 75);
+    // 75歳の誕生日の前月
+    const endDatePrevMonth = new Date(seventyFifthBirthday);
+    endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
+    const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
+    return { start, end };
+  }
+
+  // 生年月日から厚生年金保険該当期間（開始月・終了月）を計算する関数
+  // 70歳の誕生日が各月1日の場合、資格喪失日は前月末日となる（例：5月1日生まれ→4月が資格喪失月）。
+  // 2日以降の場合は誕生日の属する月が資格喪失月となる（例：5月2日生まれ→5月が資格喪失月）。
+  getPensionInsurancePeriod(birthDate: string): { start: string; end: string } | null {
+    if (!birthDate) return null;
+    const bd = new Date(birthDate);
+    // 開始月（生まれた月）
+    const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
+    // 70歳の誕生日
+    const seventiethBirthday = new Date(bd);
+    seventiethBirthday.setFullYear(bd.getFullYear() + 70);
+    // 70歳の誕生日の前月
+    const endDatePrevMonth = new Date(seventiethBirthday);
+    endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
+    const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
+    return { start, end };
+  }
+
+  // YYYY-MM → YYYY年M月 形式に変換
+  formatJapaneseYearMonth(ym: string): string {
+    if (!ym) return '';
+    const [y, m] = ym.split('-');
+    return `${y}年${parseInt(m, 10)}月`;
   }
 }
