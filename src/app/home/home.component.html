@@ -35,24 +35,71 @@
   <section class="company-expense-summary-section">
     <mat-card class="summary-card">
       <mat-card-header>
-        <mat-card-title>会社負担額サマリー</mat-card-title>
+        <mat-card-title>会社負担額</mat-card-title>
       </mat-card-header>
+      <div
+        class="selected-office-name"
+        style="margin-left: 16px; margin-bottom: 8px; font-weight: bold"
+      >
+        {{ selectedOfficeName }}
+      </div>
       <mat-card-content>
         <div class="summary-row">
           <span class="summary-label">健康保険料（会社負担分）合計</span>
-          <span class="summary-amount">- 円</span>
+          <span class="summary-amount">
+            {{
+              getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].healthInsuranceTotal
+                | number
+            }}円
+          </span>
         </div>
         <div class="summary-row">
           <span class="summary-label">厚生年金保険料（会社負担分）合計</span>
-          <span class="summary-amount">- 円</span>
+          <span class="summary-amount">
+            {{ getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].pensionTotal | number }}円
+          </span>
         </div>
         <div class="summary-total">
           <span class="summary-label">会社負担分総額</span>
-          <span class="summary-amount">- 円</span>
+          <span class="summary-amount">
+            {{
+              getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].healthInsuranceTotal +
+                getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].pensionTotal | number
+            }}円
+          </span>
         </div>
       </mat-card-content>
     </mat-card>
   </section>
+
+  <!-- 会社負担額サマリーカードの下に月ごとの合計を表示 -->
+  <!--
+  <section class="company-expense-monthly-section">
+    <mat-card class="summary-card">
+      <mat-card-header>
+        <mat-card-title>月ごとの会社負担額合計</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table class="monthly-company-totals-table">
+          <thead>
+            <tr>
+              <th>月</th>
+              <th>健康保険料（会社負担分）合計</th>
+              <th>厚生年金保険料（会社負担分）合計</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of getMonthlyCompanyTotals()">
+              <td>{{ row.month }}月</td>
+              <td>{{ row.healthInsuranceTotal | number }}円</td>
+              <td>{{ row.pensionTotal | number }}円</td>
+            </tr>
+          </tbody>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  </section>
+  -->
 
   <!-- 管理者向け：全従業員保険料表示 -->
   <section class="admin-section">

@@ -732,4 +732,44 @@ export class HomeComponent implements OnInit {
       );
     }
   }
+
+  // 月ごとの会社負担額合計を計算するメソッド
+  getMonthlyCompanyTotals(): {
+    month: number;
+    healthInsuranceTotal: number;
+    pensionTotal: number;
+  }[] {
+    // 月番号リスト（4月～翌年3月）
+    const months = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
+    const results: { month: number; healthInsuranceTotal: number; pensionTotal: number }[] = [];
+    for (const m of months) {
+      let healthInsuranceTotal = 0;
+      let pensionTotal = 0;
+      for (const emp of this.allEmployeesData) {
+        // 月ごとのデータ取得
+        const monthData =
+          emp.currentMonth.healthInsuranceCompany || emp.currentMonth.careInsuranceCompany || '0';
+        // 会社負担分の合計
+        healthInsuranceTotal += Number(monthData);
+        // 厚生年金保険料
+        pensionTotal += Number(emp.currentMonth.pensionInsuranceCompany || '0');
+      }
+      // 端数処理（1円未満切り捨て）
+      results.push({
+        month: m,
+        healthInsuranceTotal: Math.floor(healthInsuranceTotal),
+        pensionTotal: Math.floor(pensionTotal),
+      });
+    }
+    return results;
+  }
+
+  // 選択中の事業所名を返すgetter
+  get selectedOfficeName(): string {
+    if (this.selectedOffice === 'all') {
+      return '全事業所';
+    }
+    const office = this.offices.find((o) => o.branchNumber === this.selectedOffice);
+    return office ? office.name : '';
+  }
 }
