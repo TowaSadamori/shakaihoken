@@ -93,7 +93,7 @@
         <div class="card">
           <header class="card-header">
             <!-- 保存ボタンをタイトル横に配置 -->
-            <div class="card-header-save-btn">
+            <div class="card-header-save-btn" *ngIf="bonusDataList.length">
               <button
                 class="save-btn-header"
                 (click)="saveBonusResults()"
@@ -126,22 +126,17 @@
                     <td [innerHTML]="row.header"></td>
                     <ng-container *ngFor="let col of pivotedTable.columns; let i = index">
                       <td *ngIf="!col.isSeparator" [class.is-numeric]="col.isNumeric">
-                        <!-- 育休産休プルダウン列の場合 -->
-                        <select
+                        <!-- 育休産休列：プルダウンを廃止しspanで日本語表示 -->
+                        <span
                           *ngIf="
                             row.values &&
                             i < row.values.length &&
                             row.values[i] &&
                             row.values[i]!.toString().startsWith('checkbox_')
                           "
-                          [value]="getLeaveType(rowIndex)"
-                          (change)="onLeaveStatusChange($event, rowIndex)"
-                          class="leave-select"
                         >
-                          <option value="none">なし</option>
-                          <option value="maternity">産休</option>
-                          <option value="childcare">育休</option>
-                        </select>
+                          {{ getLeaveTypeLabel(getLeaveType(rowIndex)) }}
+                        </span>
                         <!-- 通常の値の場合 -->
                         <span
                           *ngIf="
@@ -176,7 +171,7 @@
                 </div>
               </div>
               <div *ngIf="!isLoading && !bonusDataList.length" class="has-text-centered">
-                <p>{{ importStatusMessage || 'データがありません。' }}</p>
+                <p>データがありません。</p>
               </div>
             </ng-template>
           </div>

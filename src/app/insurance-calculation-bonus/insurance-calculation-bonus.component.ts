@@ -117,6 +117,20 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       : 'none';
   }
 
+  // leaveTypeを日本語表示に変換
+  getLeaveTypeLabel(leaveType: string): string {
+    switch (leaveType) {
+      case 'maternity':
+        return '産休';
+      case 'childcare':
+        return '育休';
+      case 'excluded':
+        return '対象外';
+      default:
+        return '';
+    }
+  }
+
   private updateCalculationForLeave(index: number): void {
     const item = this.bonusDataList && this.bonusDataList[index];
     if (!item) return;
@@ -632,6 +646,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
             calculationResult: calculationResult,
           });
         }),
+        insurancePeriods: this.employeeInsurancePeriods,
         updatedAt: new Date(),
         updatedBy: 'system',
       };
@@ -750,6 +765,8 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       return new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime();
     });
     this.createPivotedTable();
+    // 追加直後に即保存
+    this.saveBonusResults();
   }
 
   // FirestoreのinsuranceJudgmentsから保険期間情報を取得
