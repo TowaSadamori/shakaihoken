@@ -25,11 +25,17 @@ interface SavedJudgmentData {
   officeNumber: string;
   officePrefecture: string;
   specialCases?: unknown[];
+  careInsurancePeriod?: { start: string; end: string };
+  healthInsurancePeriod?: { start: string; end: string };
+  pensionInsurancePeriod?: { start: string; end: string };
 }
 
 // ユーザーに判定結果を追加した拡張インターフェース
 interface UserWithJudgment extends User {
   judgmentResult?: InsuranceEligibility | null;
+  careInsurancePeriod?: { start: string; end: string };
+  healthInsurancePeriod?: { start: string; end: string };
+  pensionInsurancePeriod?: { start: string; end: string };
 }
 
 @Component({
@@ -133,6 +139,9 @@ export class EmployeeProceduresPlaceholderComponent implements OnInit {
             user.companyId === currentCompanyId
           ) {
             user.judgmentResult = savedData.judgmentResult;
+            user.careInsurancePeriod = savedData.careInsurancePeriod;
+            user.healthInsurancePeriod = savedData.healthInsurancePeriod;
+            user.pensionInsurancePeriod = savedData.pensionInsurancePeriod;
             console.log('✅ 判定結果をセット:', savedData.judgmentResult);
           } else {
             console.log('❌ マッチング条件が合わないためスキップ');
@@ -213,5 +222,31 @@ export class EmployeeProceduresPlaceholderComponent implements OnInit {
     if (currentUser) {
       this.router.navigate(['/employee-procedures/application-form', currentUser.uid]);
     }
+  }
+
+  // YYYY-MM → YYYY年M月 形式に変換
+  formatJapaneseYearMonth(ym: string): string {
+    if (!ym) return '';
+    const [y, m] = ym.split('-');
+    return `${y}年${parseInt(m, 10)}月`;
+  }
+
+  // 期間テキストを返す
+  getHealthInsurancePeriodText(user: UserWithJudgment): string {
+    if (user.healthInsurancePeriod)
+      return `${this.formatJapaneseYearMonth(user.healthInsurancePeriod.start)}～${this.formatJapaneseYearMonth(user.healthInsurancePeriod.end)}`;
+    return '';
+  }
+
+  getCareInsurancePeriodText(user: UserWithJudgment): string {
+    if (user.careInsurancePeriod)
+      return `${this.formatJapaneseYearMonth(user.careInsurancePeriod.start)}～${this.formatJapaneseYearMonth(user.careInsurancePeriod.end)}`;
+    return '';
+  }
+
+  getPensionInsurancePeriodText(user: UserWithJudgment): string {
+    if (user.pensionInsurancePeriod)
+      return `${this.formatJapaneseYearMonth(user.pensionInsurancePeriod.start)}～${this.formatJapaneseYearMonth(user.pensionInsurancePeriod.end)}`;
+    return '';
   }
 }

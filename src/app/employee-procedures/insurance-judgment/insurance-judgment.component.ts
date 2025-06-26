@@ -1073,20 +1073,24 @@ export class InsuranceJudgmentComponent implements OnInit {
         if (savedData.specialCases) {
           this.selectedSpecialCases = savedData.specialCases;
         }
+        // 期間が保存されていれば復元、なければ再計算
         if (savedData.careInsurancePeriod) {
           this.careInsurancePeriod = savedData.careInsurancePeriod;
         } else {
-          this.careInsurancePeriod = undefined;
+          const period = this.getCareInsurancePeriod(savedData.birthDate);
+          this.careInsurancePeriod = period ? period : undefined;
         }
         if (savedData.healthInsurancePeriod) {
           this.healthInsurancePeriod = savedData.healthInsurancePeriod;
         } else {
-          this.healthInsurancePeriod = undefined;
+          const period = this.getHealthInsurancePeriod(savedData.birthDate);
+          this.healthInsurancePeriod = period ? period : undefined;
         }
         if (savedData.pensionInsurancePeriod) {
           this.pensionInsurancePeriod = savedData.pensionInsurancePeriod;
         } else {
-          this.pensionInsurancePeriod = undefined;
+          const period = this.getPensionInsurancePeriod(savedData.birthDate);
+          this.pensionInsurancePeriod = period ? period : undefined;
         }
         this.isJudgmentSaved = true;
 
