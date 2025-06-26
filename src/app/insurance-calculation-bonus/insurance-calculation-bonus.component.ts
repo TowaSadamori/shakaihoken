@@ -766,6 +766,9 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   }
 
   showAddBonusForm = false;
+  showEditBonusForm = false;
+  editBonusIndex: number | null = null;
+  editBonusInitialData: { paymentDate: string; amount: number; leaveType: string } | null = null;
 
   addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
     // 新しい賞与データをリストに追加
@@ -833,7 +836,40 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
   // 編集ボタン押下時の処理（今はアラートのみ）
   onEditBonus(index: number): void {
-    alert('編集機能は未実装です（index: ' + index + '）');
+    const item = this.bonusDataList[index];
+    this.editBonusIndex = index;
+    this.editBonusInitialData = {
+      paymentDate: item.paymentDate || '',
+      amount: Number(item.amount),
+      leaveType: item.leaveType || 'excluded',
+    };
+    this.showEditBonusForm = true;
+  }
+
+  onEditBonusSave(bonus: { paymentDate: string; amount: number; leaveType: string }) {
+    if (this.editBonusIndex !== null && this.bonusDataList[this.editBonusIndex]) {
+      this.bonusDataList[this.editBonusIndex].paymentDate = bonus.paymentDate;
+      this.bonusDataList[this.editBonusIndex].amount = bonus.amount.toString();
+      this.bonusDataList[this.editBonusIndex].month = BigInt(
+        new Date(bonus.paymentDate).getMonth() + 1
+      );
+      this.bonusDataList[this.editBonusIndex].year = BigInt(
+        new Date(bonus.paymentDate).getFullYear()
+      );
+      this.bonusDataList[this.editBonusIndex].leaveType = bonus.leaveType;
+      this.sortBonusList();
+      this.createPivotedTable();
+      this.saveBonusResults();
+    }
+    this.showEditBonusForm = false;
+    this.editBonusIndex = null;
+    this.editBonusInitialData = null;
+  }
+
+  onEditBonusClosed() {
+    this.showEditBonusForm = false;
+    this.editBonusIndex = null;
+    this.editBonusInitialData = null;
   }
 
   // 削除ボタン押下時の処理

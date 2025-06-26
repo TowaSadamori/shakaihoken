@@ -82,6 +82,13 @@
       (save)="addBonus($event)"
       (closed)="showAddBonusForm = false"
     ></app-bonus-add-form>
+
+    <app-bonus-add-form
+      *ngIf="showEditBonusForm"
+      [initialData]="editBonusInitialData || undefined"
+      (save)="onEditBonusSave($event)"
+      (closed)="onEditBonusClosed()"
+    ></app-bonus-add-form>
   </div>
 
   <!-- Excel形式の計算結果表 -->
