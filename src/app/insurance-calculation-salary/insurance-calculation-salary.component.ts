@@ -630,7 +630,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     }
   }
 
-  // 日付を「YYYY年MM月DD日」形式に変換
+  // 日付を「YYYY年MM月」形式に変換
   formatJapaneseDate(dateStr?: string): string {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -639,7 +639,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     }
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    return `${date.getFullYear()}年${date.getMonth() + 1}月`;
   }
 
   /**

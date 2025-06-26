@@ -96,26 +96,124 @@
         <tbody>
           <tr *ngFor="let result of monthlyResults">
             <td>{{ result.year }}年 {{ result.month }}月</td>
-            <td>{{ result.healthInsuranceGrade }}</td>
             <td>
               <ng-container
                 *ngIf="
-                  result.healthInsuranceFeeEmployee && result.healthInsuranceFeeEmployee !== '0'
+                  isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.healthInsurancePeriod ?? null
+                  );
+                  else healthGradeDash
+                "
+              >
+                {{ result.healthInsuranceGrade }}
+              </ng-container>
+              <ng-template #healthGradeDash>-</ng-template>
+            </td>
+            <td>
+              <ng-container
+                *ngIf="
+                  isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.healthInsurancePeriod ?? null
+                  ) &&
+                  result.healthInsuranceGrade !== '-' &&
+                  result.healthInsuranceGrade !== '' &&
+                  result.healthInsuranceFeeEmployee &&
+                  result.healthInsuranceFeeEmployee !== '0'
                 "
               >
                 {{ result.healthInsuranceFeeEmployee | roundForEmployeeBurden }}
               </ng-container>
+              <ng-container
+                *ngIf="
+                  !(
+                    isInPeriod(
+                      result.year,
+                      result.month,
+                      employeeInsurancePeriods.healthInsurancePeriod ?? null
+                    ) &&
+                    result.healthInsuranceGrade !== '-' &&
+                    result.healthInsuranceGrade !== '' &&
+                    result.healthInsuranceFeeEmployee &&
+                    result.healthInsuranceFeeEmployee !== '0'
+                  )
+                "
+                >-</ng-container
+              >
             </td>
-            <td>{{ formatAmountWithDecimal(result.healthInsuranceFeeCompany) }}</td>
+            <td>
+              <ng-container
+                *ngIf="
+                  isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.healthInsurancePeriod ?? null
+                  ) &&
+                  result.healthInsuranceGrade !== '-' &&
+                  result.healthInsuranceGrade !== '' &&
+                  result.healthInsuranceFeeCompany &&
+                  result.healthInsuranceFeeCompany !== '0'
+                "
+              >
+                {{ formatAmountWithDecimal(result.healthInsuranceFeeCompany) }}
+              </ng-container>
+              <ng-container
+                *ngIf="
+                  !(
+                    isInPeriod(
+                      result.year,
+                      result.month,
+                      employeeInsurancePeriods.healthInsurancePeriod ?? null
+                    ) &&
+                    result.healthInsuranceGrade !== '-' &&
+                    result.healthInsuranceGrade !== '' &&
+                    result.healthInsuranceFeeCompany &&
+                    result.healthInsuranceFeeCompany !== '0'
+                  )
+                "
+                >-</ng-container
+              >
+            </td>
             <td>
               <ng-container
                 *ngIf="result.careInsuranceFeeEmployee && result.careInsuranceFeeEmployee !== '0'"
               >
                 {{ result.careInsuranceFeeEmployee | roundForEmployeeBurden }}
               </ng-container>
+              <ng-container
+                *ngIf="!result.careInsuranceFeeEmployee || result.careInsuranceFeeEmployee === '0'"
+                >-</ng-container
+              >
             </td>
-            <td>{{ formatAmountWithDecimal(result.careInsuranceFeeCompany) }}</td>
-            <td>{{ result.pensionInsuranceGrade }}</td>
+            <td>
+              <ng-container
+                *ngIf="result.careInsuranceFeeCompany && result.careInsuranceFeeCompany !== '0'"
+              >
+                {{ formatAmountWithDecimal(result.careInsuranceFeeCompany) }}
+              </ng-container>
+              <ng-container
+                *ngIf="!result.careInsuranceFeeCompany || result.careInsuranceFeeCompany === '0'"
+                >-</ng-container
+              >
+            </td>
+            <td>
+              <ng-container
+                *ngIf="
+                  isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.pensionInsurancePeriod ?? null
+                  );
+                  else pensionGradeDash
+                "
+              >
+                {{ result.pensionInsuranceGrade }}
+              </ng-container>
+              <ng-template #pensionGradeDash>-</ng-template>
+            </td>
             <td>
               <ng-container
                 *ngIf="
@@ -124,8 +222,28 @@
               >
                 {{ result.pensionInsuranceFeeEmployee | roundForEmployeeBurden }}
               </ng-container>
+              <ng-container
+                *ngIf="
+                  !result.pensionInsuranceFeeEmployee || result.pensionInsuranceFeeEmployee === '0'
+                "
+                >-</ng-container
+              >
             </td>
-            <td>{{ formatAmountWithDecimal(result.pensionInsuranceFeeCompany) }}</td>
+            <td>
+              <ng-container
+                *ngIf="
+                  result.pensionInsuranceFeeCompany && result.pensionInsuranceFeeCompany !== '0'
+                "
+              >
+                {{ formatAmountWithDecimal(result.pensionInsuranceFeeCompany) }}
+              </ng-container>
+              <ng-container
+                *ngIf="
+                  !result.pensionInsuranceFeeCompany || result.pensionInsuranceFeeCompany === '0'
+                "
+                >-</ng-container
+              >
+            </td>
           </tr>
         </tbody>
       </table>
