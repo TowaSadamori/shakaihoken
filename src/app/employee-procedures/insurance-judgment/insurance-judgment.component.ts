@@ -244,7 +244,7 @@ export class InsuranceJudgmentComponent implements OnInit {
     },
     contractWorkingHours: {
       id: 'contractWorkingHours',
-      text: '週の所定労働時間は正社員の3/4以上ですか？',
+      text: '週の所定労働時間および月の所定労働日数が、どちらも一般社員（正社員）の4分の3以上ですか？',
       type: 'yesno',
       nextQuestion: {
         yes: 'contractEmploymentPeriod',
