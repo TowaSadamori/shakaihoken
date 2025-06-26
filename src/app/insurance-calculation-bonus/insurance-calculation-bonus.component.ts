@@ -704,4 +704,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
     return obj;
   }
+
+  showAddBonusForm = false;
 }

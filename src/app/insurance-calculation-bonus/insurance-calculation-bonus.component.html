@@ -42,6 +42,7 @@
       </div>
 
       <div class="import-button-area">
+        <!--
         <button
           class="import-btn"
           (click)="importBonusData()"
@@ -50,8 +51,15 @@
           <span *ngIf="isLoading">読み込み中...</span>
           <span *ngIf="!isLoading">📥 賞与データ取り込み</span>
         </button>
+        -->
+        <button class="add-bonus-btn" (click)="showAddBonusForm = true">＋ 賞与情報追加</button>
       </div>
     </div>
+
+    <app-bonus-add-form
+      *ngIf="showAddBonusForm"
+      (close)="showAddBonusForm = false"
+    ></app-bonus-add-form>
   </div>
 
   <!-- Excel形式の計算結果表 -->
