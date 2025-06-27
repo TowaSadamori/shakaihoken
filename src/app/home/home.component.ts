@@ -72,6 +72,7 @@ export interface EmployeeBonusData {
   pensionInsuranceTotal?: string;
   healthInsuranceTotal?: string;
   careInsurancePeriod?: { start: string; end: string };
+  companyId: string;
 }
 
 // Type for bonusResults item loaded from Firestore
@@ -228,6 +229,9 @@ export class HomeComponent implements OnInit {
 
   // 賞与データ一覧
   allEmployeesBonusData: EmployeeBonusData[] = [];
+  filteredEmployeesBonusData: EmployeeBonusData[] = [];
+
+  private currentCompanyId = '';
 
   constructor(
     private authService: AuthService,
@@ -237,6 +241,7 @@ export class HomeComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    this.currentCompanyId = (await this.authService.getCurrentUserCompanyId()) || '';
     this.setDisplayedColumns();
     try {
       // 現在のユーザー情報を取得
@@ -294,6 +299,7 @@ export class HomeComponent implements OnInit {
 
       // 賞与データ取得処理の呼び出し（実装は後続で追加）
       await this.loadAllEmployeesBonusData();
+      this.filterBonusData();
     } catch (error) {
       console.error('初期化エラー:', error);
     }
@@ -625,16 +631,19 @@ export class HomeComponent implements OnInit {
   onYearChange() {
     this.setDisplayedColumns();
     this.refreshData();
+    this.filterBonusData();
   }
 
   // 月選択変更時の処理
   onMonthChange() {
     this.setDisplayedColumns();
     this.refreshData();
+    this.filterBonusData();
   }
 
   onOfficeChange() {
     this.filterDataByOffice();
+    this.filterBonusData();
   }
 
   // 表示する列を動的に設定するメソッド
@@ -712,6 +721,7 @@ export class HomeComponent implements OnInit {
       }
       // --- ここで賞与データも更新する ---
       await this.loadAllEmployeesBonusData();
+      this.filterBonusData();
     } catch (error) {
       console.error('データ更新エラー:', error);
     }
@@ -965,12 +975,14 @@ export class HomeComponent implements OnInit {
                 pensionInsuranceTotal: bonusItem.pensionInsuranceTotal ?? '-',
                 healthInsuranceTotal: bonusItem.healthInsuranceTotal ?? '-',
                 careInsurancePeriod: user.careInsurancePeriod,
+                companyId: companyId,
               });
             });
           }
         }
       }
       this.allEmployeesBonusData = bonusDataList;
+      this.filterBonusData();
     } catch (error) {
       console.error('賞与データ取得エラー:', error);
       this.allEmployeesBonusData = [];
@@ -1016,5 +1028,23 @@ export class HomeComponent implements OnInit {
     if (!paymentDate || !period) return false;
     const pay = paymentDate.slice(0, 7); // 'YYYY-MM'
     return pay >= period.start && pay <= period.end;
+  }
+
+  private filterBonusData() {
+    this.filteredEmployeesBonusData = this.allEmployeesBonusData.filter((bonus) => {
+      if (bonus.paymentDate) {
+        const date = new Date(bonus.paymentDate);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        if (year !== this.selectedYear || month !== this.selectedMonth) return false;
+      }
+      if (
+        this.selectedOffice !== 'all' &&
+        String(bonus.officeNumber) !== String(this.selectedOffice)
+      )
+        return false;
+      if (bonus.companyId && bonus.companyId !== this.currentCompanyId) return false;
+      return true;
+    });
   }
 }
