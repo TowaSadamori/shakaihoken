@@ -214,10 +214,6 @@ export class BonusCalculationService {
       rates.nursingRate.replace(/[^0-9.]/g, ''),
       '100'
     );
-    const careInsuranceRateDecimal = SocialInsuranceCalculator.subtract(
-      nursingRateDecimal,
-      nonNursingRateDecimal
-    );
     const pensionRateDecimal = SocialInsuranceCalculator.divide(
       rates.pensionRate.replace(/[^0-9.]/g, ''),
       '100'
@@ -318,10 +314,17 @@ export class BonusCalculationService {
             cumulativeHealthBonus,
             standardBonusAmount
           );
-          // --- 健康保険料の計算 ---
+          // 健康保険料率を決定
+          const healthRateDecimal = isCareInsuranceApplicable
+            ? nursingRateDecimal
+            : nonNursingRateDecimal;
+          const healthInsuranceRateStr = isCareInsuranceApplicable
+            ? rates.nursingRate
+            : rates.nonNursingRate;
+          // 健康保険料の計算
           const healthTotalDecimal = SocialInsuranceCalculator.multiply(
             applicableHealthStandardAmount,
-            nonNursingRateDecimal.toString()
+            healthRateDecimal.toString()
           );
           const healthEmployeeDecimal = healthTotalDecimal.div(2);
           const healthInsuranceEmployee =
@@ -330,25 +333,6 @@ export class BonusCalculationService {
             employeeBurden: healthInsuranceEmployee,
             companyBurden: healthTotalDecimal.div(2).toString(),
           };
-          // --- 介護保険料 ---
-          let careInsurance: { employeeBurden: string; companyBurden: string } | undefined;
-          let careInsuranceRate: string | undefined;
-          let combinedHealthAndCareRate: string | undefined;
-          if (isCareInsuranceApplicable) {
-            const careTotalDecimal = SocialInsuranceCalculator.multiply(
-              applicableHealthStandardAmount,
-              careInsuranceRateDecimal.toString()
-            );
-            const careEmployeeDecimal = careTotalDecimal.div(2);
-            const careInsuranceEmployee =
-              SocialInsuranceCalculator.roundForEmployeeBurden(careEmployeeDecimal);
-            careInsurance = {
-              employeeBurden: careInsuranceEmployee,
-              companyBurden: careTotalDecimal.div(2).toString(),
-            };
-            careInsuranceRate = new Decimal(careInsuranceRateDecimal).times(100).toFixed(3);
-            combinedHealthAndCareRate = rates.nursingRate;
-          }
           calcResult = {
             standardBonusAmount,
             cappedPensionStandardAmount,
@@ -357,11 +341,9 @@ export class BonusCalculationService {
             isHealthLimitApplied,
             pensionInsurance: { employeeBurden: pensionEmployee, companyBurden: pensionCompany },
             healthInsurance,
-            careInsurance,
-            healthInsuranceRate: rates.nonNursingRate,
-            careInsuranceRate,
-            combinedHealthAndCareRate,
+            healthInsuranceRate: healthInsuranceRateStr,
             pensionInsuranceRate: rates.pensionRate,
+            // careInsurance, careInsuranceRate, combinedHealthAndCareRateは不要
           };
         }
         // 差額計算

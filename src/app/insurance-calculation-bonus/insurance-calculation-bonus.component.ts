@@ -65,6 +65,48 @@ interface InsurancePeriods {
   pensionInsurancePeriod?: { start: string; end: string };
 }
 
+// Firestore保存用: bigint→string
+function convertBigIntToString(obj: unknown): unknown {
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToString);
+  } else if (obj && typeof obj === 'object') {
+    const newObj: Record<string, unknown> = {};
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
+      const value = (obj as Record<string, unknown>)[key];
+      if (typeof value === 'bigint') {
+        newObj[key] = value.toString();
+      } else {
+        newObj[key] = convertBigIntToString(value);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
+
+// Firestore取得用: string→bigint
+function convertStringToBigInt(obj: unknown): unknown {
+  if (Array.isArray(obj)) {
+    return obj.map(convertStringToBigInt);
+  } else if (obj && typeof obj === 'object') {
+    const newObj: Record<string, unknown> = {};
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
+      const value = (obj as Record<string, unknown>)[key];
+      if (
+        (key === 'month' || key === 'year' || key === 'age') &&
+        typeof value === 'string' &&
+        /^[0-9]+$/.test(value)
+      ) {
+        newObj[key] = BigInt(value);
+      } else {
+        newObj[key] = convertStringToBigInt(value);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
+
 @Component({
   selector: 'app-insurance-calculation-bonus',
   templateUrl: './insurance-calculation-bonus.component.html',
@@ -405,20 +447,29 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (docSnap && docSnap.exists()) {
       const data = docSnap.data();
       if (data && Array.isArray(data['bonusResults'])) {
-        const list: DisplayBonusHistoryItem[] = (
-          data['bonusResults'] as CalculatedBonusHistoryItem[]
-        ).map((item: CalculatedBonusHistoryItem) => ({
-          ...item,
-          leaveType: item.leaveType || 'excluded',
-        }));
-        list.sort((a: DisplayBonusHistoryItem, b: DisplayBonusHistoryItem) => {
-          const dateA = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
-          const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
-          if (dateA !== dateB) return dateA - dateB;
-          const numA = this.extractBonusNumber(a.header || '');
-          const numB = this.extractBonusNumber(b.header || '');
-          return numA - numB;
-        });
+        const list: DisplayBonusHistoryItem[] = (data['bonusResults'] as unknown[]).map(
+          (item: unknown) => {
+            const restored = convertStringToBigInt(item) as DisplayBonusHistoryItem;
+            return {
+              ...restored,
+              calculationResult: restored.calculationResult || {
+                healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+                pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+                careInsurance: undefined,
+                healthInsuranceRate: '',
+                pensionInsuranceRate: '',
+                careInsuranceRate: '',
+                combinedHealthAndCareRate: '',
+                standardBonusAmount: '0',
+                cappedPensionStandardAmount: '0',
+                isPensionLimitApplied: false,
+                applicableHealthStandardAmount: '0',
+                isHealthLimitApplied: false,
+              },
+              leaveType: restored.leaveType || 'excluded',
+            };
+          }
+        );
         return list;
       }
     }
@@ -652,7 +703,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     console.log('🔧 bonusDataList.length:', this.bonusDataList?.length);
     console.log('🔧 uid:', this.uid);
 
-    if (!this.employeeInfo || !this.bonusDataList.length || !this.uid) {
+    if (!this.employeeInfo || !this.pivotedTable || !this.pivotedTable.rows.length || !this.uid) {
       this.errorMessage = '保存するデータがありません。';
       console.log('🔧 保存データ不足でリターン');
       return;
@@ -663,38 +714,81 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       this.errorMessage = '';
       const { companyId, employeeNumber } = this.employeeInfo;
 
+      // 画面表示用のオブジェクトデータを生成
+      const displayResults = this.bonusDataList.map((item, idx) => {
+        // pivotedTableの行データも参照
+        const row = this.pivotedTable!.rows[idx];
+        // 個人負担・全額の値を画面表示用に整形
+        const healthInsuranceEmployee = this.formatAmount(
+          item.calculationResult.healthInsurance.employeeBurden
+        );
+        const healthInsuranceTotal = this.formatAmount(
+          SocialInsuranceCalculator.addAmounts(
+            item.calculationResult.healthInsurance.employeeBurden,
+            item.calculationResult.healthInsurance.companyBurden
+          )
+        );
+        let careInsuranceEmployee = '-';
+        let careInsuranceTotal = '-';
+        if (item.calculationResult.careInsurance) {
+          careInsuranceEmployee = this.formatAmount(
+            SocialInsuranceCalculator.addAmounts(
+              item.calculationResult.healthInsurance.employeeBurden,
+              item.calculationResult.careInsurance.employeeBurden
+            )
+          );
+          careInsuranceTotal = this.formatAmount(
+            SocialInsuranceCalculator.addAmounts(
+              SocialInsuranceCalculator.addAmounts(
+                item.calculationResult.healthInsurance.employeeBurden,
+                item.calculationResult.healthInsurance.companyBurden
+              ),
+              SocialInsuranceCalculator.addAmounts(
+                item.calculationResult.careInsurance.employeeBurden,
+                item.calculationResult.careInsurance.companyBurden
+              )
+            )
+          );
+        }
+        const pensionInsuranceEmployee = this.formatAmount(
+          item.calculationResult.pensionInsurance.employeeBurden
+        );
+        const pensionInsuranceTotal = this.formatAmount(
+          SocialInsuranceCalculator.addAmounts(
+            item.calculationResult.pensionInsurance.employeeBurden,
+            item.calculationResult.pensionInsurance.companyBurden
+          )
+        );
+        return {
+          display: [row.header, ...row.values.map((v) => (v === undefined ? '-' : String(v)))].join(
+            ' | '
+          ),
+          amount: item.amount,
+          paymentDate: item.paymentDate,
+          month: item.month,
+          year: item.year,
+          leaveType: item.leaveType,
+          companyId: this.employeeInfo!.companyId,
+          branchNumber: this.employeeInfo!.branchNumber,
+          addressPrefecture: this.employeeInfo!.addressPrefecture,
+          employeeNumber: this.employeeInfo!.employeeNumber,
+          calculationResult: item.calculationResult,
+          // 追加: 画面表示と同じカンマ区切りの金額
+          healthInsuranceEmployee,
+          healthInsuranceTotal,
+          careInsuranceEmployee,
+          careInsuranceTotal,
+          pensionInsuranceEmployee,
+          pensionInsuranceTotal,
+        };
+      });
+
       const saveData = {
         companyId: companyId,
         uid: this.uid,
         employeeId: employeeNumber,
         targetYear: Number(this.targetYear),
-        bonusResults: this.bonusDataList.map((item) => {
-          // 産休・育休の場合は保険料を0にして保存（免除）
-          let calculationResult = { ...item.calculationResult };
-
-          if (item.leaveType === 'maternity' || item.leaveType === 'childcare') {
-            calculationResult = {
-              ...calculationResult,
-              healthInsurance: { employeeBurden: '0', companyBurden: '0' },
-              pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
-              careInsurance: calculationResult.careInsurance
-                ? { employeeBurden: '0', companyBurden: '0' }
-                : calculationResult.careInsurance,
-            };
-          }
-
-          return this.cleanDataForFirestore({
-            type: item.type,
-            amount: item.amount,
-            month: Number(item.month),
-            year: Number(item.year),
-            paymentDate: item.paymentDate || '',
-            leaveType: item.leaveType || 'none',
-            originalKey: item.originalKey || '',
-            fiscalYear: Number(item.fiscalYear || this.targetYear),
-            calculationResult: calculationResult,
-          });
-        }),
+        bonusResults: displayResults, // 画面表示用の文字列配列として保存
         insurancePeriods: this.employeeInsurancePeriods,
         updatedAt: new Date(),
         updatedBy: 'system',
@@ -706,9 +800,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       const docPath = `companies/${companyId}/employees/${this.uid}/bonus_calculation_results/${this.targetYear}`;
       const docRef = doc(this.firestore, docPath);
 
-      console.log('保存先パス:', docPath);
-      console.log('保存前の詳細データ:', JSON.stringify(saveData, null, 2));
-
       // 既存ドキュメントを削除してから新規作成（完全な置き換えを保証）
       try {
         await deleteDoc(docRef);
@@ -718,7 +809,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       }
 
       // 新規ドキュメントとして作成
-      await setDoc(docRef, this.cleanDataForFirestore(saveData));
+      await setDoc(docRef, convertBigIntToString(saveData));
 
       console.log('✅ Firestore保存完了');
 
@@ -727,58 +818,17 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       if (verifyDoc.exists()) {
         const savedData = verifyDoc.data();
         console.log('📋 保存確認データ:', savedData);
-        console.log(
-          '📋 保存されたleaveType:',
-          savedData['bonusResults']?.map((item: unknown, index: number) => ({
-            index,
-            leaveType:
-              typeof item === 'object' && item !== null && 'leaveType' in item
-                ? item.leaveType
-                : 'unknown',
-            paymentDate:
-              typeof item === 'object' && item !== null && 'paymentDate' in item
-                ? item.paymentDate
-                : 'unknown',
-          }))
-        );
       } else {
         console.error('❌ 保存確認失敗: ドキュメントが見つかりません');
       }
 
-      alert('賞与計算結果を正常に保存しました。');
+      alert('賞与計算結果（画面表示内容）を正常に保存しました。');
     } catch (error) {
       console.error('保存エラー:', error);
       this.errorMessage = '保存中にエラーが発生しました。もう一度お試しください。';
     } finally {
       this.isLoading = false;
     }
-  }
-
-  // Firestore保存用にデータをクリーンアップ（undefined値を除去）
-  private cleanDataForFirestore(obj: unknown): unknown {
-    if (obj === null || obj === undefined) {
-      return null;
-    }
-
-    if (obj instanceof Date) {
-      return obj;
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map((item) => this.cleanDataForFirestore(item));
-    }
-
-    if (typeof obj === 'object' && obj !== null) {
-      const cleaned: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (value !== undefined) {
-          cleaned[key] = this.cleanDataForFirestore(value);
-        }
-      }
-      return cleaned;
-    }
-
-    return obj;
   }
 
   showAddBonusForm = false;
