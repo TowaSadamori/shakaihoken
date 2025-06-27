@@ -786,6 +786,18 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   editBonusTargetKey: { originalKey: string; amount: string; paymentDate: string } | null = null;
   editBonusInitialData: { paymentDate: string; amount: number; leaveType: string } | null = null;
 
+  /**
+   * 指定日が期間内かどうか判定
+   */
+  private isInPeriod(date: string, period?: { start: string; end: string }): boolean {
+    if (!date || !period || !period.start || !period.end) return false;
+    const d = new Date(date);
+    const start = new Date(period.start);
+    const end = new Date(period.end);
+    // 期間は日付を含む
+    return d >= start && d <= end;
+  }
+
   async addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
     if (!this.employeeInfo) return;
 
@@ -824,6 +836,34 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       this.saveBonusResults();
       return;
     }
+
+    // 保険料率マスタ取得
+    const rates = await this.bonusCalculationService.getInsuranceRates(
+      this.targetYear,
+      this.employeeInfo.addressPrefecture
+    );
+    // 期間判定
+    const careIn = this.isInPeriod(
+      bonus.paymentDate,
+      this.employeeInsurancePeriods.careInsurancePeriod
+    );
+    const healthIn = this.isInPeriod(
+      bonus.paymentDate,
+      this.employeeInsurancePeriods.healthInsurancePeriod
+    );
+    const pensionIn = this.isInPeriod(
+      bonus.paymentDate,
+      this.employeeInsurancePeriods.pensionInsurancePeriod
+    );
+
+    // 保険料率セット
+    const healthInsuranceRate = healthIn
+      ? careIn
+        ? rates?.nursingRate || ''
+        : rates?.nonNursingRate || ''
+      : '';
+    const pensionInsuranceRate = pensionIn ? rates?.pensionRate || '' : '';
+
     // 年間累計標準賞与額を計算
     const cumulativeHealthBonus = this.bonusDataList
       .reduce(
@@ -832,7 +872,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       )
       .toString();
 
-    // サービスで計算
+    // サービスで計算（保険料率は計算ロジックに渡すが、保存・表示は上記で判定した値を使う）
     const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
       {
         amount: bonus.amount.toString(),
@@ -853,6 +893,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     );
 
     if (calculated) {
+      // 保険料率欄を上書き
+      calculated.calculationResult.healthInsuranceRate = healthInsuranceRate || 'ー';
+      calculated.calculationResult.pensionInsuranceRate = pensionInsuranceRate || 'ー';
+      // careInsuranceRate, combinedHealthAndCareRateは空欄でOK
       this.bonusDataList.push({
         ...calculated,
         leaveType: bonus.leaveType || 'excluded',
@@ -961,6 +1005,33 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (this.bonusDataList[idx].originalCalculationResult) {
       delete this.bonusDataList[idx].originalCalculationResult;
     }
+    // 保険料率マスタ取得
+    const rates = await this.bonusCalculationService.getInsuranceRates(
+      this.targetYear,
+      this.employeeInfo.addressPrefecture
+    );
+    // 期間判定
+    const careIn = this.isInPeriod(
+      bonus.paymentDate,
+      this.employeeInsurancePeriods.careInsurancePeriod
+    );
+    const healthIn = this.isInPeriod(
+      bonus.paymentDate,
+      this.employeeInsurancePeriods.healthInsurancePeriod
+    );
+    const pensionIn = this.isInPeriod(
+      bonus.paymentDate,
+      this.employeeInsurancePeriods.pensionInsurancePeriod
+    );
+
+    // 保険料率セット
+    const healthInsuranceRate = healthIn
+      ? careIn
+        ? rates?.nursingRate || ''
+        : rates?.nonNursingRate || ''
+      : '';
+    const pensionInsuranceRate = pensionIn ? rates?.pensionRate || '' : '';
+
     const cumulativeHealthBonus = this.bonusDataList
       .filter((_, i) => i !== idx)
       .reduce(
@@ -986,16 +1057,15 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       },
       cumulativeHealthBonus
     );
+
     if (calculated) {
-      const newItem: DisplayBonusHistoryItem = {
+      // 保険料率欄を上書き
+      calculated.calculationResult.healthInsuranceRate = healthInsuranceRate || 'ー';
+      calculated.calculationResult.pensionInsuranceRate = pensionInsuranceRate || 'ー';
+      this.bonusDataList.splice(idx, 1, {
         ...calculated,
         leaveType: bonus.leaveType || 'excluded',
-      };
-      if (newItem.originalCalculationResult) {
-        delete newItem.originalCalculationResult;
-      }
-      this.bonusDataList.splice(idx, 1);
-      this.bonusDataList.push(newItem);
+      });
       this.sortBonusList();
       this.createPivotedTable();
       this.saveBonusResults();
@@ -1026,5 +1096,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       this.createPivotedTable();
       this.saveBonusResults();
     }
+  }
+
+  // 計算結果を保存ボタン用
+  onSaveBonusResults() {
+    this.saveBonusResults();
   }
 }

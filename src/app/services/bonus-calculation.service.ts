@@ -151,10 +151,7 @@ export class BonusCalculationService {
   /**
    * 保険料率の取得
    */
-  private async getInsuranceRates(
-    year: bigint,
-    prefecture: string
-  ): Promise<InsuranceRates | null> {
+  public async getInsuranceRates(year: bigint, prefecture: string): Promise<InsuranceRates | null> {
     const normalizedPrefecture = prefecture.replace(/(都|道|府|県)$/, '');
     const docPath = `insurance_rates/${year.toString()}/prefectures/${normalizedPrefecture}/rate_table/main`;
     const docRef = doc(this.firestore, docPath);
