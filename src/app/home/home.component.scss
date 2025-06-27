@@ -144,7 +144,7 @@
 .employees-table {
   width: 100%;
   max-width: 100%;
-  table-layout: fixed;
+  table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
   background-color: #fff;
@@ -202,47 +202,100 @@
 
 .employees-table {
   width: 100%;
+  max-width: 100%;
+  table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
+  background-color: #fff;
 }
 
 .employees-table th,
 .employees-table td {
-  text-align: center;
-  white-space: nowrap;
+  min-width: 60px;
+  max-width: 140px;
   padding: 4px 8px;
+  white-space: normal;
+  text-align: center;
+  font-size: 0.95em;
 }
 
-// カラムごとの最小幅
-.employees-table th.mat-header-cell.employeeNumber,
-.employees-table td.mat-cell.employeeNumber {
-  min-width: 80px;
+/* 項目名が長いカラムは幅を広めに */
+.employees-table .mat-column-paymentInfo,
+.employees-table .mat-column-standardBonusAmount,
+.employees-table .mat-column-cappedPensionStandardAmount,
+.employees-table .mat-column-applicableHealthStandardAmount {
+  min-width: 110px;
+  max-width: 180px;
 }
-.employees-table th.mat-header-cell.officeNumber,
-.employees-table td.mat-cell.officeNumber {
-  min-width: 80px;
+
+/* 金額・料率カラムはやや狭め */
+.employees-table .mat-column-amount,
+.employees-table .mat-column-healthInsuranceRate,
+.employees-table .mat-column-careInsuranceRate,
+.employees-table .mat-column-pensionInsuranceRate {
+  min-width: 70px;
+  max-width: 90px;
 }
-.employees-table th.mat-header-cell.paymentInfo,
-.employees-table td.mat-cell.paymentInfo {
-  min-width: 120px;
+
+/* 氏名カラムはさらに広めに */
+.employees-table .mat-column-employeeName {
+  min-width: 180px;
+  max-width: 260px;
 }
-.employees-table th.mat-header-cell.employeeName,
-.employees-table td.mat-cell.employeeName {
-  min-width: 120px;
-}
-.employees-table th.mat-header-cell.standardBonusAmount,
-.employees-table td.mat-cell.standardBonusAmount {
-  min-width: 100px;
-}
-// 保険料カラムは等幅
-.employees-table th.mat-header-cell,
-.employees-table td.mat-cell {
-  min-width: 90px;
-}
-// ヘッダーの折返し許可
-.employees-table th[colspan],
-.employees-table td[colspan] {
+
+/* 支給回数・支給日カラムは折り返し許可 */
+.employees-table .mat-column-paymentInfo {
   white-space: normal;
+  word-break: break-all;
+}
+
+/* テーブル全体の横スクロールを抑制 */
+.table-container {
+  overflow-x: auto;
+  width: 100vw;
+  max-width: none;
+}
+
+/* 賞与テーブルのカラム幅調整 */
+.employees-table th,
+.employees-table td {
+  min-width: 60px;
+  max-width: 140px;
+  padding: 4px 8px;
+  white-space: normal;
+  text-align: center;
+  font-size: 0.95em;
+}
+
+/* 項目名が長いカラムは幅を広めに */
+.employees-table .mat-column-paymentInfo,
+.employees-table .mat-column-standardBonusAmount,
+.employees-table .mat-column-cappedPensionStandardAmount,
+.employees-table .mat-column-applicableHealthStandardAmount {
+  min-width: 110px;
+  max-width: 180px;
+}
+
+/* 金額・料率カラムはやや狭め */
+.employees-table .mat-column-amount,
+.employees-table .mat-column-healthInsuranceRate,
+.employees-table .mat-column-careInsuranceRate,
+.employees-table .mat-column-pensionInsuranceRate {
+  min-width: 70px;
+  max-width: 90px;
+}
+
+/* 支給回数・支給日カラムは折り返し許可 */
+.employees-table .mat-column-paymentInfo {
+  white-space: normal;
+  word-break: break-all;
+}
+
+/* テーブル全体の横スクロールを抑制 */
+.table-container {
+  overflow-x: auto;
+  width: 100vw;
+  max-width: none;
 }
 
 .employees-table th {
@@ -314,9 +367,9 @@
 .employees-table .mat-column-healthInsuranceRate,
 .employees-table .mat-column-careInsuranceRate,
 .employees-table .mat-column-pensionInsuranceRate {
-  width: 60px;
-  min-width: 60px;
-  max-width: 60px;
+  width: 160px;
+  min-width: 120px;
+  max-width: 200px;
   text-align: center;
   color: #424242;
 }
@@ -337,9 +390,9 @@
 .employees-table .mat-column-careInsuranceCompany,
 .employees-table .mat-column-pensionInsuranceEmployee,
 .employees-table .mat-column-pensionInsuranceCompany {
-  width: 70px;
-  min-width: 70px;
-  max-width: 70px;
+  width: 160px;
+  min-width: 120px;
+  max-width: 200px;
   text-align: center;
 }
 
@@ -579,4 +632,25 @@
 .employees-table td {
   text-align: center;
   vertical-align: middle;
+}
+
+/* 厚生年金カラムは明示的に幅を広く */
+.employees-table .mat-column-pensionInsuranceRate,
+.employees-table .mat-column-pensionInsuranceEmployee,
+.employees-table .mat-column-pensionInsuranceCompany {
+  width: 180px;
+  min-width: 140px;
+  max-width: 220px;
+}
+
+/* 健康保険・介護保険カラムも広く */
+.employees-table .mat-column-healthInsuranceRate,
+.employees-table .mat-column-healthInsuranceEmployee,
+.employees-table .mat-column-healthInsuranceCompany,
+.employees-table .mat-column-careInsuranceRate,
+.employees-table .mat-column-careInsuranceEmployee,
+.employees-table .mat-column-careInsuranceCompany {
+  width: 160px;
+  min-width: 120px;
+  max-width: 200px;
 }

@@ -7,7 +7,7 @@ import {
 } from '../services/insurance-calculation.service';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { Decimal } from 'decimal.js';
-import { BonusCalculationService } from '../services/bonus-calculation.service';
+import { BonusCalculationService, BonusPremiumResult } from '../services/bonus-calculation.service';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -69,19 +69,10 @@ export interface EmployeeBonusData {
   employeeNumber: string;
   officeNumber: string;
   employeeName: string;
-  leaveStatus?: string;
   paymentInfo: string; // 支給回数・支給日
-  paymentAmount: string;
-  standardBonusAmount: string;
-  healthInsuranceRate?: string;
-  healthInsuranceEmployee?: string;
-  healthInsuranceCompany?: string;
-  careInsuranceRate?: string;
-  careInsuranceEmployee?: string;
-  careInsuranceCompany?: string;
-  pensionInsuranceRate?: string;
-  pensionInsuranceEmployee?: string;
-  pensionInsuranceCompany?: string;
+  amount: string;
+  calculationResult: BonusPremiumResult;
+  leaveType: string;
 }
 
 @Component({
@@ -199,9 +190,10 @@ export class HomeComponent implements OnInit {
   displayedColumnsAdminBonus: string[] = [
     'employeeNumber',
     'officeNumber',
-    'paymentInfo',
     'employeeName',
-    'leaveStatus',
+    'leaveType',
+    'paymentInfo',
+    'amount',
     'standardBonusAmount',
     'healthInsuranceRate',
     'healthInsuranceEmployee',
@@ -212,8 +204,6 @@ export class HomeComponent implements OnInit {
     'pensionInsuranceRate',
     'pensionInsuranceEmployee',
     'pensionInsuranceCompany',
-    'totalEmployee',
-    'totalCompany',
   ];
 
   // 賞与データ一覧
@@ -919,28 +909,23 @@ export class HomeComponent implements OnInit {
       const companyId = await this.authService.getCurrentUserCompanyId();
       if (!companyId) return;
       const employees = await this.userService.getUsersByCompanyId(companyId);
-      // 判定が「対象」の従業員のみ
       const usersWithJudgment: UserWithJudgment[] = employees as UserWithJudgment[];
       await this.loadJudgmentResults(usersWithJudgment);
       const targetEmployees = usersWithJudgment.filter((u) => this.getJudgmentStatus(u) === '対象');
       const fiscalYear = this.selectedMonth < 4 ? this.selectedYear - 1 : this.selectedYear;
       const bonusDataList: EmployeeBonusData[] = [];
       for (const user of targetEmployees) {
-        // ユーザー情報
         const employeeNumber = user.employeeNumber || '';
         const officeNumber = user.branchNumber || '';
         const employeeName = `${user.lastName || ''} ${user.firstName || ''}`.trim();
-        const leaveStatus = this.getLeaveStatus(employeeNumber);
         // 賞与履歴取得
         const bonusHistory = await this.bonusCalculationService.getFiscalYearBonusHistory(
           employeeNumber,
           BigInt(fiscalYear),
           companyId
         );
-        // 1人最大3回分
         for (let i = 0; i < Math.min(bonusHistory.length, 3); i++) {
           const bonusItem = bonusHistory[i];
-          // --- 都道府県情報の取得 ---
           let addressPrefecture =
             (user as User & { addressPrefecture?: string; prefectureCity?: string })
               .addressPrefecture ||
@@ -948,61 +933,33 @@ export class HomeComponent implements OnInit {
               .prefectureCity ||
             '';
           if (!addressPrefecture && user.branchNumber) {
-            // 事業所情報から取得
             const office = this.offices.find((o) => o.branchNumber === user.branchNumber);
             if (office && (office as { addressPrefecture?: string }).addressPrefecture) {
               addressPrefecture = (office as { addressPrefecture?: string }).addressPrefecture!;
             }
           }
           if (!addressPrefecture) {
-            addressPrefecture = '東京'; // デフォルト
+            addressPrefecture = '東京';
           }
-          // 計算結果取得
           const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
             bonusItem,
             {
-              age: BigInt(0), // 年齢は不要（計算サービス内で支給日から算出）
+              age: BigInt(0),
               addressPrefecture,
               companyId: user.companyId,
               birthDate: user.birthDate || '',
             }
           );
           if (!calculated) continue;
-          const result = calculated.calculationResult;
-          // 支給回数・支給日
           const paymentInfo = `第${i + 1}回（${bonusItem.paymentDate || '-'}）`;
-          // 支給額
-          const paymentAmount = bonusItem.amount || '-';
-          // 標準賞与額
-          const standardBonusAmount = result.standardBonusAmount || '-';
-          // 各種保険料率
-          const healthInsuranceRate = result.healthInsuranceRate || '-';
-          const careInsuranceRate = result.careInsuranceRate || '-';
-          const pensionInsuranceRate = result.pensionInsuranceRate || '-';
-          // 各種保険料（本人・全額）
-          const healthInsuranceEmployee = result.healthInsurance.employeeBurden || '-';
-          const healthInsuranceCompany = result.healthInsurance.companyBurden || '-';
-          const careInsuranceEmployee = result.careInsurance?.employeeBurden || '-';
-          const careInsuranceCompany = result.careInsurance?.companyBurden || '-';
-          const pensionInsuranceEmployee = result.pensionInsurance.employeeBurden || '-';
-          const pensionInsuranceCompany = result.pensionInsurance.companyBurden || '-';
           bonusDataList.push({
             employeeNumber,
             officeNumber,
             employeeName,
-            leaveStatus,
             paymentInfo,
-            paymentAmount,
-            standardBonusAmount,
-            healthInsuranceRate,
-            healthInsuranceEmployee,
-            healthInsuranceCompany,
-            careInsuranceRate,
-            careInsuranceEmployee,
-            careInsuranceCompany,
-            pensionInsuranceRate,
-            pensionInsuranceEmployee,
-            pensionInsuranceCompany,
+            amount: bonusItem.amount || '-',
+            calculationResult: calculated.calculationResult,
+            leaveType: bonusItem.leaveType || 'excluded',
           });
         }
       }
@@ -1011,5 +968,36 @@ export class HomeComponent implements OnInit {
       console.error('賞与データ取得エラー:', error);
       this.allEmployeesBonusData = [];
     }
+  }
+
+  // 賞与テーブル用: 育休産休ラベル
+  public getLeaveTypeLabel(leaveType: string): string {
+    switch (leaveType) {
+      case 'maternity':
+        return '産休';
+      case 'childcare':
+        return '育休';
+      case 'excluded':
+        return '対象外';
+      default:
+        return '';
+    }
+  }
+
+  // 賞与テーブル用: 金額フォーマット
+  public formatAmount(value: string | number | undefined | null): string {
+    if (value === null || typeof value === 'undefined' || value === '') return '-';
+    const num = Number(value);
+    if (isNaN(num)) return String(value);
+    return num.toLocaleString();
+  }
+
+  // 賞与テーブル用: 料率フォーマット
+  public formatPercentage(rate: string | undefined | null): string {
+    if (!rate) return '-';
+    if (rate.includes('%')) return rate;
+    const num = parseFloat(rate);
+    if (isNaN(num)) return rate;
+    return num.toFixed(3) + '%';
   }
 }
