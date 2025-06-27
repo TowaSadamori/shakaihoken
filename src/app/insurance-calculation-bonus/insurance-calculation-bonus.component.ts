@@ -695,7 +695,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     console.log('🔧 bonusDataList.length:', this.bonusDataList?.length);
     console.log('🔧 uid:', this.uid);
 
-    if (!this.employeeInfo || !this.pivotedTable || !this.pivotedTable.rows.length || !this.uid) {
+    if (!this.employeeInfo || !this.uid) {
       this.errorMessage = '保存するデータがありません。';
       console.log('🔧 保存データ不足でリターン');
       return;
