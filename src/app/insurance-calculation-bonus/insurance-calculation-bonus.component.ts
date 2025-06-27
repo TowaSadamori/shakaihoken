@@ -20,7 +20,6 @@ import { OfficeService } from '../services/office.service';
 import { doc, setDoc } from 'firebase/firestore';
 import { AuthService } from '../services/auth.service';
 import { Decimal } from 'decimal.js';
-import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { BonusAddFormComponent } from '../bonus-add-form/bonus-add-form.component';
 
 interface EmployeeInfo {
@@ -525,60 +524,73 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         item.paymentDate || '',
         this.employeeInsurancePeriods.careInsurancePeriod
       );
-
-      // 介護保険対象者か否かで表示内容を切り替える
-      const healthRate = isCareApplicable
-        ? '-'
-        : this.formatPercentage(calcResult.healthInsuranceRate);
-      const healthEmployee = isCareApplicable
-        ? '-'
-        : this.formatAmount(calcResult.healthInsurance.employeeBurden);
-      const healthTotal = isCareApplicable
-        ? '-'
-        : this.formatAmount(
-            SocialInsuranceCalculator.addAmounts(
-              calcResult.healthInsurance.employeeBurden,
-              calcResult.healthInsurance.companyBurden
-            )
-          );
-
-      const careRate = isCareApplicable
-        ? this.formatPercentage(calcResult.healthInsuranceRate)
+      // 標準賞与額（上限適用後）
+      const applicableHealthStandardAmount = calcResult.applicableHealthStandardAmount;
+      // 保険料率
+      const healthRate = parseFloat(calcResult.healthInsuranceRate.replace('%', '')) / 100;
+      const careRate = calcResult.careInsuranceRate
+        ? parseFloat(calcResult.careInsuranceRate.replace('%', '')) / 100
+        : undefined;
+      const pensionRate = parseFloat(calcResult.pensionInsuranceRate.replace('%', '')) / 100;
+      // 全額計算
+      const healthTotal = healthRate
+        ? (parseFloat(applicableHealthStandardAmount) * healthRate).toString()
         : '-';
-      let careEmployee = '-';
-      let careTotal = '-';
-
-      if (isCareApplicable) {
-        careEmployee = this.formatAmount(calcResult.healthInsurance.employeeBurden);
-        careTotal = this.formatAmount(
-          SocialInsuranceCalculator.addAmounts(
-            calcResult.healthInsurance.employeeBurden,
-            calcResult.healthInsurance.companyBurden
-          )
-        );
-      }
-
+      const careTotal = careRate
+        ? (parseFloat(applicableHealthStandardAmount) * careRate).toString()
+        : '-';
+      const pensionTotal = pensionRate
+        ? (parseFloat(applicableHealthStandardAmount) * pensionRate).toString()
+        : '-';
+      // 非該当側
+      // const healthInsuranceEmployee = !isCareApplicable
+      //   ? this.formatAmount(calcResult.healthInsurance.employeeBurden)
+      //   : '-';
+      // const healthInsuranceTotal = !isCareApplicable
+      //   ? this.formatAmount(
+      //       SocialInsuranceCalculator.addAmounts(
+      //         calcResult.healthInsurance.employeeBurden,
+      //         calcResult.healthInsurance.companyBurden
+      //       )
+      //     )
+      //   : '-';
+      // 該当側
+      // const careInsuranceEmployee = isCareApplicable
+      //   ? this.formatAmount(calcResult.healthInsurance.employeeBurden)
+      //   : '-';
+      // const careInsuranceTotal = isCareApplicable
+      //   ? this.formatAmount(
+      //       SocialInsuranceCalculator.addAmounts(
+      //         calcResult.healthInsurance.employeeBurden,
+      //         calcResult.healthInsurance.companyBurden
+      //       )
+      //     )
+      //   : '-';
+      // const pensionInsuranceEmployee = this.formatAmount(
+      //   calcResult.pensionInsurance.employeeBurden
+      // );
+      // const pensionInsuranceTotal = this.formatAmount(
+      //   SocialInsuranceCalculator.addAmounts(
+      //     calcResult.pensionInsurance.employeeBurden,
+      //     calcResult.pensionInsurance.companyBurden
+      //   )
+      // );
       const values = [
         `checkbox_${index}`,
         this.formatAmount(item.amount),
         this.formatAmount(calcResult.standardBonusAmount),
         '',
-        healthRate,
-        healthEmployee,
-        healthTotal,
+        isCareApplicable ? '-' : this.formatPercentage(calcResult.healthInsuranceRate),
+        isCareApplicable ? '-' : this.formatAmount(calcResult.healthInsurance.employeeBurden),
+        isCareApplicable ? '-' : healthTotal,
         '',
-        careRate,
-        careEmployee,
-        careTotal,
+        isCareApplicable ? this.formatPercentage(calcResult.healthInsuranceRate) : '-',
+        isCareApplicable ? this.formatAmount(calcResult.healthInsurance.employeeBurden) : '-',
+        isCareApplicable ? careTotal : '-',
         '',
         this.formatPercentage(calcResult.pensionInsuranceRate),
         this.formatAmount(calcResult.pensionInsurance.employeeBurden),
-        this.formatAmount(
-          SocialInsuranceCalculator.addAmounts(
-            calcResult.pensionInsurance.employeeBurden,
-            calcResult.pensionInsurance.companyBurden
-          )
-        ),
+        pensionTotal,
         '',
         this.formatAmount(calcResult.cappedPensionStandardAmount),
         this.formatAmount(calcResult.applicableHealthStandardAmount),
@@ -634,8 +646,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (isNaN(num)) {
       return amount;
     }
+    // 小数点そのまま表示
     return num.toLocaleString('ja-JP', {
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 20,
+      useGrouping: true,
     });
   }
 
@@ -720,46 +734,28 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
       // 画面表示用のオブジェクトデータを生成
       const displayResults = this.bonusDataList.map((item, idx) => {
-        // pivotedTableの行データも参照
         const row = this.pivotedTable!.rows[idx];
-        // 介護該当判定: 支給日が介護保険該当期間内かどうか
-        const isCareApplicable = this.isInPeriod(
-          item.paymentDate || '',
-          this.employeeInsurancePeriods.careInsurancePeriod
-        );
-        // 非該当側
-        const healthInsuranceEmployee = !isCareApplicable
-          ? this.formatAmount(item.calculationResult.healthInsurance.employeeBurden)
+        // 標準賞与額（上限適用後）
+        const applicableHealthStandardAmount =
+          item.calculationResult.applicableHealthStandardAmount;
+        // 保険料率
+        const healthRateVal =
+          parseFloat(item.calculationResult.healthInsuranceRate.replace('%', '')) / 100;
+        const careRateVal = item.calculationResult.careInsuranceRate
+          ? parseFloat(item.calculationResult.careInsuranceRate.replace('%', '')) / 100
+          : undefined;
+        const pensionRateVal =
+          parseFloat(item.calculationResult.pensionInsuranceRate.replace('%', '')) / 100;
+        // 全額計算
+        const healthInsuranceTotalCalc = healthRateVal
+          ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
           : '-';
-        const healthInsuranceTotal = !isCareApplicable
-          ? this.formatAmount(
-              SocialInsuranceCalculator.addAmounts(
-                item.calculationResult.healthInsurance.employeeBurden,
-                item.calculationResult.healthInsurance.companyBurden
-              )
-            )
+        const careInsuranceTotalCalc = careRateVal
+          ? (parseFloat(applicableHealthStandardAmount) * careRateVal).toString()
           : '-';
-        // 該当側
-        const careInsuranceEmployee = isCareApplicable
-          ? this.formatAmount(item.calculationResult.healthInsurance.employeeBurden)
+        const pensionInsuranceTotalCalc = pensionRateVal
+          ? (parseFloat(applicableHealthStandardAmount) * pensionRateVal).toString()
           : '-';
-        const careInsuranceTotal = isCareApplicable
-          ? this.formatAmount(
-              SocialInsuranceCalculator.addAmounts(
-                item.calculationResult.healthInsurance.employeeBurden,
-                item.calculationResult.healthInsurance.companyBurden
-              )
-            )
-          : '-';
-        const pensionInsuranceEmployee = this.formatAmount(
-          item.calculationResult.pensionInsurance.employeeBurden
-        );
-        const pensionInsuranceTotal = this.formatAmount(
-          SocialInsuranceCalculator.addAmounts(
-            item.calculationResult.pensionInsurance.employeeBurden,
-            item.calculationResult.pensionInsurance.companyBurden
-          )
-        );
         return {
           display: [row.header, ...row.values.map((v) => (v === undefined ? '-' : String(v)))].join(
             ' | '
@@ -774,13 +770,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           addressPrefecture: this.employeeInfo!.addressPrefecture,
           employeeNumber: this.employeeInfo!.employeeNumber,
           calculationResult: item.calculationResult,
-          // 追加: 画面表示と同じカンマ区切りの金額
-          healthInsuranceEmployee,
-          healthInsuranceTotal,
-          careInsuranceEmployee,
-          careInsuranceTotal,
-          pensionInsuranceEmployee,
-          pensionInsuranceTotal,
+          healthInsuranceTotal: healthInsuranceTotalCalc,
+          careInsuranceTotal: careInsuranceTotalCalc,
+          pensionInsuranceTotal: pensionInsuranceTotalCalc,
+          applicableHealthStandardAmount,
         };
       });
 
