@@ -408,6 +408,15 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           result.pensionInsuranceGrade = '履歴なし';
         }
 
+        // 厚生年金の適用期間外の月は必ず'-'をセット
+        const pensionPeriod = this.employeeInsurancePeriods.pensionInsurancePeriod ?? null;
+        const isPensionPeriod = this.isInPeriod(year, month, pensionPeriod);
+        if (!isPensionPeriod) {
+          result.pensionInsuranceGrade = '-';
+          result.pensionInsuranceFeeEmployee = '-';
+          result.pensionInsuranceFeeCompany = '-';
+        }
+
         finalResults.push(result);
       }
       this.monthlyResults = finalResults;
@@ -513,31 +522,40 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       year: this.targetYear,
       months: this.monthlyResults.reduce(
         (acc, r) => {
-          // 端数処理関数
-          const round = (v: string | number | null | undefined) => {
-            if (v === null || v === undefined || v === '' || v === '-') return '-';
-            try {
-              return String(SocialInsuranceCalculator.roundForEmployeeBurden(new Decimal(v)));
-            } catch {
-              return String(v);
-            }
-          };
+          const normalize = (v: string | number | null | undefined) =>
+            v === null || v === undefined || v === '' || v === '0' || v === '-' ? '-' : String(v);
+
+          const healthGrade = normalize(r.healthInsuranceGrade);
+          const healthEmp = normalize(r.healthInsuranceFeeEmployee);
+          const healthCom = normalize(r.healthInsuranceFeeCompany);
+
+          const pensionGrade = normalize(r.pensionInsuranceGrade);
+          const pensionEmp = normalize(r.pensionInsuranceFeeEmployee);
+          const pensionCom = normalize(r.pensionInsuranceFeeCompany);
+
+          // 健康保険も厚生年金も全て'-'なら保存しない
+          if (
+            healthGrade === '-' &&
+            healthEmp === '-' &&
+            healthCom === '-' &&
+            pensionGrade === '-' &&
+            pensionEmp === '-' &&
+            pensionCom === '-'
+          ) {
+            return acc;
+          }
+
           acc[r.month] = {
-            year: String(r.year),
-            month: String(r.month),
-            healthInsuranceGrade:
-              r.healthInsuranceGrade != null ? String(r.healthInsuranceGrade) : '-',
-            healthInsuranceFeeEmployee: round(r.healthInsuranceFeeEmployee),
-            healthInsuranceFeeCompany:
-              r.healthInsuranceFeeCompany != null ? String(r.healthInsuranceFeeCompany) : '-',
-            careInsuranceFeeEmployee: round(r.careInsuranceFeeEmployee),
-            careInsuranceFeeCompany:
-              r.careInsuranceFeeCompany != null ? String(r.careInsuranceFeeCompany) : '-',
-            pensionInsuranceGrade:
-              r.pensionInsuranceGrade != null ? String(r.pensionInsuranceGrade) : '-',
-            pensionInsuranceFeeEmployee: round(r.pensionInsuranceFeeEmployee),
-            pensionInsuranceFeeCompany:
-              r.pensionInsuranceFeeCompany != null ? String(r.pensionInsuranceFeeCompany) : '-',
+            year: normalize(r.year),
+            month: normalize(r.month),
+            healthInsuranceGrade: healthGrade,
+            healthInsuranceFeeEmployee: healthEmp,
+            healthInsuranceFeeCompany: healthCom,
+            careInsuranceFeeEmployee: normalize(r.careInsuranceFeeEmployee),
+            careInsuranceFeeCompany: normalize(r.careInsuranceFeeCompany),
+            pensionInsuranceGrade: pensionGrade,
+            pensionInsuranceFeeEmployee: pensionEmp,
+            pensionInsuranceFeeCompany: pensionCom,
           };
           return acc;
         },
@@ -547,7 +565,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
     };
 
     try {
-      await setDoc(docRef, resultsForDb, { merge: true });
+      await setDoc(docRef, resultsForDb); // 完全上書き保存
       if (showAlert) {
         alert(`${this.targetYear}年度の計算結果を保存しました。`);
       }
