@@ -1,8 +1,9 @@
 .home-container {
-  padding: 0;
+  padding: 0 24px;
   width: 100vw;
-  margin: 0;
-  overflow-x: hidden;
+  max-width: 2400px;
+  margin: 0 auto;
+  overflow-x: auto;
 }
 
 .welcome-section {
@@ -67,8 +68,8 @@
   }
 
   .table-container {
-    width: calc(100% - 2rem);
-    max-width: calc(100vw - 2rem);
+    width: 100%;
+    max-width: 1800px;
     margin: 0 1rem;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -467,6 +468,9 @@
 
 // 追加のスタイリング改善
 .employees-card {
+  max-width: 2400px;
+  margin: 0 auto 20px auto;
+
   .mat-mdc-card-header {
     background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
     color: white;
@@ -483,6 +487,16 @@
 
   .mat-mdc-card-content {
     padding: 0;
+  }
+
+  .table-container {
+    width: 100%;
+    max-width: 2400px;
+    margin: 0 auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    overflow-x: auto;
   }
 }
 

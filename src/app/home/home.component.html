@@ -445,10 +445,40 @@
       <mat-card-content>
         <div class="table-container">
           <table mat-table [dataSource]="allEmployeesBonusData" class="employees-table">
-            <!-- Col: 支給回数・支給日 -->
-            <ng-container matColumnDef="paymentInfo">
-              <th mat-header-cell *matHeaderCellDef>支給回数・支給日</th>
-              <td mat-cell *matCellDef="let bonus">{{ bonus.paymentInfo }}</td>
+            <!-- Col: 支給回数 -->
+            <ng-container matColumnDef="paymentNumber">
+              <th mat-header-cell *matHeaderCellDef>支給回数</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ bonus.paymentNumber }}
+              </td>
+            </ng-container>
+            <!-- Col: 支給日 -->
+            <ng-container matColumnDef="paymentDate">
+              <th mat-header-cell *matHeaderCellDef>支給日</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ bonus.paymentDate | date: 'yyyy/MM/dd' }}
+              </td>
+            </ng-container>
+            <!-- Col: 従業員番号 -->
+            <ng-container matColumnDef="employeeNumber">
+              <th mat-header-cell *matHeaderCellDef>従業員番号</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ bonus.employeeNumber }}
+              </td>
+            </ng-container>
+            <!-- Col: 事業所番号 -->
+            <ng-container matColumnDef="officeNumber">
+              <th mat-header-cell *matHeaderCellDef>事業所番号</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ bonus.officeNumber }}
+              </td>
+            </ng-container>
+            <!-- Col: 従業員名 -->
+            <ng-container matColumnDef="employeeName">
+              <th mat-header-cell *matHeaderCellDef>氏名</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ bonus.employeeName }}
+              </td>
             </ng-container>
             <!-- Col: 育休産休 -->
             <ng-container matColumnDef="leaveType">
@@ -571,7 +601,11 @@
             <tr
               mat-header-row
               *matHeaderRowDef="[
-                'paymentInfo',
+                'paymentNumber',
+                'paymentDate',
+                'employeeNumber',
+                'officeNumber',
+                'employeeName',
                 'leaveType',
                 'amount',
                 'standardBonusAmount',
@@ -593,7 +627,11 @@
               *matRowDef="
                 let row;
                 columns: [
-                  'paymentInfo',
+                  'paymentNumber',
+                  'paymentDate',
+                  'employeeNumber',
+                  'officeNumber',
+                  'employeeName',
                   'leaveType',
                   'amount',
                   'standardBonusAmount',

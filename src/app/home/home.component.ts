@@ -63,6 +63,7 @@ export interface EmployeeBonusData {
   officeNumber: string;
   employeeName: string;
   paymentInfo: string; // 支給回数・支給日
+  paymentNumber: string; // 支給回数
   paymentDate?: string;
   amount: string;
   calculationResult: BonusPremiumResult;
@@ -955,6 +956,7 @@ export class HomeComponent implements OnInit {
                 officeNumber,
                 employeeName,
                 paymentInfo,
+                paymentNumber: `第${idx + 1}回`,
                 paymentDate: bonusItem.paymentDate,
                 amount: bonusItem.amount || '-',
                 calculationResult: bonusItem.calculationResult,
