@@ -233,6 +233,10 @@ export class HomeComponent implements OnInit {
 
   private currentCompanyId = '';
 
+  // 月ごとの会社負担額合計をキャッシュするプロパティ
+  monthlyCompanyTotals: { month: number; healthInsuranceTotal: number; pensionTotal: number }[] =
+    [];
+
   constructor(
     private authService: AuthService,
     private userService: UserService,
@@ -300,6 +304,8 @@ export class HomeComponent implements OnInit {
       // 賞与データ取得処理の呼び出し（実装は後続で追加）
       await this.loadAllEmployeesBonusData();
       this.filterBonusData();
+      // 会社負担額合計を再計算
+      this.monthlyCompanyTotals = this.calcMonthlyCompanyTotals();
     } catch (error) {
       console.error('初期化エラー:', error);
     }
@@ -628,22 +634,52 @@ export class HomeComponent implements OnInit {
   }
 
   // 年次切り替え時の処理
-  onYearChange() {
+  async onYearChange() {
+    console.log('=== onYearChange START ===');
     this.setDisplayedColumns();
-    this.refreshData();
-    this.filterBonusData();
+    await this.refreshData();
+    console.log(
+      'onYearChange: refreshData完了後のallEmployeesData件数:',
+      this.allEmployeesData.length
+    );
+    console.log(
+      'onYearChange: refreshData完了後のallEmployeesBonusData件数:',
+      this.allEmployeesBonusData.length
+    );
+    this.monthlyCompanyTotals = this.calcMonthlyCompanyTotals();
+    console.log('=== onYearChange END ===');
   }
 
   // 月選択変更時の処理
-  onMonthChange() {
+  async onMonthChange() {
+    console.log('=== onMonthChange START ===');
     this.setDisplayedColumns();
-    this.refreshData();
-    this.filterBonusData();
+    await this.refreshData();
+    console.log(
+      'onMonthChange: refreshData完了後のallEmployeesData件数:',
+      this.allEmployeesData.length
+    );
+    console.log(
+      'onMonthChange: refreshData完了後のallEmployeesBonusData件数:',
+      this.allEmployeesBonusData.length
+    );
+    this.monthlyCompanyTotals = this.calcMonthlyCompanyTotals();
+    console.log('=== onMonthChange END ===');
   }
 
-  onOfficeChange() {
+  async onOfficeChange() {
+    console.log('=== onOfficeChange START ===');
+    console.log('onOfficeChange: selectedOffice:', this.selectedOffice);
+    console.log('onOfficeChange: 実行前のallEmployeesData件数:', this.allEmployeesData.length);
+    console.log(
+      'onOfficeChange: 実行前のallOriginalEmployeesData件数:',
+      this.allOriginalEmployeesData.length
+    );
     this.filterDataByOffice();
     this.filterBonusData();
+    console.log('onOfficeChange: フィルタ後のallEmployeesData件数:', this.allEmployeesData.length);
+    this.monthlyCompanyTotals = this.calcMonthlyCompanyTotals();
+    console.log('=== onOfficeChange END ===');
   }
 
   // 表示する列を動的に設定するメソッド
@@ -802,6 +838,11 @@ export class HomeComponent implements OnInit {
 
   // フィルタリングメソッド
   private filterDataByOffice() {
+    console.log('filterDataByOffice: selectedOffice =', this.selectedOffice);
+    console.log(
+      'filterDataByOffice: allOriginalEmployeesData件数 =',
+      this.allOriginalEmployeesData.length
+    );
     if (this.selectedOffice === 'all') {
       this.allEmployeesData = [...this.allOriginalEmployeesData];
     } else {
@@ -809,36 +850,97 @@ export class HomeComponent implements OnInit {
         (employee) => employee.officeNumber === this.selectedOffice
       );
     }
+    console.log(
+      'filterDataByOffice: フィルタ後のallEmployeesData件数 =',
+      this.allEmployeesData.length
+    );
   }
 
-  // 月ごとの会社負担額合計を計算するメソッド
-  getMonthlyCompanyTotals(): {
+  private filterBonusData() {
+    console.log('filterBonusData: allEmployeesBonusData件数 =', this.allEmployeesBonusData.length);
+    this.filteredEmployeesBonusData = this.allEmployeesBonusData.filter((bonus) => {
+      if (bonus.paymentDate) {
+        const date = new Date(bonus.paymentDate);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        if (year !== this.selectedYear || month !== this.selectedMonth) return false;
+      }
+      if (
+        this.selectedOffice !== 'all' &&
+        String(bonus.officeNumber) !== String(this.selectedOffice)
+      )
+        return false;
+      if (bonus.companyId && bonus.companyId !== this.currentCompanyId) return false;
+      return true;
+    });
+    console.log(
+      'filterBonusData: フィルタ後のfilteredEmployeesBonusData件数 =',
+      this.filteredEmployeesBonusData.length
+    );
+  }
+
+  // 月ごとの会社負担額合計を計算する純粋関数
+  private calcMonthlyCompanyTotals(): {
     month: number;
     healthInsuranceTotal: number;
     pensionTotal: number;
   }[] {
+    console.log('calcMonthlyCompanyTotals: 計算開始');
+    console.log('calcMonthlyCompanyTotals: allEmployeesData件数 =', this.allEmployeesData.length);
+    console.log(
+      'calcMonthlyCompanyTotals: allEmployeesBonusData件数 =',
+      this.allEmployeesBonusData?.length || 0
+    );
+    console.log('calcMonthlyCompanyTotals: selectedOffice =', this.selectedOffice);
+
     // 月番号リスト（4月～翌年3月）
     const months = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
     const results: { month: number; healthInsuranceTotal: number; pensionTotal: number }[] = [];
     for (const m of months) {
       let healthInsuranceTotal = 0;
       let pensionTotal = 0;
+      // 給与分
       for (const emp of this.allEmployeesData) {
-        // 月ごとのデータ取得
-        const monthData =
-          emp.currentMonth.healthInsuranceCompany || emp.currentMonth.careInsuranceCompany || '0';
-        // 会社負担分の合計
-        healthInsuranceTotal += Number(monthData);
-        // 厚生年金保険料
-        pensionTotal += Number(emp.currentMonth.pensionInsuranceCompany || '0');
+        const healthCompany =
+          (Number(emp.currentMonth.healthInsuranceCompany) || 0) -
+          (Number(emp.currentMonth.healthInsuranceEmployee) || 0);
+        const careCompany =
+          (Number(emp.currentMonth.careInsuranceCompany) || 0) -
+          (Number(emp.currentMonth.careInsuranceEmployee) || 0);
+        healthInsuranceTotal += healthCompany + careCompany;
+        // 厚生年金
+        const pensionCompany =
+          (Number(emp.currentMonth.pensionInsuranceCompany) || 0) -
+          (Number(emp.currentMonth.pensionInsuranceEmployee) || 0);
+        pensionTotal += pensionCompany;
       }
-      // 端数処理（1円未満切り捨て）
+      // 賞与分
+      for (const bonus of this.allEmployeesBonusData || []) {
+        if (this.selectedOffice !== 'all' && bonus.officeNumber !== this.selectedOffice) continue;
+        // 月フィルタを追加：選択された月の賞与のみを合算
+        if (bonus.paymentDate) {
+          const date = new Date(bonus.paymentDate);
+          const month = date.getMonth() + 1;
+          if (month !== m) continue; // 現在処理中の月(m)と一致しない場合はスキップ
+        }
+        const healthTotal = Number(bonus.healthInsuranceTotal) || 0;
+        const healthEmployee =
+          Number(bonus.calculationResult?.healthInsurance?.employeeBurden) || 0;
+        const careTotal = Number(bonus.careInsuranceTotal) || 0;
+        const careEmployee = Number(bonus.calculationResult?.careInsurance?.employeeBurden) || 0;
+        healthInsuranceTotal += healthTotal - healthEmployee + careTotal - careEmployee;
+        const pensionTotalAll = Number(bonus.pensionInsuranceTotal) || 0;
+        const pensionEmployee =
+          Number(bonus.calculationResult?.pensionInsurance?.employeeBurden) || 0;
+        pensionTotal += pensionTotalAll - pensionEmployee;
+      }
       results.push({
         month: m,
         healthInsuranceTotal: Math.floor(healthInsuranceTotal),
         pensionTotal: Math.floor(pensionTotal),
       });
     }
+    console.log('calcMonthlyCompanyTotals: 計算結果:', results[2]); // 6月(index2)の結果を出力
     return results;
   }
 
@@ -1028,23 +1130,5 @@ export class HomeComponent implements OnInit {
     if (!paymentDate || !period) return false;
     const pay = paymentDate.slice(0, 7); // 'YYYY-MM'
     return pay >= period.start && pay <= period.end;
-  }
-
-  private filterBonusData() {
-    this.filteredEmployeesBonusData = this.allEmployeesBonusData.filter((bonus) => {
-      if (bonus.paymentDate) {
-        const date = new Date(bonus.paymentDate);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        if (year !== this.selectedYear || month !== this.selectedMonth) return false;
-      }
-      if (
-        this.selectedOffice !== 'all' &&
-        String(bonus.officeNumber) !== String(this.selectedOffice)
-      )
-        return false;
-      if (bonus.companyId && bonus.companyId !== this.currentCompanyId) return false;
-      return true;
-    });
   }
 }

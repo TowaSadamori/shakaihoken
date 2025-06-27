@@ -48,7 +48,7 @@
           <span class="summary-label">健康保険料・介護保険料（会社負担分）合計</span>
           <span class="summary-amount">
             {{
-              getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].healthInsuranceTotal
+              monthlyCompanyTotals[(selectedMonth - 4 + 12) % 12]?.healthInsuranceTotal ?? 0
                 | number
             }}円
           </span>
@@ -56,15 +56,15 @@
         <div class="summary-row">
           <span class="summary-label">厚生年金保険料（会社負担分）合計</span>
           <span class="summary-amount">
-            {{ getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].pensionTotal | number }}円
+            {{ monthlyCompanyTotals[(selectedMonth - 4 + 12) % 12]?.pensionTotal ?? 0 | number }}円
           </span>
         </div>
         <div class="summary-total">
           <span class="summary-label">会社負担分総額</span>
           <span class="summary-amount">
             {{
-              getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].healthInsuranceTotal +
-                getMonthlyCompanyTotals()[(selectedMonth - 4 + 12) % 12].pensionTotal | number
+              (monthlyCompanyTotals[(selectedMonth - 4 + 12) % 12]?.healthInsuranceTotal ?? 0) +
+                (monthlyCompanyTotals[(selectedMonth - 4 + 12) % 12]?.pensionTotal ?? 0) | number
             }}円
           </span>
         </div>
