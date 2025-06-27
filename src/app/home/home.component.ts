@@ -73,6 +73,7 @@ export interface EmployeeBonusData {
   amount: string;
   calculationResult: BonusPremiumResult;
   leaveType: string;
+  careInsuranceTotal?: string;
 }
 
 // Type for bonusResults item loaded from Firestore
@@ -948,6 +949,31 @@ export class HomeComponent implements OnInit {
           if (data && Array.isArray(data['bonusResults'])) {
             data['bonusResults'].forEach((bonusItem: BonusResultFirestoreItem, idx: number) => {
               const paymentInfo = `第${idx + 1}回（${bonusItem.paymentDate || '-'}）`;
+              // 介護保険該当判定
+              let isCareApplicable = false;
+              if (user && user.birthDate && bonusItem.paymentDate) {
+                const ageAtPayment = (() => {
+                  const birth = new Date(user.birthDate);
+                  const pay = new Date(bonusItem.paymentDate);
+                  let age = pay.getFullYear() - birth.getFullYear();
+                  const m = pay.getMonth() - birth.getMonth();
+                  if (m < 0 || (m === 0 && pay.getDate() < birth.getDate())) age--;
+                  return age;
+                })();
+                isCareApplicable = ageAtPayment >= 40 && ageAtPayment < 65;
+              }
+              // 標準賞与額（上限適用後）
+              const applicableHealthStandardAmount =
+                bonusItem.calculationResult?.applicableHealthStandardAmount || '0';
+              // 保険料率
+              const healthRateVal = bonusItem.calculationResult?.healthInsuranceRate
+                ? parseFloat(bonusItem.calculationResult.healthInsuranceRate.replace('%', '')) / 100
+                : 0;
+              // 介護保険該当の全額
+              const careInsuranceTotal =
+                isCareApplicable && healthRateVal
+                  ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
+                  : '-';
               bonusDataList.push({
                 employeeNumber,
                 officeNumber,
@@ -956,6 +982,7 @@ export class HomeComponent implements OnInit {
                 amount: bonusItem.amount || '-',
                 calculationResult: bonusItem.calculationResult,
                 leaveType: bonusItem.leaveType || 'excluded',
+                careInsuranceTotal,
               });
             });
           }

@@ -445,21 +445,6 @@
       <mat-card-content>
         <div class="table-container">
           <table mat-table [dataSource]="allEmployeesBonusData" class="employees-table">
-            <!-- Col: 従業員番号 -->
-            <ng-container matColumnDef="employeeNumber">
-              <th mat-header-cell *matHeaderCellDef>従業員番号</th>
-              <td mat-cell *matCellDef="let bonus">{{ bonus.employeeNumber }}</td>
-            </ng-container>
-            <!-- Col: 氏名 -->
-            <ng-container matColumnDef="employeeName">
-              <th mat-header-cell *matHeaderCellDef>氏名</th>
-              <td mat-cell *matCellDef="let bonus">{{ bonus.employeeName }}</td>
-            </ng-container>
-            <!-- Col: 事業所番号 -->
-            <ng-container matColumnDef="officeNumber">
-              <th mat-header-cell *matHeaderCellDef>事業所番号</th>
-              <td mat-cell *matCellDef="let bonus">{{ bonus.officeNumber }}</td>
-            </ng-container>
             <!-- Col: 支給回数・支給日 -->
             <ng-container matColumnDef="paymentInfo">
               <th mat-header-cell *matHeaderCellDef>支給回数・支給日</th>
@@ -507,22 +492,20 @@
             <ng-container matColumnDef="careInsuranceRate">
               <th mat-header-cell *matHeaderCellDef>健康保険料率<br />（介護保険該当）</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatPercentage(bonus.calculationResult?.combinedHealthAndCareRate) }}
+                {{ formatPercentage(bonus.calculationResult?.healthInsuranceRate) }}
               </td>
             </ng-container>
             <!-- Col: 健康保険料(個人)（介護保険該当） -->
             <ng-container matColumnDef="careInsuranceEmployee">
               <th mat-header-cell *matHeaderCellDef>健康保険料(個人)<br />（介護保険該当）</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatAmount(bonus.calculationResult?.careInsurance?.employeeBurden) }}
+                {{ formatAmount(bonus.calculationResult?.healthInsurance?.employeeBurden) }}
               </td>
             </ng-container>
             <!-- Col: 健康保険料(全額)（介護保険該当） -->
             <ng-container matColumnDef="careInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>健康保険料(全額)<br />（介護保険該当）</th>
-              <td mat-cell *matCellDef="let bonus">
-                {{ formatAmount(bonus.calculationResult?.careInsurance?.companyBurden) }}
-              </td>
+              <td mat-cell *matCellDef="let bonus">{{ formatAmount(bonus.careInsuranceTotal) }}</td>
             </ng-container>
             <!-- Col: 厚生年金保険料率 -->
             <ng-container matColumnDef="pensionInsuranceRate">
@@ -545,8 +528,63 @@
                 {{ formatAmount(bonus.calculationResult?.pensionInsurance?.companyBurden) }}
               </td>
             </ng-container>
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsAdminBonus"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumnsAdminBonus"></tr>
+            <!-- Col: 厚生年金上限適用後標準賞与額 -->
+            <ng-container matColumnDef="cappedPensionStandardAmount">
+              <th mat-header-cell *matHeaderCellDef>厚生年金<br />上限適用後標準賞与額</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ formatAmount(bonus.calculationResult?.cappedPensionStandardAmount) }}
+              </td>
+            </ng-container>
+            <!-- Col: 健康保険上限適用後標準賞与額 -->
+            <ng-container matColumnDef="applicableHealthStandardAmount">
+              <th mat-header-cell *matHeaderCellDef>健康保険<br />上限適用後標準賞与額</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ formatAmount(bonus.calculationResult?.applicableHealthStandardAmount) }}
+              </td>
+            </ng-container>
+            <tr
+              mat-header-row
+              *matHeaderRowDef="[
+                'paymentInfo',
+                'leaveType',
+                'amount',
+                'standardBonusAmount',
+                'healthInsuranceRate',
+                'healthInsuranceEmployee',
+                'healthInsuranceCompany',
+                'careInsuranceRate',
+                'careInsuranceEmployee',
+                'careInsuranceCompany',
+                'pensionInsuranceRate',
+                'pensionInsuranceEmployee',
+                'pensionInsuranceCompany',
+                'cappedPensionStandardAmount',
+                'applicableHealthStandardAmount',
+              ]"
+            ></tr>
+            <tr
+              mat-row
+              *matRowDef="
+                let row;
+                columns: [
+                  'paymentInfo',
+                  'leaveType',
+                  'amount',
+                  'standardBonusAmount',
+                  'healthInsuranceRate',
+                  'healthInsuranceEmployee',
+                  'healthInsuranceCompany',
+                  'careInsuranceRate',
+                  'careInsuranceEmployee',
+                  'careInsuranceCompany',
+                  'pensionInsuranceRate',
+                  'pensionInsuranceEmployee',
+                  'pensionInsuranceCompany',
+                  'cappedPensionStandardAmount',
+                  'applicableHealthStandardAmount',
+                ]
+              "
+            ></tr>
           </table>
           <div *ngIf="allEmployeesBonusData.length === 0" class="no-data-message">
             対象データがありません
