@@ -918,49 +918,26 @@ export class HomeComponent implements OnInit {
         const employeeNumber = user.employeeNumber || '';
         const officeNumber = user.branchNumber || '';
         const employeeName = `${user.lastName || ''} ${user.firstName || ''}`.trim();
-        // 賞与履歴取得
-        const bonusHistory = await this.bonusCalculationService.getFiscalYearBonusHistory(
-          employeeNumber,
-          BigInt(fiscalYear),
-          companyId
-        );
-        for (let i = 0; i < Math.min(bonusHistory.length, 3); i++) {
-          const bonusItem = bonusHistory[i];
-          let addressPrefecture =
-            (user as User & { addressPrefecture?: string; prefectureCity?: string })
-              .addressPrefecture ||
-            (user as User & { addressPrefecture?: string; prefectureCity?: string })
-              .prefectureCity ||
-            '';
-          if (!addressPrefecture && user.branchNumber) {
-            const office = this.offices.find((o) => o.branchNumber === user.branchNumber);
-            if (office && (office as { addressPrefecture?: string }).addressPrefecture) {
-              addressPrefecture = (office as { addressPrefecture?: string }).addressPrefecture!;
-            }
+        // Firestoreのbonus_calculation_resultsから直接取得
+        const docPath = `companies/${companyId}/employees/${user.uid}/bonus_calculation_results/${fiscalYear}`;
+        const docRef = doc(this.firestore, docPath);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data && Array.isArray(data['bonusResults'])) {
+            data['bonusResults'].forEach((bonusItem: any, idx: number) => {
+              const paymentInfo = `第${idx + 1}回（${bonusItem.paymentDate || '-'}）`;
+              bonusDataList.push({
+                employeeNumber,
+                officeNumber,
+                employeeName,
+                paymentInfo,
+                amount: bonusItem.amount || '-',
+                calculationResult: bonusItem.calculationResult,
+                leaveType: bonusItem.leaveType || 'excluded',
+              });
+            });
           }
-          if (!addressPrefecture) {
-            addressPrefecture = '東京';
-          }
-          const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
-            bonusItem,
-            {
-              age: BigInt(0),
-              addressPrefecture,
-              companyId: user.companyId,
-              birthDate: user.birthDate || '',
-            }
-          );
-          if (!calculated) continue;
-          const paymentInfo = `第${i + 1}回（${bonusItem.paymentDate || '-'}）`;
-          bonusDataList.push({
-            employeeNumber,
-            officeNumber,
-            employeeName,
-            paymentInfo,
-            amount: bonusItem.amount || '-',
-            calculationResult: calculated.calculationResult,
-            leaveType: bonusItem.leaveType || 'excluded',
-          });
         }
       }
       this.allEmployeesBonusData = bonusDataList;
