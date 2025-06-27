@@ -520,61 +520,25 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     const rows: PivotRow[] = this.bonusDataList.map((item, index) => {
       const calcResult = item.calculationResult;
       // 介護該当判定: 支給日が介護保険該当期間内かどうか
-      const isCareApplicable = this.isInPeriod(
-        item.paymentDate || '',
-        this.employeeInsurancePeriods.careInsurancePeriod
-      );
+      const isCareApplicable =
+        item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
+          ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod)
+          : false;
       // 標準賞与額（上限適用後）
       const applicableHealthStandardAmount = calcResult.applicableHealthStandardAmount;
       // 保険料率
-      const healthRate = parseFloat(calcResult.healthInsuranceRate.replace('%', '')) / 100;
-      const careRate = calcResult.careInsuranceRate
-        ? parseFloat(calcResult.careInsuranceRate.replace('%', '')) / 100
-        : undefined;
-      const pensionRate = parseFloat(calcResult.pensionInsuranceRate.replace('%', '')) / 100;
+      const healthRateVal = parseFloat(calcResult.healthInsuranceRate.replace('%', '')) / 100;
+      const pensionRateVal = parseFloat(calcResult.pensionInsuranceRate.replace('%', '')) / 100;
       // 全額計算
-      const healthTotal = healthRate
-        ? (parseFloat(applicableHealthStandardAmount) * healthRate).toString()
+      const healthInsuranceTotalCalc = healthRateVal
+        ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
         : '-';
-      const careTotal = careRate
-        ? (parseFloat(applicableHealthStandardAmount) * careRate).toString()
+      const careInsuranceTotalCalc = isCareApplicable
+        ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
         : '-';
-      const pensionTotal = pensionRate
-        ? (parseFloat(applicableHealthStandardAmount) * pensionRate).toString()
+      const pensionInsuranceTotalCalc = pensionRateVal
+        ? (parseFloat(applicableHealthStandardAmount) * pensionRateVal).toString()
         : '-';
-      // 非該当側
-      // const healthInsuranceEmployee = !isCareApplicable
-      //   ? this.formatAmount(calcResult.healthInsurance.employeeBurden)
-      //   : '-';
-      // const healthInsuranceTotal = !isCareApplicable
-      //   ? this.formatAmount(
-      //       SocialInsuranceCalculator.addAmounts(
-      //         calcResult.healthInsurance.employeeBurden,
-      //         calcResult.healthInsurance.companyBurden
-      //       )
-      //     )
-      //   : '-';
-      // 該当側
-      // const careInsuranceEmployee = isCareApplicable
-      //   ? this.formatAmount(calcResult.healthInsurance.employeeBurden)
-      //   : '-';
-      // const careInsuranceTotal = isCareApplicable
-      //   ? this.formatAmount(
-      //       SocialInsuranceCalculator.addAmounts(
-      //         calcResult.healthInsurance.employeeBurden,
-      //         calcResult.healthInsurance.companyBurden
-      //       )
-      //     )
-      //   : '-';
-      // const pensionInsuranceEmployee = this.formatAmount(
-      //   calcResult.pensionInsurance.employeeBurden
-      // );
-      // const pensionInsuranceTotal = this.formatAmount(
-      //   SocialInsuranceCalculator.addAmounts(
-      //     calcResult.pensionInsurance.employeeBurden,
-      //     calcResult.pensionInsurance.companyBurden
-      //   )
-      // );
       const values = [
         `checkbox_${index}`,
         this.formatAmount(item.amount),
@@ -582,15 +546,15 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         '',
         isCareApplicable ? '-' : this.formatPercentage(calcResult.healthInsuranceRate),
         isCareApplicable ? '-' : this.formatAmount(calcResult.healthInsurance.employeeBurden),
-        isCareApplicable ? '-' : healthTotal,
+        isCareApplicable ? '-' : healthInsuranceTotalCalc,
         '',
         isCareApplicable ? this.formatPercentage(calcResult.healthInsuranceRate) : '-',
         isCareApplicable ? this.formatAmount(calcResult.healthInsurance.employeeBurden) : '-',
-        isCareApplicable ? careTotal : '-',
+        isCareApplicable ? careInsuranceTotalCalc : '-',
         '',
         this.formatPercentage(calcResult.pensionInsuranceRate),
         this.formatAmount(calcResult.pensionInsurance.employeeBurden),
-        pensionTotal,
+        pensionInsuranceTotalCalc,
         '',
         this.formatAmount(calcResult.cappedPensionStandardAmount),
         this.formatAmount(calcResult.applicableHealthStandardAmount),
@@ -735,23 +699,25 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       // 画面表示用のオブジェクトデータを生成
       const displayResults = this.bonusDataList.map((item, idx) => {
         const row = this.pivotedTable!.rows[idx];
+        // 介護該当判定: 支給日が介護保険該当期間内かどうか
+        const isCareApplicable =
+          item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
+            ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod)
+            : false;
         // 標準賞与額（上限適用後）
         const applicableHealthStandardAmount =
           item.calculationResult.applicableHealthStandardAmount;
         // 保険料率
         const healthRateVal =
           parseFloat(item.calculationResult.healthInsuranceRate.replace('%', '')) / 100;
-        const careRateVal = item.calculationResult.careInsuranceRate
-          ? parseFloat(item.calculationResult.careInsuranceRate.replace('%', '')) / 100
-          : undefined;
         const pensionRateVal =
           parseFloat(item.calculationResult.pensionInsuranceRate.replace('%', '')) / 100;
         // 全額計算
         const healthInsuranceTotalCalc = healthRateVal
           ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
           : '-';
-        const careInsuranceTotalCalc = careRateVal
-          ? (parseFloat(applicableHealthStandardAmount) * careRateVal).toString()
+        const careInsuranceTotalCalc = isCareApplicable
+          ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
           : '-';
         const pensionInsuranceTotalCalc = pensionRateVal
           ? (parseFloat(applicableHealthStandardAmount) * pensionRateVal).toString()
