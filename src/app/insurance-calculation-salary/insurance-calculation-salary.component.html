@@ -217,14 +217,30 @@
             <td>
               <ng-container
                 *ngIf="
-                  result.pensionInsuranceFeeEmployee && result.pensionInsuranceFeeEmployee !== '0'
+                  result.pensionInsuranceGrade !== '-' &&
+                  result.pensionInsuranceGrade !== '' &&
+                  isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.pensionInsurancePeriod ?? null
+                  ) &&
+                  result.pensionInsuranceFeeEmployee &&
+                  result.pensionInsuranceFeeEmployee !== '0'
                 "
               >
                 {{ result.pensionInsuranceFeeEmployee | roundForEmployeeBurden }}
               </ng-container>
               <ng-container
                 *ngIf="
-                  !result.pensionInsuranceFeeEmployee || result.pensionInsuranceFeeEmployee === '0'
+                  result.pensionInsuranceGrade === '-' ||
+                  result.pensionInsuranceGrade === '' ||
+                  !isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.pensionInsurancePeriod ?? null
+                  ) ||
+                  !result.pensionInsuranceFeeEmployee ||
+                  result.pensionInsuranceFeeEmployee === '0'
                 "
                 >-</ng-container
               >
@@ -232,14 +248,30 @@
             <td>
               <ng-container
                 *ngIf="
-                  result.pensionInsuranceFeeCompany && result.pensionInsuranceFeeCompany !== '0'
+                  result.pensionInsuranceGrade !== '-' &&
+                  result.pensionInsuranceGrade !== '' &&
+                  isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.pensionInsurancePeriod ?? null
+                  ) &&
+                  result.pensionInsuranceFeeCompany &&
+                  result.pensionInsuranceFeeCompany !== '0'
                 "
               >
-                {{ formatAmountWithDecimal(result.pensionInsuranceFeeCompany) }}
+                {{ result.pensionInsuranceFeeCompany | roundForEmployeeBurden }}
               </ng-container>
               <ng-container
                 *ngIf="
-                  !result.pensionInsuranceFeeCompany || result.pensionInsuranceFeeCompany === '0'
+                  result.pensionInsuranceGrade === '-' ||
+                  result.pensionInsuranceGrade === '' ||
+                  !isInPeriod(
+                    result.year,
+                    result.month,
+                    employeeInsurancePeriods.pensionInsurancePeriod ?? null
+                  ) ||
+                  !result.pensionInsuranceFeeCompany ||
+                  result.pensionInsuranceFeeCompany === '0'
                 "
                 >-</ng-container
               >

@@ -96,8 +96,8 @@
             <td class="updated-at">{{ formatDate(record.updatedAt) }}</td>
             <td class="judgment-type">{{ getJudgmentTypeLabel(record.judgmentType) }}</td>
             <td class="period">
-              {{ formatDate(record.effectiveDate) }}
-              <span *ngIf="record.endDate"> ～ {{ formatDate(record.endDate) }}</span>
+              {{ formatYearMonth(record.effectiveDate) }}
+              <span *ngIf="record.endDate"> ～ {{ formatYearMonth(record.endDate) }}</span>
               <span *ngIf="!record.endDate"> ～ 継続中</span>
             </td>
             <td class="grade">

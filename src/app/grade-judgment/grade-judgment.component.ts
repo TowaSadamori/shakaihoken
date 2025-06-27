@@ -529,6 +529,16 @@ export class GradeJudgmentComponent implements OnInit {
       .padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
   }
 
+  // 年月のみを返すフォーマット関数
+  formatYearMonth(date: Date): string {
+    if (!(date instanceof Date)) {
+      return '無効な日付';
+    }
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    return `${year}年${month}月`;
+  }
+
   formatCurrency(amount: string): string {
     if (!amount || amount === '0') return '';
     return amount + '円';
