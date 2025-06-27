@@ -43,6 +43,7 @@ interface PivotColumn {
 interface PivotRow {
   header: string;
   values: (string | undefined)[];
+  dataIndex: number;
 }
 
 interface PivotedTable {
@@ -522,7 +523,16 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       { header: '健康保険<br>上限適用後標準賞与額', isNumeric: true, isSeparator: false }
     );
 
-    const rows: PivotRow[] = this.bonusDataList.map((item, index) => {
+    // rows生成時に健康保険も厚生年金も全て'-'のデータは除外し、bonusDataListのindexをdataIndexとして保持
+    const rows: PivotRow[] = [];
+    this.bonusDataList.forEach((item, dataIndex) => {
+      const calc = item.calculationResult;
+      const isAllExcluded =
+        calc.healthInsurance.employeeBurden === '-' &&
+        calc.healthInsurance.companyBurden === '-' &&
+        calc.pensionInsurance.employeeBurden === '-' &&
+        calc.pensionInsurance.companyBurden === '-';
+      if (isAllExcluded) return;
       const calcResult = item.calculationResult;
       const isCareApplicable =
         item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
@@ -543,7 +553,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           ).toString()
         : '-';
       const values: (string | undefined)[] = [
-        `checkbox_${index}`,
+        `checkbox_${dataIndex}`,
         this.formatAmount(item.amount),
         this.formatAmount(calcResult.standardBonusAmount),
         '',
@@ -568,12 +578,12 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         this.formatAmount(calcResult.cappedPensionStandardAmount),
         this.formatAmount(calcResult.applicableHealthStandardAmount)
       );
-      return {
-        header: `賞与(${index + 1}回目)<br>${item.paymentDate || ''}`,
+      rows.push({
+        header: `賞与(${rows.length + 1}回目)<br>${item.paymentDate || ''}`,
         values,
-      };
+        dataIndex,
+      });
     });
-
     this.pivotedTable = { columns, rows };
   }
 
@@ -705,51 +715,90 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       }
 
       // 画面表示用のオブジェクトデータを生成
-      const displayResults = this.bonusDataList.map((item, idx) => {
-        const row = this.pivotedTable!.rows[idx];
-        // 介護該当判定: 支給日が介護保険該当期間内かどうか
-        const isCareApplicable =
-          item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
-            ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod)
-            : false;
-        // 標準賞与額（上限適用後）
-        const applicableHealthStandardAmount =
-          item.calculationResult.applicableHealthStandardAmount;
-        // 保険料率
-        const healthRateVal =
-          parseFloat(item.calculationResult.healthInsuranceRate.replace('%', '')) / 100;
-        // 全額計算
-        const healthInsuranceTotalCalc = healthRateVal
-          ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
-          : '-';
-        const careInsuranceTotalCalc = isCareApplicable
-          ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
-          : '-';
-        const pensionInsuranceTotalCalc = healthRateVal
-          ? (
-              parseFloat(item.calculationResult.cappedPensionStandardAmount) * healthRateVal
-            ).toString()
-          : '-';
-        return {
-          display: [row.header, ...row.values.map((v) => (v === undefined ? '-' : String(v)))].join(
-            ' | '
-          ),
-          amount: item.amount,
-          paymentDate: item.paymentDate,
-          month: item.month,
-          year: item.year,
-          leaveType: item.leaveType,
-          companyId: this.employeeInfo!.companyId,
-          branchNumber: this.employeeInfo!.branchNumber,
-          addressPrefecture: this.employeeInfo!.addressPrefecture,
-          employeeNumber: this.employeeInfo!.employeeNumber,
-          calculationResult: item.calculationResult,
-          healthInsuranceTotal: healthInsuranceTotalCalc,
-          careInsuranceTotal: careInsuranceTotalCalc,
-          pensionInsuranceTotal: pensionInsuranceTotalCalc,
-          applicableHealthStandardAmount,
-        };
-      });
+      const displayResults = this.bonusDataList
+        .map((item, idx) => {
+          const row = this.pivotedTable!.rows[idx];
+          // 介護該当判定: 支給日が介護保険該当期間内かどうか
+          const isCareApplicable =
+            item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
+              ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod)
+              : false;
+          // 健康保険該当判定
+          const isHealthApplicable =
+            item.paymentDate && this.employeeInsurancePeriods.healthInsurancePeriod
+              ? this.isInPeriod(
+                  item.paymentDate,
+                  this.employeeInsurancePeriods.healthInsurancePeriod
+                )
+              : false;
+          // 厚生年金該当判定
+          const isPensionApplicable =
+            item.paymentDate && this.employeeInsurancePeriods.pensionInsurancePeriod
+              ? this.isInPeriod(
+                  item.paymentDate,
+                  this.employeeInsurancePeriods.pensionInsurancePeriod
+                )
+              : false;
+
+          // 健康保険対象外なら'-'に上書き
+          if (!isHealthApplicable) {
+            item.calculationResult.healthInsurance.employeeBurden = '-';
+            item.calculationResult.healthInsurance.companyBurden = '-';
+          }
+          // 厚生年金対象外なら'-'に上書き
+          if (!isPensionApplicable) {
+            item.calculationResult.pensionInsurance.employeeBurden = '-';
+            item.calculationResult.pensionInsurance.companyBurden = '-';
+          }
+          // 健康保険も厚生年金も全て'-'なら保存しない
+          const isAllExcluded =
+            item.calculationResult.healthInsurance.employeeBurden === '-' &&
+            item.calculationResult.healthInsurance.companyBurden === '-' &&
+            item.calculationResult.pensionInsurance.employeeBurden === '-' &&
+            item.calculationResult.pensionInsurance.companyBurden === '-';
+          if (isAllExcluded) {
+            return null; // 保存対象外
+          }
+          // 標準賞与額（上限適用後）
+          const applicableHealthStandardAmount =
+            item.calculationResult.applicableHealthStandardAmount;
+          // 保険料率
+          const healthRateVal =
+            parseFloat(item.calculationResult.healthInsuranceRate.replace('%', '')) / 100;
+          // 全額計算
+          const healthInsuranceTotalCalc = healthRateVal
+            ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
+            : '-';
+          const careInsuranceTotalCalc = isCareApplicable
+            ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
+            : '-';
+          const pensionInsuranceTotalCalc = healthRateVal
+            ? (
+                parseFloat(item.calculationResult.cappedPensionStandardAmount) * healthRateVal
+              ).toString()
+            : '-';
+          return {
+            display: [
+              row.header,
+              ...row.values.map((v) => (v === undefined ? '-' : String(v))),
+            ].join(' | '),
+            amount: item.amount,
+            paymentDate: item.paymentDate,
+            month: item.month,
+            year: item.year,
+            leaveType: item.leaveType,
+            companyId: this.employeeInfo!.companyId,
+            branchNumber: this.employeeInfo!.branchNumber,
+            addressPrefecture: this.employeeInfo!.addressPrefecture,
+            employeeNumber: this.employeeInfo!.employeeNumber,
+            calculationResult: item.calculationResult,
+            healthInsuranceTotal: healthInsuranceTotalCalc,
+            careInsuranceTotal: careInsuranceTotalCalc,
+            pensionInsuranceTotal: pensionInsuranceTotalCalc,
+            applicableHealthStandardAmount,
+          };
+        })
+        .filter((item) => item !== null); // null（保存対象外）は除外
 
       const saveData = {
         companyId: companyId,

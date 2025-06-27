@@ -135,8 +135,10 @@
                 <tbody>
                   <tr *ngFor="let row of pivotedTable.rows; let rowIndex = index" class="data-row">
                     <td>
-                      <button class="edit-btn" (click)="onEditBonus(rowIndex)">編集</button>
-                      <button class="delete-btn" (click)="onDeleteBonus(rowIndex)">削除</button>
+                      <button class="edit-btn" (click)="onEditBonus(row.dataIndex)">編集</button>
+                      <button class="delete-btn" (click)="onDeleteBonus(row.dataIndex)">
+                        削除
+                      </button>
                     </td>
                     <td [innerHTML]="row.header"></td>
                     <ng-container *ngFor="let col of pivotedTable.columns; let i = index">

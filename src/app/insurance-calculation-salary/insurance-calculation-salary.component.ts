@@ -408,6 +408,15 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           result.pensionInsuranceGrade = '履歴なし';
         }
 
+        // 健康保険の適用期間外なら必ず'-'をセット
+        const healthPeriod = this.employeeInsurancePeriods.healthInsurancePeriod ?? null;
+        const isHealthPeriod = this.isInPeriod(year, month, healthPeriod);
+        if (!isHealthPeriod) {
+          result.healthInsuranceGrade = '-';
+          result.healthInsuranceFeeEmployee = '-';
+          result.healthInsuranceFeeCompany = '-';
+        }
+
         // 厚生年金の適用期間外の月は必ず'-'をセット
         const pensionPeriod = this.employeeInsurancePeriods.pensionInsurancePeriod ?? null;
         const isPensionPeriod = this.isInPeriod(year, month, pensionPeriod);

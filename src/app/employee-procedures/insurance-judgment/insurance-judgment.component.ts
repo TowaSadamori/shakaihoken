@@ -3085,13 +3085,10 @@ export class InsuranceJudgmentComponent implements OnInit {
     const bd = new Date(birthDate);
     // 開始月（生まれた月）
     const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
-    // 75歳の誕生日
+    // 75歳の誕生日（1日生まれ特例なし、常に誕生月が終了月）
     const seventyFifthBirthday = new Date(bd);
     seventyFifthBirthday.setFullYear(bd.getFullYear() + 75);
-    // 75歳の誕生日の前月
-    const endDatePrevMonth = new Date(seventyFifthBirthday);
-    endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
-    const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
+    const end = `${seventyFifthBirthday.getFullYear()}-${('0' + (seventyFifthBirthday.getMonth() + 1)).slice(-2)}`;
     return { start, end };
   }
 
