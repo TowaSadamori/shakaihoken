@@ -34,14 +34,6 @@ interface InsuranceEligibility {
   careInsurance?: { eligible: boolean; reason: string };
 }
 
-// Firestoreから取得する保険判定データの型
-interface InsuranceJudgmentData {
-  employeeNumber: string;
-  officeNumber: string;
-  judgmentResult: InsuranceEligibility;
-  // 必要に応じて他のフィールドも追加
-}
-
 interface EmployeeInsuranceData {
   employeeNumber: string;
   officeNumber: string;
@@ -62,6 +54,7 @@ interface EmployeeInsuranceData {
 // ユーザーに判定結果を追加した拡張インターフェース
 interface UserWithJudgment extends User {
   judgmentResult?: InsuranceEligibility | null;
+  careInsurancePeriod?: { start: string; end: string };
 }
 
 // 賞与データ表示用の型
@@ -70,10 +63,14 @@ export interface EmployeeBonusData {
   officeNumber: string;
   employeeName: string;
   paymentInfo: string; // 支給回数・支給日
+  paymentDate?: string;
   amount: string;
   calculationResult: BonusPremiumResult;
   leaveType: string;
   careInsuranceTotal?: string;
+  pensionInsuranceTotal?: string;
+  healthInsuranceTotal?: string;
+  careInsurancePeriod?: { start: string; end: string };
 }
 
 // Type for bonusResults item loaded from Firestore
@@ -326,15 +323,19 @@ export class HomeComponent implements OnInit {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const savedData = docSnap.data() as InsuranceJudgmentData;
+          const savedData = docSnap.data() as Record<string, unknown>;
 
           // 会社ID、事業所番号、従業員番号が一致するかチェック
           if (
-            savedData.employeeNumber === user.employeeNumber &&
-            savedData.officeNumber === user.branchNumber?.toString() &&
+            savedData['employeeNumber'] === user.employeeNumber &&
+            savedData['officeNumber'] === user.branchNumber?.toString() &&
             user.companyId === currentCompanyId
           ) {
-            user.judgmentResult = savedData.judgmentResult;
+            user.judgmentResult = savedData['judgmentResult'] as InsuranceEligibility;
+            user.careInsurancePeriod = savedData['careInsurancePeriod'] as {
+              start: string;
+              end: string;
+            };
           }
         }
       } catch (error) {
@@ -949,40 +950,19 @@ export class HomeComponent implements OnInit {
           if (data && Array.isArray(data['bonusResults'])) {
             data['bonusResults'].forEach((bonusItem: BonusResultFirestoreItem, idx: number) => {
               const paymentInfo = `第${idx + 1}回（${bonusItem.paymentDate || '-'}）`;
-              // 介護保険該当判定
-              let isCareApplicable = false;
-              if (user && user.birthDate && bonusItem.paymentDate) {
-                const ageAtPayment = (() => {
-                  const birth = new Date(user.birthDate);
-                  const pay = new Date(bonusItem.paymentDate);
-                  let age = pay.getFullYear() - birth.getFullYear();
-                  const m = pay.getMonth() - birth.getMonth();
-                  if (m < 0 || (m === 0 && pay.getDate() < birth.getDate())) age--;
-                  return age;
-                })();
-                isCareApplicable = ageAtPayment >= 40 && ageAtPayment < 65;
-              }
-              // 標準賞与額（上限適用後）
-              const applicableHealthStandardAmount =
-                bonusItem.calculationResult?.applicableHealthStandardAmount || '0';
-              // 保険料率
-              const healthRateVal = bonusItem.calculationResult?.healthInsuranceRate
-                ? parseFloat(bonusItem.calculationResult.healthInsuranceRate.replace('%', '')) / 100
-                : 0;
-              // 介護保険該当の全額
-              const careInsuranceTotal =
-                isCareApplicable && healthRateVal
-                  ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
-                  : '-';
               bonusDataList.push({
                 employeeNumber,
                 officeNumber,
                 employeeName,
                 paymentInfo,
+                paymentDate: bonusItem.paymentDate,
                 amount: bonusItem.amount || '-',
                 calculationResult: bonusItem.calculationResult,
                 leaveType: bonusItem.leaveType || 'excluded',
-                careInsuranceTotal,
+                careInsuranceTotal: bonusItem.careInsuranceTotal ?? '-',
+                pensionInsuranceTotal: bonusItem.pensionInsuranceTotal ?? '-',
+                healthInsuranceTotal: bonusItem.healthInsuranceTotal ?? '-',
+                careInsurancePeriod: user.careInsurancePeriod,
               });
             });
           }
@@ -1024,5 +1004,15 @@ export class HomeComponent implements OnInit {
     const num = parseFloat(rate);
     if (isNaN(num)) return rate;
     return num.toFixed(3) + '%';
+  }
+
+  // 支給日が介護保険該当期間内かどうか判定
+  public isInCareInsurancePeriod(
+    paymentDate: string | undefined,
+    period: { start: string; end: string } | undefined
+  ): boolean {
+    if (!paymentDate || !period) return false;
+    const pay = paymentDate.slice(0, 7); // 'YYYY-MM'
+    return pay >= period.start && pay <= period.end;
   }
 }

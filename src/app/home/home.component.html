@@ -471,41 +471,67 @@
             <ng-container matColumnDef="healthInsuranceRate">
               <th mat-header-cell *matHeaderCellDef>健康保険料率<br />（介護保険非該当）</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatPercentage(bonus.calculationResult?.healthInsuranceRate) }}
+                <ng-container
+                  *ngIf="!isInCareInsurancePeriod(bonus.paymentDate, bonus.careInsurancePeriod)"
+                >
+                  {{ formatPercentage(bonus.calculationResult?.healthInsuranceRate) }}
+                </ng-container>
               </td>
             </ng-container>
             <!-- Col: 健康保険料(個人)（介護保険非該当） -->
             <ng-container matColumnDef="healthInsuranceEmployee">
               <th mat-header-cell *matHeaderCellDef>健康保険料(個人)<br />（介護保険非該当）</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatAmount(bonus.calculationResult?.healthInsurance?.employeeBurden) }}
+                <ng-container
+                  *ngIf="!isInCareInsurancePeriod(bonus.paymentDate, bonus.careInsurancePeriod)"
+                >
+                  {{ formatAmount(bonus.calculationResult?.healthInsurance?.employeeBurden) }}
+                </ng-container>
               </td>
             </ng-container>
             <!-- Col: 健康保険料(全額)（介護保険非該当） -->
             <ng-container matColumnDef="healthInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>健康保険料(全額)<br />（介護保険非該当）</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatAmount(bonus.calculationResult?.healthInsurance?.companyBurden) }}
+                <ng-container
+                  *ngIf="!isInCareInsurancePeriod(bonus.paymentDate, bonus.careInsurancePeriod)"
+                >
+                  {{ formatAmount(bonus.healthInsuranceTotal) }}
+                </ng-container>
               </td>
             </ng-container>
             <!-- Col: 健康保険料率（介護保険該当） -->
             <ng-container matColumnDef="careInsuranceRate">
               <th mat-header-cell *matHeaderCellDef>健康保険料率<br />（介護保険該当）</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatPercentage(bonus.calculationResult?.healthInsuranceRate) }}
+                <ng-container
+                  *ngIf="isInCareInsurancePeriod(bonus.paymentDate, bonus.careInsurancePeriod)"
+                >
+                  {{ formatPercentage(bonus.calculationResult?.healthInsuranceRate) }}
+                </ng-container>
               </td>
             </ng-container>
             <!-- Col: 健康保険料(個人)（介護保険該当） -->
             <ng-container matColumnDef="careInsuranceEmployee">
               <th mat-header-cell *matHeaderCellDef>健康保険料(個人)<br />（介護保険該当）</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatAmount(bonus.calculationResult?.healthInsurance?.employeeBurden) }}
+                <ng-container
+                  *ngIf="isInCareInsurancePeriod(bonus.paymentDate, bonus.careInsurancePeriod)"
+                >
+                  {{ formatAmount(bonus.calculationResult?.healthInsurance?.employeeBurden) }}
+                </ng-container>
               </td>
             </ng-container>
             <!-- Col: 健康保険料(全額)（介護保険該当） -->
             <ng-container matColumnDef="careInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>健康保険料(全額)<br />（介護保険該当）</th>
-              <td mat-cell *matCellDef="let bonus">{{ formatAmount(bonus.careInsuranceTotal) }}</td>
+              <td mat-cell *matCellDef="let bonus">
+                <ng-container
+                  *ngIf="isInCareInsurancePeriod(bonus.paymentDate, bonus.careInsurancePeriod)"
+                >
+                  {{ formatAmount(bonus.careInsuranceTotal) }}
+                </ng-container>
+              </td>
             </ng-container>
             <!-- Col: 厚生年金保険料率 -->
             <ng-container matColumnDef="pensionInsuranceRate">
@@ -525,7 +551,7 @@
             <ng-container matColumnDef="pensionInsuranceCompany">
               <th mat-header-cell *matHeaderCellDef>厚生年金保険料(全額)</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ formatAmount(bonus.calculationResult?.pensionInsurance?.companyBurden) }}
+                {{ formatAmount(bonus.pensionInsuranceTotal) }}
               </td>
             </ng-container>
             <!-- Col: 厚生年金上限適用後標準賞与額 -->

@@ -488,6 +488,13 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       return;
     }
 
+    // 介護保険該当判定（いずれかの賞与が介護保険該当ならtrue）
+    const hasCareApplicable = this.bonusDataList.some((item) => {
+      if (!item.paymentDate || !this.employeeInsurancePeriods.careInsurancePeriod) return false;
+      return this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod);
+    });
+
+    // カラム定義
     const columns: PivotColumn[] = [
       { header: '育休産休', isNumeric: false, isSeparator: false },
       { header: '支給額', isNumeric: true, isSeparator: false },
@@ -497,49 +504,45 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       { header: '健康保険料(個人)<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
       { header: '健康保険料(全額)<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
-      { header: '健康保険料率<br />（介護保険該当）', isNumeric: true, isSeparator: false },
-      { header: '健康保険料(個人)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
-      { header: '健康保険料(全額)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
-      { header: '---', isNumeric: false, isSeparator: true },
+    ];
+    if (hasCareApplicable) {
+      columns.push(
+        { header: '健康保険料率<br />（介護保険該当）', isNumeric: true, isSeparator: false },
+        { header: '健康保険料(個人)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
+        { header: '健康保険料(全額)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
+        { header: '---', isNumeric: false, isSeparator: true }
+      );
+    }
+    columns.push(
       { header: '厚生年金保険料率', isNumeric: true, isSeparator: false },
       { header: '厚生年金保険料(個人)', isNumeric: true, isSeparator: false },
       { header: '厚生年金保険料(全額)', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
-      {
-        header: '厚生年金<br>上限適用後標準賞与額',
-        isNumeric: true,
-        isSeparator: false,
-      },
-      {
-        header: '健康保険<br>上限適用後標準賞与額',
-        isNumeric: true,
-        isSeparator: false,
-      },
-    ];
+      { header: '厚生年金<br>上限適用後標準賞与額', isNumeric: true, isSeparator: false },
+      { header: '健康保険<br>上限適用後標準賞与額', isNumeric: true, isSeparator: false }
+    );
 
     const rows: PivotRow[] = this.bonusDataList.map((item, index) => {
       const calcResult = item.calculationResult;
-      // 介護該当判定: 支給日が介護保険該当期間内かどうか
       const isCareApplicable =
         item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
           ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod)
           : false;
-      // 標準賞与額（上限適用後）
       const applicableHealthStandardAmount = calcResult.applicableHealthStandardAmount;
-      // 保険料率
       const healthRateVal = parseFloat(calcResult.healthInsuranceRate.replace('%', '')) / 100;
-      const pensionRateVal = parseFloat(calcResult.pensionInsuranceRate.replace('%', '')) / 100;
-      // 全額計算
       const healthInsuranceTotalCalc = healthRateVal
         ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
         : '-';
       const careInsuranceTotalCalc = isCareApplicable
         ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
         : '-';
-      const pensionInsuranceTotalCalc = pensionRateVal
-        ? (parseFloat(applicableHealthStandardAmount) * pensionRateVal).toString()
+      const pensionInsuranceTotalCalc = calcResult.pensionInsurance
+        ? (
+            parseFloat(calcResult.pensionInsurance.employeeBurden) +
+            parseFloat(calcResult.pensionInsurance.companyBurden)
+          ).toString()
         : '-';
-      const values = [
+      const values: (string | undefined)[] = [
         `checkbox_${index}`,
         this.formatAmount(item.amount),
         this.formatAmount(calcResult.standardBonusAmount),
@@ -548,18 +551,23 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         isCareApplicable ? '-' : this.formatAmount(calcResult.healthInsurance.employeeBurden),
         isCareApplicable ? '-' : healthInsuranceTotalCalc,
         '',
-        isCareApplicable ? this.formatPercentage(calcResult.healthInsuranceRate) : '-',
-        isCareApplicable ? this.formatAmount(calcResult.healthInsurance.employeeBurden) : '-',
-        isCareApplicable ? careInsuranceTotalCalc : '-',
-        '',
+      ];
+      if (hasCareApplicable) {
+        values.push(
+          isCareApplicable ? this.formatPercentage(calcResult.healthInsuranceRate) : '-',
+          isCareApplicable ? this.formatAmount(calcResult.healthInsurance.employeeBurden) : '-',
+          isCareApplicable ? careInsuranceTotalCalc : '-',
+          ''
+        );
+      }
+      values.push(
         this.formatPercentage(calcResult.pensionInsuranceRate),
         this.formatAmount(calcResult.pensionInsurance.employeeBurden),
         pensionInsuranceTotalCalc,
         '',
         this.formatAmount(calcResult.cappedPensionStandardAmount),
-        this.formatAmount(calcResult.applicableHealthStandardAmount),
-      ];
-
+        this.formatAmount(calcResult.applicableHealthStandardAmount)
+      );
       return {
         header: `賞与(${index + 1}回目)<br>${item.paymentDate || ''}`,
         values,
@@ -710,8 +718,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         // 保険料率
         const healthRateVal =
           parseFloat(item.calculationResult.healthInsuranceRate.replace('%', '')) / 100;
-        const pensionRateVal =
-          parseFloat(item.calculationResult.pensionInsuranceRate.replace('%', '')) / 100;
         // 全額計算
         const healthInsuranceTotalCalc = healthRateVal
           ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
@@ -719,8 +725,10 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         const careInsuranceTotalCalc = isCareApplicable
           ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
           : '-';
-        const pensionInsuranceTotalCalc = pensionRateVal
-          ? (parseFloat(applicableHealthStandardAmount) * pensionRateVal).toString()
+        const pensionInsuranceTotalCalc = healthRateVal
+          ? (
+              parseFloat(item.calculationResult.cappedPensionStandardAmount) * healthRateVal
+            ).toString()
           : '-';
         return {
           display: [row.header, ...row.values.map((v) => (v === undefined ? '-' : String(v)))].join(
