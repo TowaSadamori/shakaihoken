@@ -75,6 +75,27 @@ export interface EmployeeBonusData {
   leaveType: string;
 }
 
+// Type for bonusResults item loaded from Firestore
+interface BonusResultFirestoreItem {
+  amount: string;
+  paymentDate?: string;
+  month?: string | number;
+  year?: string | number;
+  leaveType?: string;
+  companyId?: string;
+  branchNumber?: string;
+  addressPrefecture?: string;
+  employeeNumber?: string;
+  calculationResult: BonusPremiumResult;
+  healthInsuranceEmployee?: string;
+  healthInsuranceTotal?: string;
+  careInsuranceEmployee?: string;
+  careInsuranceTotal?: string;
+  pensionInsuranceEmployee?: string;
+  pensionInsuranceTotal?: string;
+  [key: string]: unknown;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -925,7 +946,7 @@ export class HomeComponent implements OnInit {
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (data && Array.isArray(data['bonusResults'])) {
-            data['bonusResults'].forEach((bonusItem: any, idx: number) => {
+            data['bonusResults'].forEach((bonusItem: BonusResultFirestoreItem, idx: number) => {
               const paymentInfo = `第${idx + 1}回（${bonusItem.paymentDate || '-'}）`;
               bonusDataList.push({
                 employeeNumber,

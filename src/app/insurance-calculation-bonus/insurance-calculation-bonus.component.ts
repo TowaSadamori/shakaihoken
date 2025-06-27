@@ -520,7 +520,11 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
     const rows: PivotRow[] = this.bonusDataList.map((item, index) => {
       const calcResult = item.calculationResult;
-      const isCareApplicable = !!calcResult.careInsurance;
+      // 介護該当判定: 支給日が介護保険該当期間内かどうか
+      const isCareApplicable = this.isInPeriod(
+        item.paymentDate || '',
+        this.employeeInsurancePeriods.careInsurancePeriod
+      );
 
       // 介護保険対象者か否かで表示内容を切り替える
       const healthRate = isCareApplicable
@@ -539,46 +543,34 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           );
 
       const careRate = isCareApplicable
-        ? this.formatPercentage(calcResult.combinedHealthAndCareRate)
+        ? this.formatPercentage(calcResult.healthInsuranceRate)
         : '-';
       let careEmployee = '-';
       let careTotal = '-';
 
-      if (isCareApplicable && calcResult.careInsurance) {
-        // 介護対象者の場合、介護保険料の欄には「健康保険料＋介護保険料」の合算値を表示
-        careEmployee = this.formatAmount(
-          SocialInsuranceCalculator.addAmounts(
-            calcResult.healthInsurance.employeeBurden,
-            calcResult.careInsurance.employeeBurden
-          )
-        );
+      if (isCareApplicable) {
+        careEmployee = this.formatAmount(calcResult.healthInsurance.employeeBurden);
         careTotal = this.formatAmount(
           SocialInsuranceCalculator.addAmounts(
-            SocialInsuranceCalculator.addAmounts(
-              calcResult.healthInsurance.employeeBurden,
-              calcResult.healthInsurance.companyBurden
-            ),
-            SocialInsuranceCalculator.addAmounts(
-              calcResult.careInsurance.employeeBurden,
-              calcResult.careInsurance.companyBurden
-            )
+            calcResult.healthInsurance.employeeBurden,
+            calcResult.healthInsurance.companyBurden
           )
         );
       }
 
       const values = [
-        `checkbox_${index}`, // チェックボックス用のプレースホルダー
+        `checkbox_${index}`,
         this.formatAmount(item.amount),
         this.formatAmount(calcResult.standardBonusAmount),
-        '', // Separator
+        '',
         healthRate,
         healthEmployee,
         healthTotal,
-        '', // Separator
+        '',
         careRate,
         careEmployee,
         careTotal,
-        '', // Separator
+        '',
         this.formatPercentage(calcResult.pensionInsuranceRate),
         this.formatAmount(calcResult.pensionInsurance.employeeBurden),
         this.formatAmount(
@@ -587,7 +579,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
             calcResult.pensionInsurance.companyBurden
           )
         ),
-        '', // Separator
+        '',
         this.formatAmount(calcResult.cappedPensionStandardAmount),
         this.formatAmount(calcResult.applicableHealthStandardAmount),
       ];
@@ -714,42 +706,51 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       this.errorMessage = '';
       const { companyId, employeeNumber } = this.employeeInfo;
 
+      const docPath = `companies/${companyId}/employees/${this.uid}/bonus_calculation_results/${this.targetYear}`;
+      const docRef = doc(this.firestore, docPath);
+
+      // データが空の場合はドキュメント自体を削除
+      if (this.bonusDataList.length === 0) {
+        await deleteDoc(docRef);
+        console.log('🗑️ Firestoreドキュメント自体を削除しました');
+        alert('全ての賞与データを削除しました。');
+        this.isLoading = false;
+        return;
+      }
+
       // 画面表示用のオブジェクトデータを生成
       const displayResults = this.bonusDataList.map((item, idx) => {
         // pivotedTableの行データも参照
         const row = this.pivotedTable!.rows[idx];
-        // 個人負担・全額の値を画面表示用に整形
-        const healthInsuranceEmployee = this.formatAmount(
-          item.calculationResult.healthInsurance.employeeBurden
+        // 介護該当判定: 支給日が介護保険該当期間内かどうか
+        const isCareApplicable = this.isInPeriod(
+          item.paymentDate || '',
+          this.employeeInsurancePeriods.careInsurancePeriod
         );
-        const healthInsuranceTotal = this.formatAmount(
-          SocialInsuranceCalculator.addAmounts(
-            item.calculationResult.healthInsurance.employeeBurden,
-            item.calculationResult.healthInsurance.companyBurden
-          )
-        );
-        let careInsuranceEmployee = '-';
-        let careInsuranceTotal = '-';
-        if (item.calculationResult.careInsurance) {
-          careInsuranceEmployee = this.formatAmount(
-            SocialInsuranceCalculator.addAmounts(
-              item.calculationResult.healthInsurance.employeeBurden,
-              item.calculationResult.careInsurance.employeeBurden
-            )
-          );
-          careInsuranceTotal = this.formatAmount(
-            SocialInsuranceCalculator.addAmounts(
+        // 非該当側
+        const healthInsuranceEmployee = !isCareApplicable
+          ? this.formatAmount(item.calculationResult.healthInsurance.employeeBurden)
+          : '-';
+        const healthInsuranceTotal = !isCareApplicable
+          ? this.formatAmount(
               SocialInsuranceCalculator.addAmounts(
                 item.calculationResult.healthInsurance.employeeBurden,
                 item.calculationResult.healthInsurance.companyBurden
-              ),
-              SocialInsuranceCalculator.addAmounts(
-                item.calculationResult.careInsurance.employeeBurden,
-                item.calculationResult.careInsurance.companyBurden
               )
             )
-          );
-        }
+          : '-';
+        // 該当側
+        const careInsuranceEmployee = isCareApplicable
+          ? this.formatAmount(item.calculationResult.healthInsurance.employeeBurden)
+          : '-';
+        const careInsuranceTotal = isCareApplicable
+          ? this.formatAmount(
+              SocialInsuranceCalculator.addAmounts(
+                item.calculationResult.healthInsurance.employeeBurden,
+                item.calculationResult.healthInsurance.companyBurden
+              )
+            )
+          : '-';
         const pensionInsuranceEmployee = this.formatAmount(
           item.calculationResult.pensionInsurance.employeeBurden
         );
@@ -796,9 +797,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
 
       // デバッグ: 保存データをログ出力
       console.log('Firestore保存データ:', saveData);
-
-      const docPath = `companies/${companyId}/employees/${this.uid}/bonus_calculation_results/${this.targetYear}`;
-      const docRef = doc(this.firestore, docPath);
 
       // 既存ドキュメントを削除してから新規作成（完全な置き換えを保証）
       try {
