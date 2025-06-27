@@ -347,13 +347,6 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           pensionInsuranceFeeCompany: null,
         };
 
-        // === 介護保険期間取得 ===
-        let careInsurancePeriod: { start: string; end: string } | null = null;
-        if (this.employeeInfo && this.employeeInfo.birthDate) {
-          careInsurancePeriod = this.getCareInsurancePeriod(this.employeeInfo.birthDate);
-        }
-        const isCarePeriod = this.isInPeriod(year, month, careInsurancePeriod);
-
         if (applicableGrade) {
           // 産休・育休の判定
           if (applicableGrade.judgmentReason === 'maternity_leave') {
@@ -368,13 +361,9 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
             result.pensionInsuranceGrade = applicableGrade.pensionInsuranceGrade;
 
             if (this.employeeInfo) {
-              // 保険料計算
-              const ageOnFirstDayOfMonth = this.calculateAgeAtDate(
-                new Date(this.employeeInfo.birthDate),
-                firstDayOfMonth
-              );
-              const isCareInsuranceApplicable =
-                ageOnFirstDayOfMonth >= 40 && ageOnFirstDayOfMonth < 65;
+              // 介護保険適用判定：40歳の誕生日の前日が属する月から適用
+              const careInsurancePeriod = this.getCareInsurancePeriod(this.employeeInfo.birthDate);
+              const isCareInsuranceApplicable = this.isInPeriod(year, month, careInsurancePeriod);
 
               // 健康保険料
               const healthGradeInfo = rateData.insuranceTable.find(
@@ -417,13 +406,6 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           // 適用される等級がない場合
           result.healthInsuranceGrade = '履歴なし';
           result.pensionInsuranceGrade = '履歴なし';
-        }
-
-        // === 介護保険期間と重なっている場合は健康保険を非表示にする ===
-        if (isCarePeriod) {
-          // 等級は必ず表示、金額のみ非表示
-          result.healthInsuranceFeeEmployee = null;
-          result.healthInsuranceFeeCompany = null;
         }
 
         finalResults.push(result);

@@ -885,62 +885,161 @@ export class HomeComponent implements OnInit {
     healthInsuranceTotal: number;
     pensionTotal: number;
   }[] {
-    console.log('calcMonthlyCompanyTotals: 計算開始');
-    console.log('calcMonthlyCompanyTotals: allEmployeesData件数 =', this.allEmployeesData.length);
-    console.log(
-      'calcMonthlyCompanyTotals: allEmployeesBonusData件数 =',
-      this.allEmployeesBonusData?.length || 0
-    );
-    console.log('calcMonthlyCompanyTotals: selectedOffice =', this.selectedOffice);
+    console.log('=== 会社負担額計算開始 ===');
+    console.log('allEmployeesData件数:', this.allEmployeesData.length);
+    console.log('allEmployeesBonusData件数:', this.allEmployeesBonusData.length);
+    console.log('selectedOffice:', this.selectedOffice);
 
-    // 月番号リスト（4月～翌年3月）
-    const months = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
     const results: { month: number; healthInsuranceTotal: number; pensionTotal: number }[] = [];
-    for (const m of months) {
-      let healthInsuranceTotal = 0;
-      let pensionTotal = 0;
-      // 給与分
+
+    for (let m = 4; m <= 15; m++) {
+      const displayMonth = m > 12 ? m - 12 : m;
+      console.log(`\n--- ${displayMonth}月の計算開始 ---`);
+
+      // 給与分の全従業員合計を先に計算
+      console.log('【給与分 - 全従業員合計計算】');
+
+      let totalHealthInsuranceAll = 0; // 健康保険全額合計
+      let totalHealthInsuranceEmployee = 0; // 健康保険本人負担合計
+      let totalCareInsuranceAll = 0; // 介護保険全額合計
+      let totalCareInsuranceEmployee = 0; // 介護保険本人負担合計
+      let totalPensionInsuranceAll = 0; // 厚生年金全額合計
+      let totalPensionInsuranceEmployee = 0; // 厚生年金本人負担合計
+
+      // 給与データから全従業員分の合計を計算
       for (const emp of this.allEmployeesData) {
-        const healthCompany =
-          (Number(emp.currentMonth.healthInsuranceCompany) || 0) -
-          (Number(emp.currentMonth.healthInsuranceEmployee) || 0);
-        const careCompany =
-          (Number(emp.currentMonth.careInsuranceCompany) || 0) -
-          (Number(emp.currentMonth.careInsuranceEmployee) || 0);
-        healthInsuranceTotal += healthCompany + careCompany;
+        if (this.selectedOffice !== 'all' && emp.officeNumber !== this.selectedOffice) continue;
+
+        // 健康保険
+        const healthCompany = Number(emp.currentMonth.healthInsuranceCompany) || 0;
+        const healthEmployee = Number(emp.currentMonth.healthInsuranceEmployee) || 0;
+        const healthTotal = healthCompany + healthEmployee;
+
+        // 介護保険
+        const careCompany = Number(emp.currentMonth.careInsuranceCompany) || 0;
+        const careEmployee = Number(emp.currentMonth.careInsuranceEmployee) || 0;
+        const careTotal = careCompany + careEmployee;
+
         // 厚生年金
-        const pensionCompany =
-          (Number(emp.currentMonth.pensionInsuranceCompany) || 0) -
-          (Number(emp.currentMonth.pensionInsuranceEmployee) || 0);
-        pensionTotal += pensionCompany;
+        const pensionCompany = Number(emp.currentMonth.pensionInsuranceCompany) || 0;
+        const pensionEmployee = Number(emp.currentMonth.pensionInsuranceEmployee) || 0;
+        const pensionTotal = pensionCompany + pensionEmployee;
+
+        totalHealthInsuranceAll += healthTotal;
+        totalHealthInsuranceEmployee += healthEmployee;
+        totalCareInsuranceAll += careTotal;
+        totalCareInsuranceEmployee += careEmployee;
+        totalPensionInsuranceAll += pensionTotal;
+        totalPensionInsuranceEmployee += pensionEmployee;
       }
-      // 賞与分
+
+      // 給与分会社負担計算
+      const salaryHealthCareCompanyBurden = Math.floor(
+        totalHealthInsuranceAll +
+          totalCareInsuranceAll -
+          totalHealthInsuranceEmployee -
+          totalCareInsuranceEmployee
+      );
+      const salaryPensionCompanyBurden = Math.floor(
+        totalPensionInsuranceAll - totalPensionInsuranceEmployee
+      );
+
+      console.log(
+        `給与分合計: 健康+介護保険[全額${totalHealthInsuranceAll + totalCareInsuranceAll}円-本人${totalHealthInsuranceEmployee + totalCareInsuranceEmployee}円=会社${salaryHealthCareCompanyBurden}円]`
+      );
+      console.log(
+        `給与分合計: 厚生年金[全額${totalPensionInsuranceAll}円-本人${totalPensionInsuranceEmployee}円=会社${salaryPensionCompanyBurden}円]`
+      );
+
+      // 賞与分の全従業員合計を計算
+      console.log('【賞与分 - 全従業員合計計算】');
+
+      let bonusTotalHealthInsuranceAll = 0;
+      let bonusTotalHealthInsuranceEmployee = 0;
+      let bonusTotalCareInsuranceAll = 0;
+      let bonusTotalCareInsuranceEmployee = 0;
+      let bonusTotalPensionInsuranceAll = 0;
+      let bonusTotalPensionInsuranceEmployee = 0;
+      let bonusCount = 0;
+
       for (const bonus of this.allEmployeesBonusData || []) {
         if (this.selectedOffice !== 'all' && bonus.officeNumber !== this.selectedOffice) continue;
-        // 月フィルタを追加：選択された月の賞与のみを合算
+
+        // 月フィルタ
         if (bonus.paymentDate) {
           const date = new Date(bonus.paymentDate);
           const month = date.getMonth() + 1;
-          if (month !== m) continue; // 現在処理中の月(m)と一致しない場合はスキップ
+          if (month !== displayMonth) continue;
         }
+
+        // 健康保険
         const healthTotal = Number(bonus.healthInsuranceTotal) || 0;
         const healthEmployee =
           Number(bonus.calculationResult?.healthInsurance?.employeeBurden) || 0;
+
+        // 介護保険
         const careTotal = Number(bonus.careInsuranceTotal) || 0;
         const careEmployee = Number(bonus.calculationResult?.careInsurance?.employeeBurden) || 0;
-        healthInsuranceTotal += healthTotal - healthEmployee + careTotal - careEmployee;
-        const pensionTotalAll = Number(bonus.pensionInsuranceTotal) || 0;
+
+        // 厚生年金
+        const pensionTotal = Number(bonus.pensionInsuranceTotal) || 0;
         const pensionEmployee =
           Number(bonus.calculationResult?.pensionInsurance?.employeeBurden) || 0;
-        pensionTotal += pensionTotalAll - pensionEmployee;
+
+        bonusTotalHealthInsuranceAll += healthTotal;
+        bonusTotalHealthInsuranceEmployee += healthEmployee;
+        bonusTotalCareInsuranceAll += careTotal;
+        bonusTotalCareInsuranceEmployee += careEmployee;
+        bonusTotalPensionInsuranceAll += pensionTotal;
+        bonusTotalPensionInsuranceEmployee += pensionEmployee;
+
+        bonusCount++;
       }
+
+      // 賞与分会社負担計算
+      const bonusHealthCareCompanyBurden = Math.floor(
+        bonusTotalHealthInsuranceAll +
+          bonusTotalCareInsuranceAll -
+          bonusTotalHealthInsuranceEmployee -
+          bonusTotalCareInsuranceEmployee
+      );
+      const bonusPensionCompanyBurden = Math.floor(
+        bonusTotalPensionInsuranceAll - bonusTotalPensionInsuranceEmployee
+      );
+
+      console.log(
+        `賞与分合計(${bonusCount}件): 健康+介護保険[全額${bonusTotalHealthInsuranceAll + bonusTotalCareInsuranceAll}円-本人${bonusTotalHealthInsuranceEmployee + bonusTotalCareInsuranceEmployee}円=会社${bonusHealthCareCompanyBurden}円]`
+      );
+      console.log(
+        `賞与分合計(${bonusCount}件): 厚生年金[全額${bonusTotalPensionInsuranceAll}円-本人${bonusTotalPensionInsuranceEmployee}円=会社${bonusPensionCompanyBurden}円]`
+      );
+
+      // 月合計の計算（給与分 + 賞与分）- 既に端数処理済み
+      const monthlyHealthCareCompanyTotal =
+        salaryHealthCareCompanyBurden + bonusHealthCareCompanyBurden;
+      const monthlyPensionCompanyTotal = salaryPensionCompanyBurden + bonusPensionCompanyBurden;
+
+      // 既に各段階で端数処理済みなので、そのまま使用
+      const afterFloorHealthCare = monthlyHealthCareCompanyTotal;
+      const afterFloorPension = monthlyPensionCompanyTotal;
+
+      console.log(`【${displayMonth}月 最終計算】`);
+      console.log(
+        `健康+介護保険: 給与${salaryHealthCareCompanyBurden}円 + 賞与${bonusHealthCareCompanyBurden}円 = ${monthlyHealthCareCompanyTotal}円 → 切り捨て後${afterFloorHealthCare}円`
+      );
+      console.log(
+        `厚生年金: 給与${salaryPensionCompanyBurden}円 + 賞与${bonusPensionCompanyBurden}円 = ${monthlyPensionCompanyTotal}円 → 切り捨て後${afterFloorPension}円`
+      );
+      console.log(`--- ${displayMonth}月の計算終了 ---`);
+
       results.push({
-        month: m,
-        healthInsuranceTotal: Math.floor(healthInsuranceTotal),
-        pensionTotal: Math.floor(pensionTotal),
+        month: displayMonth,
+        healthInsuranceTotal: afterFloorHealthCare,
+        pensionTotal: afterFloorPension,
       });
     }
-    console.log('calcMonthlyCompanyTotals: 計算結果:', results[2]); // 6月(index2)の結果を出力
+
+    console.log('=== 会社負担額計算終了 ===');
     return results;
   }
 

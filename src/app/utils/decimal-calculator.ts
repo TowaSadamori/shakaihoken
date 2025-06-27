@@ -73,9 +73,13 @@ export class SocialInsuranceCalculator {
     const minDecimal = new Decimal(cleanMin);
     const maxDecimal = new Decimal(cleanMax);
 
-    return (
-      amountDecimal.greaterThanOrEqualTo(minDecimal) && amountDecimal.lessThanOrEqualTo(maxDecimal)
-    );
+    // 等級表は「以上、未満」の条件で判定する
+    // 最高等級の場合のみInfinityを許可して「以下」とする
+    if (cleanMax === 'Infinity') {
+      return amountDecimal.greaterThanOrEqualTo(minDecimal);
+    }
+
+    return amountDecimal.greaterThanOrEqualTo(minDecimal) && amountDecimal.lessThan(maxDecimal);
   }
 
   /**
