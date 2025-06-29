@@ -3173,16 +3173,13 @@ export class InsuranceJudgmentComponent implements OnInit {
       const end = `${endYear}-${('0' + (endMonth + 1)).slice(-2)}`;
       return { start, end };
     } else {
-      // 2日以降生まれの場合は従来通り
+      // 2日以降生まれの場合：65歳の誕生日の前日が属する月の前月まで徴収
       const endDate = new Date(bd);
       endDate.setFullYear(bd.getFullYear() + 65);
       endDate.setDate(endDate.getDate() - 1);
-      // eslint-disable-next-line prefer-const
-      let endDatePrevMonth = new Date(endDate);
+      // 65歳の誕生日の前日が属する月の前月を計算
+      const endDatePrevMonth = new Date(endDate);
       endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
-      if (endDate.getDate() === 1) {
-        endDatePrevMonth.setMonth(endDatePrevMonth.getMonth() - 1);
-      }
       const end = `${endDatePrevMonth.getFullYear()}-${('0' + (endDatePrevMonth.getMonth() + 1)).slice(-2)}`;
       return { start, end };
     }
