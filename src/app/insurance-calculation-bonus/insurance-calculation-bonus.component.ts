@@ -489,12 +489,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       return;
     }
 
-    // 介護保険該当判定（いずれかの賞与が介護保険該当ならtrue）
-    const hasCareApplicable = this.bonusDataList.some((item) => {
-      if (!item.paymentDate || !this.employeeInsurancePeriods.careInsurancePeriod) return false;
-      return this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod);
-    });
-
     // カラム定義
     const columns: PivotColumn[] = [
       { header: '育休産休', isNumeric: false, isSeparator: false },
@@ -505,23 +499,18 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       { header: '健康保険料(個人)<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
       { header: '健康保険料(全額)<br />（介護保険非該当）', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
-    ];
-    if (hasCareApplicable) {
-      columns.push(
-        { header: '健康保険料率<br />（介護保険該当）', isNumeric: true, isSeparator: false },
-        { header: '健康保険料(個人)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
-        { header: '健康保険料(全額)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
-        { header: '---', isNumeric: false, isSeparator: true }
-      );
-    }
-    columns.push(
+      // 介護保険該当の列を常に表示
+      { header: '健康保険料率<br />（介護保険該当）', isNumeric: true, isSeparator: false },
+      { header: '健康保険料(個人)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
+      { header: '健康保険料(全額)<br />（介護保険該当）', isNumeric: true, isSeparator: false },
+      { header: '---', isNumeric: false, isSeparator: true },
       { header: '厚生年金保険料率', isNumeric: true, isSeparator: false },
       { header: '厚生年金保険料(個人)', isNumeric: true, isSeparator: false },
       { header: '厚生年金保険料(全額)', isNumeric: true, isSeparator: false },
       { header: '---', isNumeric: false, isSeparator: true },
       { header: '厚生年金<br>上限適用後標準賞与額', isNumeric: true, isSeparator: false },
-      { header: '健康保険<br>上限適用後標準賞与額', isNumeric: true, isSeparator: false }
-    );
+      { header: '健康保険<br>上限適用後標準賞与額', isNumeric: true, isSeparator: false },
+    ];
 
     // rows生成時に健康保険も厚生年金も全て'-'のデータは除外し、bonusDataListのindexをdataIndexとして保持
     const rows: PivotRow[] = [];
@@ -561,23 +550,18 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         isCareApplicable ? '-' : this.formatAmount(calcResult.healthInsurance.employeeBurden),
         isCareApplicable ? '-' : healthInsuranceTotalCalc,
         '',
-      ];
-      if (hasCareApplicable) {
-        values.push(
-          isCareApplicable ? this.formatPercentage(calcResult.healthInsuranceRate) : '-',
-          isCareApplicable ? this.formatAmount(calcResult.healthInsurance.employeeBurden) : '-',
-          isCareApplicable ? careInsuranceTotalCalc : '-',
-          ''
-        );
-      }
-      values.push(
+        // 介護保険該当の列を常に追加
+        isCareApplicable ? this.formatPercentage(calcResult.healthInsuranceRate) : '-',
+        isCareApplicable ? this.formatAmount(calcResult.healthInsurance.employeeBurden) : '-',
+        isCareApplicable ? careInsuranceTotalCalc : '-',
+        '',
         this.formatPercentage(calcResult.pensionInsuranceRate),
         this.formatAmount(calcResult.pensionInsurance.employeeBurden),
         pensionInsuranceTotalCalc,
         '',
         this.formatAmount(calcResult.cappedPensionStandardAmount),
-        this.formatAmount(calcResult.applicableHealthStandardAmount)
-      );
+        this.formatAmount(calcResult.applicableHealthStandardAmount),
+      ];
       rows.push({
         header: `賞与(${rows.length + 1}回目)<br>${item.paymentDate || ''}`,
         values,
