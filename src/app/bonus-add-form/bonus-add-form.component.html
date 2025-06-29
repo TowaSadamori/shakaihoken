@@ -1,10 +1,21 @@
 <div class="bonus-add-dialog-backdrop">
   <div class="bonus-add-dialog">
-    <h3>賞与情報の追加</h3>
+    <h3>{{ isEdit ? '賞与情報の編集' : '賞与情報の追加' }}</h3>
     <form (ngSubmit)="onSave()" #bonusForm="ngForm">
       <div class="form-group">
-        <label for="paymentDate">支給日</label>
-        <input id="paymentDate" name="paymentDate" type="date" [(ngModel)]="paymentDate" required />
+        <label for="paymentDate">支給月</label>
+        <input
+          id="paymentDate"
+          name="paymentDate"
+          type="month"
+          [(ngModel)]="paymentDate"
+          (ngModelChange)="onPaymentDateChange()"
+          required
+          [class.error]="duplicateMonthError"
+        />
+        <div class="error-message" *ngIf="duplicateMonthError">
+          {{ errorMessage }}
+        </div>
       </div>
       <div class="form-group">
         <label for="amount">支給金額（社会保険対象分）</label>
@@ -19,7 +30,9 @@
         </select>
       </div>
       <div class="dialog-actions">
-        <button type="submit" [disabled]="!bonusForm.form.valid">登録</button>
+        <button type="submit" [disabled]="!bonusForm.form.valid || duplicateMonthError">
+          {{ isEdit ? '更新' : '登録' }}
+        </button>
         <button type="button" (click)="onCancel()">キャンセル</button>
       </div>
     </form>

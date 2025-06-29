@@ -658,12 +658,18 @@ export class BonusCalculationService {
    * @param bonusItem 計算対象の賞与データ
    * @param employeeInfo 従業員情報
    * @param cumulativeHealthBonus 年間累計標準賞与額（健康保険）
+   * @param insurancePeriods 保険期間情報
    * @returns 計算結果
    */
   public async calculateSingleBonusPremium(
     bonusItem: BonusHistoryItem,
     employeeInfo: { age: bigint; addressPrefecture: string; birthDate: string; companyId?: string },
-    cumulativeHealthBonus = '0'
+    cumulativeHealthBonus = '0',
+    insurancePeriods?: {
+      careInsurancePeriod?: { start: string; end: string };
+      healthInsurancePeriod?: { start: string; end: string };
+      pensionInsurancePeriod?: { start: string; end: string };
+    }
   ): Promise<CalculatedBonusHistoryItem | null> {
     const rates = await this.getInsuranceRates(
       bonusItem.fiscalYear || BigInt(new Date().getFullYear()),
@@ -675,15 +681,313 @@ export class BonusCalculationService {
       return null;
     }
 
-    // 単一アイテムを配列に入れて既存のロジックを再利用
-    const calculatedItems = this.calculateBonusPremiums(
+    // 期間判定を行う
+    const isInPeriod = (date: string, period?: { start: string; end: string }): boolean => {
+      if (!date || !period || !period.start || !period.end) return false;
+
+      const d = new Date(date);
+
+      // 開始日の処理
+      let start: Date;
+      if (period.start.length === 7) {
+        // "YYYY-MM" 形式
+        const [year, month] = period.start.split('-').map(Number);
+        start = new Date(year, month - 1, 1); // 月の1日
+      } else {
+        start = new Date(period.start);
+      }
+
+      // 終了日の処理
+      let end: Date;
+      if (period.end.length === 7) {
+        // "YYYY-MM" 形式
+        const [year, month] = period.end.split('-').map(Number);
+        end = new Date(year, month, 0, 23, 59, 59, 999); // 月の最終日 23:59:59.999
+      } else {
+        end = new Date(period.end);
+      }
+
+      return d >= start && d <= end;
+    };
+
+    // 期間判定
+    const isCareInsuranceApplicable = insurancePeriods?.careInsurancePeriod
+      ? isInPeriod(bonusItem.paymentDate || '', insurancePeriods.careInsurancePeriod)
+      : false;
+    const isHealthInsuranceApplicable = insurancePeriods?.healthInsurancePeriod
+      ? isInPeriod(bonusItem.paymentDate || '', insurancePeriods.healthInsurancePeriod)
+      : true; // デフォルトは適用
+    const isPensionInsuranceApplicable = insurancePeriods?.pensionInsurancePeriod
+      ? isInPeriod(bonusItem.paymentDate || '', insurancePeriods.pensionInsurancePeriod)
+      : true; // デフォルトは適用
+
+    // 単一アイテムを配列に入れて既存のロジックを再利用（期間判定情報も渡す）
+    const calculatedItems = this.calculateBonusPremiumsWithPeriods(
       [bonusItem],
       rates,
       employeeInfo.birthDate,
       [], // 休業期間はここでは考慮しない
-      cumulativeHealthBonus
+      cumulativeHealthBonus,
+      { isCareInsuranceApplicable, isHealthInsuranceApplicable, isPensionInsuranceApplicable }
     );
 
     return calculatedItems.length > 0 ? calculatedItems[0] : null;
+  }
+
+  /**
+   * 期間情報を考慮した賞与保険料の計算ロジック
+   */
+  private calculateBonusPremiumsWithPeriods(
+    bonusHistory: BonusHistoryItem[],
+    rates: InsuranceRates,
+    birthDate: string,
+    leavePeriods: LeavePeriod[] = [],
+    initialCumulativeHealthBonus = '0',
+    periodInfo?: {
+      isCareInsuranceApplicable: boolean;
+      isHealthInsuranceApplicable: boolean;
+      isPensionInsuranceApplicable: boolean;
+    }
+  ): CalculatedBonusHistoryItem[] {
+    // 支給日昇順でソート
+    const sortedBonuses = [...bonusHistory].sort((a, b) => {
+      const dateA = new Date(a.paymentDate || 0).getTime();
+      const dateB = new Date(b.paymentDate || 0).getTime();
+      if (dateA !== dateB) {
+        return dateA - dateB;
+      }
+      // 日付が同じ場合は、金額の降順でソート
+      return SocialInsuranceCalculator.compare(b.amount, a.amount);
+    });
+
+    // 月ごとにグループ化
+    const monthlyGroups: Record<string, BonusHistoryItem[]> = {};
+    for (const item of sortedBonuses) {
+      if (!item.paymentDate) continue;
+      const payDate = new Date(item.paymentDate);
+      const monthKey = `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthlyGroups[monthKey]) monthlyGroups[monthKey] = [];
+      monthlyGroups[monthKey].push(item);
+    }
+
+    let cumulativeHealthBonus = initialCumulativeHealthBonus;
+    const HEALTH_INSURANCE_YEARLY_CAP = '5730000';
+    const PENSION_INSURANCE_MONTHLY_CAP = '1500000';
+
+    const nonNursingRateDecimal = SocialInsuranceCalculator.divide(
+      rates.nonNursingRate.replace(/[^0-9.]/g, ''),
+      '100'
+    );
+    const nursingRateDecimal = SocialInsuranceCalculator.divide(
+      rates.nursingRate.replace(/[^0-9.]/g, ''),
+      '100'
+    );
+    const pensionRateDecimal = SocialInsuranceCalculator.divide(
+      rates.pensionRate.replace(/[^0-9.]/g, ''),
+      '100'
+    );
+
+    // 結果格納用
+    const results: CalculatedBonusHistoryItem[] = [];
+
+    // 免除時の計算結果テンプレート
+    const EXEMPTED_BONUS_RESULT = (rates: InsuranceRates): BonusPremiumResult => ({
+      standardBonusAmount: '0',
+      cappedPensionStandardAmount: '0',
+      isPensionLimitApplied: false,
+      applicableHealthStandardAmount: '0',
+      isHealthLimitApplied: false,
+      pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+      healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+      careInsurance: undefined,
+      healthInsuranceRate: rates.nonNursingRate,
+      pensionInsuranceRate: rates.pensionRate,
+      careInsuranceRate: undefined,
+      combinedHealthAndCareRate: rates.nursingRate,
+    });
+
+    // 月ごとに処理
+    for (const monthKey of Object.keys(monthlyGroups).sort()) {
+      const items = monthlyGroups[monthKey].sort((a, b) => {
+        const dateA = new Date(a.paymentDate || 0).getTime();
+        const dateB = new Date(b.paymentDate || 0).getTime();
+        return dateA - dateB;
+      });
+      let prevResult: BonusPremiumResult | null = null;
+      for (let i = 0; i < items.length; i++) {
+        const subItems = items.slice(0, i + 1);
+        // 合計額
+        const totalAmount = subItems.reduce(
+          (acc, cur) => acc.add(new Decimal(cur.amount)),
+          new Decimal(0)
+        );
+        // 休業免除判定
+        const leaveType = items[i].leaveType || '';
+        const isExempted =
+          this.isExemptedByLeave(items[i].paymentDate || '', leavePeriods) ||
+          leaveType === 'maternity' ||
+          leaveType === 'childcare';
+
+        // 計算
+        let calcResult: BonusPremiumResult;
+        if (isExempted) {
+          calcResult = EXEMPTED_BONUS_RESULT(rates);
+        } else {
+          // 通常計算
+          const standardBonusAmount = SocialInsuranceCalculator.floorToThousand(
+            totalAmount.toString()
+          );
+          // --- 厚生年金保険料 ---
+          let pensionEmployee = '0';
+          let pensionCompany = '0';
+          let isPensionLimitApplied = false;
+          let cappedPensionStandardAmount = standardBonusAmount;
+          // 期間情報を使用して介護保険適用を判定
+          const isCareInsuranceApplicable = periodInfo?.isCareInsuranceApplicable ?? false;
+          // 支払日時点の年齢を計算（厚生年金の70歳判定用）
+          const ageAtPayment = this._calculateAgeAtDate(birthDate, items[i].paymentDate!);
+          if (ageAtPayment < 70) {
+            isPensionLimitApplied =
+              SocialInsuranceCalculator.compare(
+                standardBonusAmount,
+                PENSION_INSURANCE_MONTHLY_CAP
+              ) > 0;
+            cappedPensionStandardAmount = isPensionLimitApplied
+              ? PENSION_INSURANCE_MONTHLY_CAP
+              : standardBonusAmount;
+            const pensionTotalDecimal = SocialInsuranceCalculator.multiply(
+              cappedPensionStandardAmount,
+              pensionRateDecimal
+            );
+            const pensionEmployeeDecimal = pensionTotalDecimal.div(2);
+            pensionEmployee =
+              SocialInsuranceCalculator.roundForEmployeeBurden(pensionEmployeeDecimal);
+            const pensionCompanyDecimal = pensionTotalDecimal.div(2);
+            pensionCompany = SocialInsuranceCalculator.roundForTotalAmount(pensionCompanyDecimal);
+          } else {
+            isPensionLimitApplied = false;
+            cappedPensionStandardAmount = '0';
+          }
+          // --- 健康保険料 ---
+          const remainingCap = SocialInsuranceCalculator.subtract(
+            HEALTH_INSURANCE_YEARLY_CAP,
+            cumulativeHealthBonus
+          );
+          const positiveRemainingCap =
+            SocialInsuranceCalculator.compare(remainingCap, '0') > 0 ? remainingCap : '0';
+          const isHealthLimitApplied =
+            SocialInsuranceCalculator.compare(standardBonusAmount, positiveRemainingCap) > 0;
+          const applicableHealthStandardAmount = isHealthLimitApplied
+            ? positiveRemainingCap
+            : standardBonusAmount;
+          cumulativeHealthBonus = SocialInsuranceCalculator.addAmounts(
+            cumulativeHealthBonus,
+            standardBonusAmount
+          );
+          // 健康保険料率を決定
+          const healthRateDecimal = isCareInsuranceApplicable
+            ? nursingRateDecimal
+            : nonNursingRateDecimal;
+          const healthInsuranceRateStr = isCareInsuranceApplicable
+            ? rates.nursingRate
+            : rates.nonNursingRate;
+          // 健康保険料の計算
+          const healthTotalDecimal = SocialInsuranceCalculator.multiply(
+            applicableHealthStandardAmount,
+            healthRateDecimal.toString()
+          );
+          const healthEmployeeDecimal = healthTotalDecimal.div(2);
+          const healthInsuranceEmployee =
+            SocialInsuranceCalculator.roundForEmployeeBurden(healthEmployeeDecimal);
+          const healthCompanyDecimal = healthTotalDecimal.div(2);
+          const healthInsuranceCompany =
+            SocialInsuranceCalculator.roundForTotalAmount(healthCompanyDecimal);
+          const healthInsurance = {
+            employeeBurden: healthInsuranceEmployee,
+            companyBurden: healthInsuranceCompany,
+          };
+          calcResult = {
+            standardBonusAmount,
+            cappedPensionStandardAmount,
+            isPensionLimitApplied,
+            applicableHealthStandardAmount,
+            isHealthLimitApplied,
+            pensionInsurance: { employeeBurden: pensionEmployee, companyBurden: pensionCompany },
+            healthInsurance,
+            healthInsuranceRate: healthInsuranceRateStr,
+            pensionInsuranceRate: rates.pensionRate,
+            // careInsurance, careInsuranceRate, combinedHealthAndCareRateは不要
+          };
+        }
+        // 差額計算
+        let diffResult: BonusPremiumResult = calcResult;
+        if (i > 0 && prevResult) {
+          // 各保険料の差額を計算
+          const diff = (a: string, b: string) => new Decimal(a).minus(new Decimal(b)).toString();
+          diffResult = {
+            ...calcResult,
+            pensionInsurance: {
+              employeeBurden: diff(
+                calcResult.pensionInsurance.employeeBurden,
+                prevResult.pensionInsurance.employeeBurden
+              ),
+              companyBurden: diff(
+                calcResult.pensionInsurance.companyBurden,
+                prevResult.pensionInsurance.companyBurden
+              ),
+            },
+            healthInsurance: {
+              employeeBurden: diff(
+                calcResult.healthInsurance.employeeBurden,
+                prevResult.healthInsurance.employeeBurden
+              ),
+              companyBurden: diff(
+                calcResult.healthInsurance.companyBurden,
+                prevResult.healthInsurance.companyBurden
+              ),
+            },
+            careInsurance:
+              calcResult.careInsurance && prevResult.careInsurance
+                ? {
+                    employeeBurden: diff(
+                      calcResult.careInsurance.employeeBurden,
+                      prevResult.careInsurance.employeeBurden
+                    ),
+                    companyBurden: diff(
+                      calcResult.careInsurance.companyBurden,
+                      prevResult.careInsurance.companyBurden
+                    ),
+                  }
+                : calcResult.careInsurance,
+          };
+          // マイナスは0に
+          const zeroIfNegative = (v: string) => (new Decimal(v).isNegative() ? '0' : v);
+          diffResult.pensionInsurance.employeeBurden = zeroIfNegative(
+            diffResult.pensionInsurance.employeeBurden
+          );
+          diffResult.pensionInsurance.companyBurden = zeroIfNegative(
+            diffResult.pensionInsurance.companyBurden
+          );
+          diffResult.healthInsurance.employeeBurden = zeroIfNegative(
+            diffResult.healthInsurance.employeeBurden
+          );
+          diffResult.healthInsurance.companyBurden = zeroIfNegative(
+            diffResult.healthInsurance.companyBurden
+          );
+          if (diffResult.careInsurance) {
+            diffResult.careInsurance.employeeBurden = zeroIfNegative(
+              diffResult.careInsurance.employeeBurden
+            );
+            diffResult.careInsurance.companyBurden = zeroIfNegative(
+              diffResult.careInsurance.companyBurden
+            );
+          }
+        }
+        // 結果をpush
+        results.push({ ...items[i], calculationResult: diffResult });
+        prevResult = calcResult;
+      }
+    }
+    return results;
   }
 }

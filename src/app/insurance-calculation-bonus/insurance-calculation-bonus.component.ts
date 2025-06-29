@@ -241,7 +241,8 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           companyId: this.employeeInfo.companyId,
           birthDate: this.employeeInfo.birthDate,
         },
-        cumulativeHealthBonus
+        cumulativeHealthBonus,
+        this.employeeInsurancePeriods
       );
 
       if (recalculatedItem) {
@@ -600,7 +601,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         isHealthApplicable ? this.formatAmount(calcResult.applicableHealthStandardAmount) : '-',
       ];
       rows.push({
-        header: `賞与(${rows.length + 1}回目)<br>${item.paymentDate || ''}`,
+        header: `賞与(${rows.length + 1}回目)<br>${this.formatPaymentMonth(item.paymentDate)}`,
         values,
         dataIndex,
       });
@@ -956,33 +957,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       return;
     }
 
-    // 保険料率マスタ取得
-    const rates = await this.bonusCalculationService.getInsuranceRates(
-      this.targetYear,
-      this.employeeInfo.addressPrefecture
-    );
-    // 期間判定
-    const careIn = this.isInPeriod(
-      bonus.paymentDate,
-      this.employeeInsurancePeriods.careInsurancePeriod
-    );
-    const healthIn = this.isInPeriod(
-      bonus.paymentDate,
-      this.employeeInsurancePeriods.healthInsurancePeriod
-    );
-    const pensionIn = this.isInPeriod(
-      bonus.paymentDate,
-      this.employeeInsurancePeriods.pensionInsurancePeriod
-    );
-
-    // 保険料率セット
-    const healthInsuranceRate = healthIn
-      ? careIn
-        ? rates?.nursingRate || ''
-        : rates?.nonNursingRate || ''
-      : '';
-    const pensionInsuranceRate = pensionIn ? rates?.pensionRate || '' : '';
-
     // 年間累計標準賞与額を計算
     const cumulativeHealthBonus = this.bonusDataList
       .reduce(
@@ -991,7 +965,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       )
       .toString();
 
-    // サービスで計算（保険料率は計算ロジックに渡すが、保存・表示は上記で判定した値を使う）
+    // サービスで計算（期間情報を渡す）
     const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
       {
         amount: bonus.amount.toString(),
@@ -1008,14 +982,12 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         companyId: this.employeeInfo.companyId,
         birthDate: this.employeeInfo.birthDate,
       },
-      cumulativeHealthBonus
+      cumulativeHealthBonus,
+      this.employeeInsurancePeriods
     );
 
     if (calculated) {
-      // 保険料率欄を上書き
-      calculated.calculationResult.healthInsuranceRate = healthInsuranceRate || 'ー';
-      calculated.calculationResult.pensionInsuranceRate = pensionInsuranceRate || 'ー';
-      // careInsuranceRate, combinedHealthAndCareRateは空欄でOK
+      // 保険料率の上書きは削除 - サービス側で正しく計算された値をそのまま使用
       this.bonusDataList.push({
         ...calculated,
         leaveType: bonus.leaveType || 'excluded',
@@ -1058,6 +1030,18 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
     return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+  }
+
+  // 日付から月のみを表示するフォーマット関数
+  formatPaymentMonth(dateStr?: string): string {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length >= 2) {
+      const year = parts[0];
+      const month = parseInt(parts[1]);
+      return `${year}年${month}月`;
+    }
+    return dateStr;
   }
 
   // 編集ボタン押下時の処理（今はアラートのみ）
@@ -1124,32 +1108,6 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (this.bonusDataList[idx].originalCalculationResult) {
       delete this.bonusDataList[idx].originalCalculationResult;
     }
-    // 保険料率マスタ取得
-    const rates = await this.bonusCalculationService.getInsuranceRates(
-      this.targetYear,
-      this.employeeInfo.addressPrefecture
-    );
-    // 期間判定
-    const careIn = this.isInPeriod(
-      bonus.paymentDate,
-      this.employeeInsurancePeriods.careInsurancePeriod
-    );
-    const healthIn = this.isInPeriod(
-      bonus.paymentDate,
-      this.employeeInsurancePeriods.healthInsurancePeriod
-    );
-    const pensionIn = this.isInPeriod(
-      bonus.paymentDate,
-      this.employeeInsurancePeriods.pensionInsurancePeriod
-    );
-
-    // 保険料率セット
-    const healthInsuranceRate = healthIn
-      ? careIn
-        ? rates?.nursingRate || ''
-        : rates?.nonNursingRate || ''
-      : '';
-    const pensionInsuranceRate = pensionIn ? rates?.pensionRate || '' : '';
 
     const cumulativeHealthBonus = this.bonusDataList
       .filter((_, i) => i !== idx)
@@ -1174,13 +1132,12 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         companyId: this.employeeInfo.companyId,
         birthDate: this.employeeInfo.birthDate,
       },
-      cumulativeHealthBonus
+      cumulativeHealthBonus,
+      this.employeeInsurancePeriods
     );
 
     if (calculated) {
-      // 保険料率欄を上書き
-      calculated.calculationResult.healthInsuranceRate = healthInsuranceRate || 'ー';
-      calculated.calculationResult.pensionInsuranceRate = pensionInsuranceRate || 'ー';
+      // 保険料率の上書きは削除 - サービス側で正しく計算された値をそのまま使用
       this.bonusDataList.splice(idx, 1, {
         ...calculated,
         leaveType: bonus.leaveType || 'excluded',
@@ -1220,5 +1177,12 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   // 計算結果を保存ボタン用
   onSaveBonusResults() {
     this.saveBonusResults();
+  }
+
+  // 既存の賞与月リストを取得（YYYY-MM形式）
+  getExistingBonusMonths(): string[] {
+    return this.bonusDataList
+      .filter((item) => item.paymentDate)
+      .map((item) => item.paymentDate!.substring(0, 7));
   }
 }

@@ -89,6 +89,8 @@
 
     <app-bonus-add-form
       *ngIf="showAddBonusForm"
+      [existingBonusMonths]="getExistingBonusMonths()"
+      [isEdit]="false"
       (save)="addBonus($event)"
       (closed)="onAddBonusClosed()"
     ></app-bonus-add-form>
@@ -96,6 +98,11 @@
     <app-bonus-add-form
       *ngIf="showEditBonusForm"
       [initialData]="editBonusInitialData || undefined"
+      [existingBonusMonths]="getExistingBonusMonths()"
+      [isEdit]="true"
+      [originalMonth]="
+        editBonusInitialData ? editBonusInitialData.paymentDate.substring(0, 7) : undefined
+      "
       (save)="onEditBonusSave($event)"
       (closed)="onEditBonusClosed()"
     ></app-bonus-add-form>
@@ -121,7 +128,7 @@
                 <thead>
                   <tr>
                     <th>操作</th>
-                    <th>支給回数・支給日</th>
+                    <th>支給回数・支給月</th>
                     <ng-container *ngFor="let col of pivotedTable.columns">
                       <th
                         *ngIf="!col.isSeparator"

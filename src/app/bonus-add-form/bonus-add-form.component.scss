@@ -42,6 +42,7 @@
 }
 .form-group input[type='date'],
 .form-group input[type='number'],
+.form-group input[type='month'],
 .form-group select {
   padding: 7px 10px;
   border: 1px solid #bdbdbd;
@@ -78,4 +79,16 @@
   background: #e0e0e0;
   color: #aaa;
   cursor: not-allowed;
+}
+
+// エラー表示用のスタイル
+.form-group input.error {
+  border-color: #f44336;
+  background-color: #ffebee;
+}
+
+.error-message {
+  color: #f44336;
+  font-size: 0.875rem;
+  margin-top: 4px;
 }
