@@ -1235,7 +1235,21 @@ export class HomeComponent implements OnInit {
     period: { start: string; end: string } | undefined
   ): boolean {
     if (!paymentDate || !period) return false;
-    const pay = paymentDate.slice(0, 7); // 'YYYY-MM'
-    return pay >= period.start && pay <= period.end;
+    const date = new Date(paymentDate);
+    const start = new Date(period.start);
+    const end = new Date(period.end);
+    return date >= start && date <= end;
+  }
+
+  // 日付から月のみを表示するフォーマット関数
+  public formatPaymentMonth(dateStr?: string): string {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length >= 2) {
+      const year = parts[0];
+      const month = parseInt(parts[1]);
+      return `${year}年${month}月`;
+    }
+    return dateStr;
   }
 }

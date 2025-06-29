@@ -437,11 +437,11 @@
                 {{ bonus.paymentNumber }}
               </td>
             </ng-container>
-            <!-- Col: 支給日 -->
+            <!-- Col: 支給月 -->
             <ng-container matColumnDef="paymentDate">
-              <th mat-header-cell *matHeaderCellDef>支給日</th>
+              <th mat-header-cell *matHeaderCellDef>支給月</th>
               <td mat-cell *matCellDef="let bonus">
-                {{ bonus.paymentDate | date: 'yyyy/MM/dd' }}
+                {{ formatPaymentMonth(bonus.paymentDate) }}
               </td>
             </ng-container>
             <!-- Col: 従業員番号 -->
