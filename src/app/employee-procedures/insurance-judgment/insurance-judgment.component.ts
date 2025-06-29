@@ -178,7 +178,16 @@ export class InsuranceJudgmentComponent implements OnInit {
         'part-time': 'workingHours',
         // contract: 'contractWorkingHours',
         manual: function (this: InsuranceJudgmentComponent) {
-          return this.age >= 75 ? 'manualPensionInsurance' : 'manualHealthInsurance';
+          if (this.age >= 75) {
+            // 75歳以上：健康保険・厚生年金保険ともに年齢制限により対象外 → 質問スキップ
+            return 'finalEnd';
+          } else if (this.age >= 70) {
+            // 70歳以上75歳未満：厚生年金保険対象外、健康保険のみ手動判定
+            return 'manualHealthInsurance';
+          } else {
+            // 70歳未満：健康保険から開始（次に厚生年金保険）
+            return 'manualHealthInsurance';
+          }
         },
       },
     },
@@ -389,8 +398,12 @@ export class InsuranceJudgmentComponent implements OnInit {
         { value: 'not-eligible', label: '加入対象外' },
       ],
       nextQuestion: {
-        eligible: 'manualPensionInsurance',
-        'not-eligible': 'manualPensionInsurance',
+        eligible: function (this: InsuranceJudgmentComponent) {
+          return this.age >= 70 ? 'finalEnd' : 'manualPensionInsurance';
+        },
+        'not-eligible': function (this: InsuranceJudgmentComponent) {
+          return this.age >= 70 ? 'finalEnd' : 'manualPensionInsurance';
+        },
       },
     },
     manualPensionInsurance: {
@@ -988,26 +1001,8 @@ export class InsuranceJudgmentComponent implements OnInit {
 
   private performJudgment(rule: JudgmentRule): InsuranceEligibility {
     const healthInsurance = this.evaluateInsurance('healthInsurance', rule);
-    let pensionInsurance = this.evaluateInsurance('pensionInsurance', rule);
+    const pensionInsurance = this.evaluateInsurance('pensionInsurance', rule);
     const careInsurance = this.evaluateCareInsurance();
-
-    // 手入力かつ70歳以上かつ「厚生年金加入対象」選択時は特例で必ず加入対象
-    if (
-      this.answers['employmentType'] === 'manual' &&
-      this.age >= 70 &&
-      this.answers['manualPensionInsurance'] === 'eligible'
-    ) {
-      pensionInsurance = {
-        eligible: true,
-        reason: '加入対象（特例）',
-      };
-      // 期間も上限なしにする
-      if (this.birthDate) {
-        const bd = new Date(this.birthDate);
-        const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
-        this.pensionInsurancePeriod = { start, end: '' };
-      }
-    }
 
     return { healthInsurance, pensionInsurance, careInsurance };
   }
