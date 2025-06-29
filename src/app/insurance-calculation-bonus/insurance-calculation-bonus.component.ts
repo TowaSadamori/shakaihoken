@@ -793,18 +793,26 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           // 保険料率
           const healthRateVal =
             parseFloat(item.calculationResult.healthInsuranceRate.replace('%', '')) / 100;
-          // 全額計算
-          const healthInsuranceTotalCalc = healthRateVal
-            ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
-            : '-';
-          const careInsuranceTotalCalc = isCareApplicable
-            ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
-            : '-';
-          const pensionInsuranceTotalCalc = healthRateVal
-            ? (
-                parseFloat(item.calculationResult.cappedPensionStandardAmount) * healthRateVal
-              ).toString()
-            : '-';
+
+          // 全額計算（期間判定を考慮）
+          const healthInsuranceTotalCalc =
+            isHealthApplicable && !isCareApplicable && healthRateVal
+              ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
+              : '-';
+          const careInsuranceTotalCalc =
+            isHealthApplicable && isCareApplicable && healthRateVal
+              ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
+              : '-';
+          const pensionInsuranceTotalCalc =
+            isPensionApplicable && healthRateVal
+              ? (
+                  (parseFloat(item.calculationResult.cappedPensionStandardAmount) *
+                    parseFloat(
+                      item.calculationResult.pensionInsuranceRate.replace('%', '').replace('※', '')
+                    )) /
+                  100
+                ).toString()
+              : '-';
           return {
             display: [
               row.header,
