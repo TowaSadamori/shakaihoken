@@ -293,7 +293,8 @@ export class BonusCalculationService {
             const pensionEmployeeDecimal = pensionTotalDecimal.div(2);
             pensionEmployee =
               SocialInsuranceCalculator.roundForEmployeeBurden(pensionEmployeeDecimal);
-            pensionCompany = pensionTotalDecimal.div(2).toString();
+            const pensionCompanyDecimal = pensionTotalDecimal.div(2);
+            pensionCompany = SocialInsuranceCalculator.roundForTotalAmount(pensionCompanyDecimal);
           } else {
             isPensionLimitApplied = false;
             cappedPensionStandardAmount = '0';
@@ -329,9 +330,12 @@ export class BonusCalculationService {
           const healthEmployeeDecimal = healthTotalDecimal.div(2);
           const healthInsuranceEmployee =
             SocialInsuranceCalculator.roundForEmployeeBurden(healthEmployeeDecimal);
+          const healthCompanyDecimal = healthTotalDecimal.div(2);
+          const healthInsuranceCompany =
+            SocialInsuranceCalculator.roundForTotalAmount(healthCompanyDecimal);
           const healthInsurance = {
             employeeBurden: healthInsuranceEmployee,
-            companyBurden: healthTotalDecimal.div(2).toString(),
+            companyBurden: healthInsuranceCompany,
           };
           calcResult = {
             standardBonusAmount,

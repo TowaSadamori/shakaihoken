@@ -343,4 +343,22 @@ export class SocialInsuranceCalculator {
       return floorAmount.toString();
     }
   }
+
+  /**
+   * 全額（会社負担分含む）の端数処理（50銭以下切り捨て、50銭超切り上げ）
+   * @param amount 処理前の金額 (Decimal.jsオブジェクト)
+   * @returns 処理後の金額 (文字列)
+   */
+  static roundForTotalAmount(amount: Decimal): string {
+    const floorAmount = amount.floor();
+    const fraction = amount.sub(floorAmount);
+
+    if (fraction.comparedTo(new Decimal('0.5')) > 0) {
+      // 0.5より大きい場合 (e.g., 0.501) は切り上げ
+      return floorAmount.add(1).toString();
+    } else {
+      // 0.5以下の場合 (e.g., 0.5, 0.499) は切り捨て
+      return floorAmount.toString();
+    }
+  }
 }

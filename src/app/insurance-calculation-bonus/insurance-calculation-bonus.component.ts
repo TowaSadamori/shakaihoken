@@ -21,6 +21,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { AuthService } from '../services/auth.service';
 import { Decimal } from 'decimal.js';
 import { BonusAddFormComponent } from '../bonus-add-form/bonus-add-form.component';
+import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 
 interface EmployeeInfo {
   uid: string;
@@ -523,44 +524,80 @@ export class InsuranceCalculationBonusComponent implements OnInit {
         calc.pensionInsurance.companyBurden === '-';
       if (isAllExcluded) return;
       const calcResult = item.calculationResult;
+      // 各保険の期間判定
       const isCareApplicable =
         item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
           ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.careInsurancePeriod)
           : false;
+      const isHealthApplicable =
+        item.paymentDate && this.employeeInsurancePeriods.healthInsurancePeriod
+          ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.healthInsurancePeriod)
+          : false;
+      const isPensionApplicable =
+        item.paymentDate && this.employeeInsurancePeriods.pensionInsurancePeriod
+          ? this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.pensionInsurancePeriod)
+          : false;
+
       const applicableHealthStandardAmount = calcResult.applicableHealthStandardAmount;
       const healthRateVal = parseFloat(calcResult.healthInsuranceRate.replace('%', '')) / 100;
-      const healthInsuranceTotalCalc = healthRateVal
-        ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
-        : '-';
-      const careInsuranceTotalCalc = isCareApplicable
-        ? (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
-        : '-';
-      const pensionInsuranceTotalCalc = calcResult.pensionInsurance
-        ? (
-            parseFloat(calcResult.pensionInsurance.employeeBurden) +
-            parseFloat(calcResult.pensionInsurance.companyBurden)
-          ).toString()
-        : '-';
+
+      // 健康保険料全額計算（介護保険非該当）
+      const healthInsuranceTotalCalc =
+        isHealthApplicable && !isCareApplicable && healthRateVal
+          ? this.formatAmount(
+              (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
+            )
+          : '-';
+
+      // 健康保険料全額計算（介護保険該当）
+      const careInsuranceTotalCalc =
+        isHealthApplicable && isCareApplicable && healthRateVal
+          ? this.formatAmount(
+              (parseFloat(applicableHealthStandardAmount) * healthRateVal).toString()
+            )
+          : '-';
+
+      // 厚生年金保険料全額計算
+      const pensionInsuranceTotalCalc =
+        isPensionApplicable && calcResult.pensionInsurance
+          ? this.formatAmount(
+              (
+                parseFloat(calcResult.pensionInsurance.employeeBurden) +
+                parseFloat(calcResult.pensionInsurance.companyBurden)
+              ).toString()
+            )
+          : '-';
       const values: (string | undefined)[] = [
         `checkbox_${dataIndex}`,
         this.formatAmount(item.amount),
         this.formatAmount(calcResult.standardBonusAmount),
         '',
-        isCareApplicable ? '-' : this.formatPercentage(calcResult.healthInsuranceRate),
-        isCareApplicable ? '-' : this.formatAmount(calcResult.healthInsurance.employeeBurden),
-        isCareApplicable ? '-' : healthInsuranceTotalCalc,
+        // 健康保険（介護保険非該当）
+        isHealthApplicable && !isCareApplicable
+          ? this.formatPercentage(calcResult.healthInsuranceRate)
+          : '-',
+        isHealthApplicable && !isCareApplicable
+          ? this.formatAmount(calcResult.healthInsurance.employeeBurden)
+          : '-',
+        healthInsuranceTotalCalc,
         '',
-        // 介護保険該当の列を常に追加
-        isCareApplicable ? this.formatPercentage(calcResult.healthInsuranceRate) : '-',
-        isCareApplicable ? this.formatAmount(calcResult.healthInsurance.employeeBurden) : '-',
-        isCareApplicable ? careInsuranceTotalCalc : '-',
+        // 健康保険（介護保険該当）
+        isHealthApplicable && isCareApplicable
+          ? this.formatPercentage(calcResult.healthInsuranceRate)
+          : '-',
+        isHealthApplicable && isCareApplicable
+          ? this.formatAmount(calcResult.healthInsurance.employeeBurden)
+          : '-',
+        careInsuranceTotalCalc,
         '',
-        this.formatPercentage(calcResult.pensionInsuranceRate),
-        this.formatAmount(calcResult.pensionInsurance.employeeBurden),
+        // 厚生年金保険
+        isPensionApplicable ? this.formatPercentage(calcResult.pensionInsuranceRate) : '-',
+        isPensionApplicable ? this.formatAmount(calcResult.pensionInsurance.employeeBurden) : '-',
         pensionInsuranceTotalCalc,
         '',
-        this.formatAmount(calcResult.cappedPensionStandardAmount),
-        this.formatAmount(calcResult.applicableHealthStandardAmount),
+        // 上限適用後標準賞与額
+        isPensionApplicable ? this.formatAmount(calcResult.cappedPensionStandardAmount) : '-',
+        isHealthApplicable ? this.formatAmount(calcResult.applicableHealthStandardAmount) : '-',
       ];
       rows.push({
         header: `賞与(${rows.length + 1}回目)<br>${item.paymentDate || ''}`,
@@ -608,15 +645,22 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     if (amount === null || amount === undefined || amount.trim() === '' || amount === '-') {
       return '-';
     }
-    const num = Number(amount);
-    if (isNaN(num)) {
+    try {
+      const decimal = new Decimal(amount);
+      // 丸め処理適用（50銭以下切り捨て、50銭超切り上げ）
+      const roundedAmount = SocialInsuranceCalculator.roundForTotalAmount(decimal);
+      const num = Number(roundedAmount);
+      if (isNaN(num)) {
+        return amount;
+      }
+      return num.toLocaleString('ja-JP', {
+        maximumFractionDigits: 0,
+        useGrouping: true,
+      });
+    } catch (error) {
+      console.error('金額フォーマットエラー:', error);
       return amount;
     }
-    // 小数点そのまま表示
-    return num.toLocaleString('ja-JP', {
-      maximumFractionDigits: 20,
-      useGrouping: true,
-    });
   }
 
   formatPercentage(rate: string | undefined): string {

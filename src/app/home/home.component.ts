@@ -1207,9 +1207,17 @@ export class HomeComponent implements OnInit {
   // 賞与テーブル用: 金額フォーマット
   public formatAmount(value: string | number | undefined | null): string {
     if (value === null || typeof value === 'undefined' || value === '') return '-';
-    const num = Number(value);
-    if (isNaN(num)) return String(value);
-    return num.toLocaleString();
+    try {
+      const decimal = new Decimal(String(value));
+      // 丸め処理適用（50銭以下切り捨て、50銭超切り上げ）
+      const roundedAmount = SocialInsuranceCalculator.roundForTotalAmount(decimal);
+      const num = Number(roundedAmount);
+      if (isNaN(num)) return String(value);
+      return num.toLocaleString();
+    } catch (error) {
+      console.error('金額フォーマットエラー:', error);
+      return String(value);
+    }
   }
 
   // 賞与テーブル用: 料率フォーマット
