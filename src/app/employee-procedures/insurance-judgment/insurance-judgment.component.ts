@@ -236,7 +236,7 @@ export class InsuranceJudgmentComponent implements OnInit {
     },
     companySize: {
       id: 'companySize',
-      text: 'お勤め先の従業員（厚生年金被保険者）の数は51人以上ですか？',
+      text: '「特定適用事業所」「任意特定適用事業所」または「国・地方公共団体に属する事業所」に勤務する方ですか？',
       type: 'yesno',
       nextQuestion: {
         yes: 'weeklyWorkingHours',
@@ -254,7 +254,7 @@ export class InsuranceJudgmentComponent implements OnInit {
     },
     monthlySalary: {
       id: 'monthlySalary',
-      text: '基本給と諸手当を合わせた月額賃金は88,000円以上ですか？',
+      text: '所定内賃金が月額8.8万円以上ですか？',
       type: 'yesno',
       nextQuestion: {
         yes: 'shortTimeEmploymentPeriod',
@@ -273,7 +273,7 @@ export class InsuranceJudgmentComponent implements OnInit {
 
     studentStatus: {
       id: 'studentStatus',
-      text: 'あなたは学生ですか？（以下の場合は「いいえ」を選択：卒業後も引き続き当該事業所に使用される者、休学中の者、定時制課程・通信制課程に在学する者、社会人大学院生等）',
+      text: 'あなたは学生ですか？（以下の場合は「いいえ」を選択：休学中の者や夜間学生等）',
       type: 'yesno',
       nextQuestion: {
         yes: 'finalEnd',
