@@ -891,10 +891,29 @@ export class InsuranceCalculationBonusComponent implements OnInit {
    */
   private isInPeriod(date: string, period?: { start: string; end: string }): boolean {
     if (!date || !period || !period.start || !period.end) return false;
+
     const d = new Date(date);
-    const start = new Date(period.start);
-    const end = new Date(period.end);
-    // 期間は日付を含む
+
+    // 開始日の処理
+    let start: Date;
+    if (period.start.length === 7) {
+      // "YYYY-MM" 形式
+      const [year, month] = period.start.split('-').map(Number);
+      start = new Date(year, month - 1, 1); // 月の1日
+    } else {
+      start = new Date(period.start);
+    }
+
+    // 終了日の処理
+    let end: Date;
+    if (period.end.length === 7) {
+      // "YYYY-MM" 形式
+      const [year, month] = period.end.split('-').map(Number);
+      end = new Date(year, month, 0, 23, 59, 59, 999); // 月の最終日 23:59:59.999
+    } else {
+      end = new Date(period.end);
+    }
+
     return d >= start && d <= end;
   }
 
