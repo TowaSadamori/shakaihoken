@@ -169,7 +169,10 @@ export class InsuranceJudgmentComponent implements OnInit {
       type: 'choice',
       choices: [
         { value: 'regular', label: '正社員（役員含む）' },
-        { value: 'part-time', label: 'パートタイム・アルバイト（短時間労働者）' },
+        {
+          value: 'part-time',
+          label: '短時間労働者等（パートタイム・アルバイトなど正社員以外の方）',
+        },
         // { value: 'contract', label: '契約社員' },
         { value: 'manual', label: '手入力（管理者判断による操作）' },
       ],

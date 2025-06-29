@@ -10,6 +10,7 @@
         <th>名前</th>
         <th>事業所番号</th>
         <th>事業所所在地</th>
+        <th>判定状況</th>
         <th>等級判定</th>
         <th>社会保険料計算</th>
         <!-- <th>給与の詳細</th> -->
@@ -22,23 +23,51 @@
         <td>{{ emp.branchNumber }}</td>
         <td>{{ emp.officeAddress }}</td>
         <td>
+          <span
+            class="judgment-status"
+            [ngClass]="{
+              'status-eligible': emp.judgmentStatus === '対象',
+              'status-not-eligible': emp.judgmentStatus === '対象外',
+              'status-not-implemented': emp.judgmentStatus === '未実施',
+            }"
+          >
+            {{ emp.judgmentStatus }}
+          </span>
+        </td>
+        <td>
           <div class="button-container">
+            <!-- 対象の場合のみクリック可能 -->
             <button
+              *ngIf="emp.judgmentStatus === '対象'"
               class="action-button grade-judgment-btn"
               (click)="navigateToGradeJudgment(emp.employeeNumber!)"
             >
               等級判定
             </button>
+
+            <!-- 対象外の場合：メッセージ表示 -->
+            <div *ngIf="emp.judgmentStatus === '対象外'" class="disabled-message">対象外です</div>
+
+            <!-- 未実施の場合：メッセージ表示 -->
+            <div *ngIf="emp.judgmentStatus === '未実施'" class="disabled-message">判定未実施</div>
           </div>
         </td>
         <td>
           <div class="button-container">
+            <!-- 対象の場合のみクリック可能 -->
             <button
+              *ngIf="emp.judgmentStatus === '対象'"
               class="action-button insurance-calc-btn"
               (click)="navigateToInsuranceCalculation(emp.employeeNumber!)"
             >
               社会保険料計算
             </button>
+
+            <!-- 対象外の場合：メッセージ表示 -->
+            <div *ngIf="emp.judgmentStatus === '対象外'" class="disabled-message">対象外です</div>
+
+            <!-- 未実施の場合：メッセージ表示 -->
+            <div *ngIf="emp.judgmentStatus === '未実施'" class="disabled-message">判定未実施</div>
           </div>
         </td>
         <!--
