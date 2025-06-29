@@ -170,13 +170,13 @@ export class InsuranceJudgmentComponent implements OnInit {
       choices: [
         { value: 'regular', label: '正社員（役員含む）' },
         { value: 'part-time', label: 'パートタイム・アルバイト（短時間労働者）' },
-        { value: 'contract', label: '契約社員' },
+        // { value: 'contract', label: '契約社員' },
         { value: 'manual', label: '手入力（管理者判断による操作）' },
       ],
       nextQuestion: {
         regular: 'regularEmployeeType',
         'part-time': 'workingHours',
-        contract: 'contractWorkingHours',
+        // contract: 'contractWorkingHours',
         manual: function (this: InsuranceJudgmentComponent) {
           return this.age >= 75 ? 'manualPensionInsurance' : 'manualHealthInsurance';
         },
@@ -206,29 +206,55 @@ export class InsuranceJudgmentComponent implements OnInit {
     },
     workingHours: {
       id: 'workingHours',
-      text: '週の所定労働時間および月の所定労働日数が、どちらも一般社員の4分の3以上ですか？',
+      text: '1週の所定労働時間が一般社員の4分の3以上および1月の所定労働日数が一般社員の4分の3以上ですか？',
       type: 'yesno',
       nextQuestion: {
         yes: 'employmentPeriodLong',
-        no: 'shortTimeWorker',
+        no: 'companySize',
       },
     },
-    shortTimeWorker: {
-      id: 'shortTimeWorker',
-      text: '短時間労働者の要件（週20時間以上、月額88,000円以上、雇用期間2ヶ月超）をすべて満たしますか？',
-      type: 'yesno',
-      nextQuestion: {
-        yes: 'studentStatus',
-        no: 'finalEnd',
-      },
-    },
-
     employmentPeriodLong: {
       id: 'employmentPeriodLong',
-      text: '雇用期間は2ヶ月を超えますか？',
+      text: '契約上の期間にかかわらず、契約更新の可能性などを含め、結果的に2ヶ月を超えて雇用される見込みはありますか？',
       type: 'yesno',
       nextQuestion: {
         yes: 'finalEnd',
+        no: 'finalEnd',
+      },
+    },
+    companySize: {
+      id: 'companySize',
+      text: 'お勤め先の従業員（厚生年金被保険者）の数は51人以上ですか？',
+      type: 'yesno',
+      nextQuestion: {
+        yes: 'weeklyWorkingHours',
+        no: 'finalEnd',
+      },
+    },
+    weeklyWorkingHours: {
+      id: 'weeklyWorkingHours',
+      text: '週の所定労働時間は20時間以上ですか？',
+      type: 'yesno',
+      nextQuestion: {
+        yes: 'monthlySalary',
+        no: 'finalEnd',
+      },
+    },
+    monthlySalary: {
+      id: 'monthlySalary',
+      text: '基本給と諸手当を合わせた月額賃金は88,000円以上ですか？',
+      type: 'yesno',
+      nextQuestion: {
+        yes: 'shortTimeEmploymentPeriod',
+        no: 'finalEnd',
+      },
+    },
+    shortTimeEmploymentPeriod: {
+      id: 'shortTimeEmploymentPeriod',
+      text: '契約上の期間にかかわらず、契約更新の可能性などを含め、結果的に2ヶ月を超えて雇用される見込みはありますか？',
+      type: 'yesno',
+      nextQuestion: {
+        yes: 'studentStatus',
         no: 'finalEnd',
       },
     },
@@ -242,24 +268,24 @@ export class InsuranceJudgmentComponent implements OnInit {
         no: 'finalEnd',
       },
     },
-    contractWorkingHours: {
-      id: 'contractWorkingHours',
-      text: '週の所定労働時間および月の所定労働日数が、どちらも一般社員（正社員）の4分の3以上ですか？',
-      type: 'yesno',
-      nextQuestion: {
-        yes: 'contractEmploymentPeriod',
-        no: 'finalEnd',
-      },
-    },
-    contractEmploymentPeriod: {
-      id: 'contractEmploymentPeriod',
-      text: '雇用期間は2ヶ月を超えますか？',
-      type: 'yesno',
-      nextQuestion: {
-        yes: 'finalEnd',
-        no: 'finalEnd',
-      },
-    },
+    // contractWorkingHours: {
+    //   id: 'contractWorkingHours',
+    //   text: '週の所定労働時間および月の所定労働日数が、どちらも一般社員（正社員）の4分の3以上ですか？',
+    //   type: 'yesno',
+    //   nextQuestion: {
+    //     yes: 'contractEmploymentPeriod',
+    //     no: 'finalEnd',
+    //   },
+    // },
+    // contractEmploymentPeriod: {
+    //   id: 'contractEmploymentPeriod',
+    //   text: '雇用期間は2ヶ月を超えますか？',
+    //   type: 'yesno',
+    //   nextQuestion: {
+    //     yes: 'finalEnd',
+    //     no: 'finalEnd',
+    //   },
+    // },
     executiveType: {
       id: 'executiveType',
       text: '役員報酬を受けていますか？',
@@ -454,23 +480,66 @@ export class InsuranceJudgmentComponent implements OnInit {
             },
             priority: 2,
           },
-          // 短時間労働者の場合（学生でない）
+          // 企業規模51人未満の場合
           {
-            conditions: { workingHours: 'no', shortTimeWorker: 'yes', studentStatus: 'no' },
-            result: { eligible: true, reason: '短時間労働者の要件を満たすため加入対象' },
+            conditions: { workingHours: 'no', companySize: 'no' },
+            result: { eligible: false, reason: '従業員数51人未満の企業のため加入対象外' },
             priority: 3,
+          },
+          // 週20時間未満の場合
+          {
+            conditions: { workingHours: 'no', companySize: 'yes', weeklyWorkingHours: 'no' },
+            result: { eligible: false, reason: '週の労働時間が20時間未満のため加入対象外' },
+            priority: 4,
+          },
+          // 月額88,000円未満の場合
+          {
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'no',
+            },
+            result: { eligible: false, reason: '月額賃金が88,000円未満のため加入対象外' },
+            priority: 5,
+          },
+          // 雇用期間2ヶ月以下の場合
+          {
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'yes',
+              shortTimeEmploymentPeriod: 'no',
+            },
+            result: { eligible: false, reason: '雇用期間が2ヶ月以下のため加入対象外' },
+            priority: 6,
           },
           // 学生の場合
           {
-            conditions: { workingHours: 'no', shortTimeWorker: 'yes', studentStatus: 'yes' },
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'yes',
+              shortTimeEmploymentPeriod: 'yes',
+              studentStatus: 'yes',
+            },
             result: { eligible: false, reason: '学生のため加入対象外' },
-            priority: 4,
+            priority: 7,
           },
-          // その他の除外条件
+          // 短時間労働者の要件をすべて満たし、学生でない場合
           {
-            conditions: { workingHours: 'no', shortTimeWorker: 'no' },
-            result: { eligible: false, reason: '短時間労働者の要件を満たさないため加入対象外' },
-            priority: 5,
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'yes',
+              shortTimeEmploymentPeriod: 'yes',
+              studentStatus: 'no',
+            },
+            result: { eligible: true, reason: '短時間労働者の要件をすべて満たすため加入対象' },
+            priority: 8,
           },
         ],
         pensionInsurance: [
@@ -492,19 +561,59 @@ export class InsuranceJudgmentComponent implements OnInit {
             priority: 2,
           },
           {
-            conditions: { workingHours: 'no', shortTimeWorker: 'yes', studentStatus: 'no' },
-            result: { eligible: true, reason: '短時間労働者の要件を満たすため加入対象' },
+            conditions: { workingHours: 'no', companySize: 'no' },
+            result: { eligible: false, reason: '従業員数51人未満の企業のため加入対象外' },
             priority: 3,
           },
           {
-            conditions: { workingHours: 'no', shortTimeWorker: 'yes', studentStatus: 'yes' },
-            result: { eligible: false, reason: '学生のため加入対象外' },
+            conditions: { workingHours: 'no', companySize: 'yes', weeklyWorkingHours: 'no' },
+            result: { eligible: false, reason: '週の労働時間が20時間未満のため加入対象外' },
             priority: 4,
           },
           {
-            conditions: { workingHours: 'no', shortTimeWorker: 'no' },
-            result: { eligible: false, reason: '短時間労働者の要件を満たさないため加入対象外' },
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'no',
+            },
+            result: { eligible: false, reason: '月額賃金が88,000円未満のため加入対象外' },
             priority: 5,
+          },
+          {
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'yes',
+              shortTimeEmploymentPeriod: 'no',
+            },
+            result: { eligible: false, reason: '雇用期間が2ヶ月以下のため加入対象外' },
+            priority: 6,
+          },
+          {
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'yes',
+              shortTimeEmploymentPeriod: 'yes',
+              studentStatus: 'yes',
+            },
+            result: { eligible: false, reason: '学生のため加入対象外' },
+            priority: 7,
+          },
+          {
+            conditions: {
+              workingHours: 'no',
+              companySize: 'yes',
+              weeklyWorkingHours: 'yes',
+              monthlySalary: 'yes',
+              shortTimeEmploymentPeriod: 'yes',
+              studentStatus: 'no',
+            },
+            result: { eligible: true, reason: '短時間労働者の要件をすべて満たすため加入対象' },
+            priority: 8,
           },
         ],
       },
@@ -587,53 +696,53 @@ export class InsuranceJudgmentComponent implements OnInit {
         ],
       },
     },
-    contract: {
-      employmentType: 'contract',
-      firstQuestion: 'contractWorkingHours',
-      questions: {},
-      judgmentLogic: {
-        healthInsurance: [
-          {
-            conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'yes' },
-            result: {
-              eligible: true,
-              reason: '労働時間が正社員の3/4以上かつ雇用期間2ヶ月超のため加入対象',
-            },
-            priority: 1,
-          },
-          {
-            conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'no' },
-            result: { eligible: false, reason: '雇用期間が2ヶ月以下のため加入対象外' },
-            priority: 2,
-          },
-          {
-            conditions: { contractWorkingHours: 'no' },
-            result: { eligible: false, reason: '労働時間が正社員の3/4未満のため加入対象外' },
-            priority: 3,
-          },
-        ],
-        pensionInsurance: [
-          {
-            conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'yes' },
-            result: {
-              eligible: true,
-              reason: '労働時間が正社員の3/4以上かつ雇用期間2ヶ月超のため加入対象',
-            },
-            priority: 1,
-          },
-          {
-            conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'no' },
-            result: { eligible: false, reason: '雇用期間が2ヶ月以下のため加入対象外' },
-            priority: 2,
-          },
-          {
-            conditions: { contractWorkingHours: 'no' },
-            result: { eligible: false, reason: '労働時間が正社員の3/4未満のため加入対象外' },
-            priority: 3,
-          },
-        ],
-      },
-    },
+    // contract: {
+    //   employmentType: 'contract',
+    //   firstQuestion: 'contractWorkingHours',
+    //   questions: {},
+    //   judgmentLogic: {
+    //     healthInsurance: [
+    //       {
+    //         conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'yes' },
+    //         result: {
+    //           eligible: true,
+    //           reason: '労働時間が正社員の3/4以上かつ雇用期間2ヶ月超のため加入対象',
+    //         },
+    //         priority: 1,
+    //       },
+    //       {
+    //         conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'no' },
+    //         result: { eligible: false, reason: '雇用期間が2ヶ月以下のため加入対象外' },
+    //         priority: 2,
+    //       },
+    //       {
+    //         conditions: { contractWorkingHours: 'no' },
+    //         result: { eligible: false, reason: '労働時間が正社員の3/4未満のため加入対象外' },
+    //         priority: 3,
+    //       },
+    //     ],
+    //     pensionInsurance: [
+    //       {
+    //         conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'yes' },
+    //         result: {
+    //           eligible: true,
+    //           reason: '労働時間が正社員の3/4以上かつ雇用期間2ヶ月超のため加入対象',
+    //         },
+    //         priority: 1,
+    //       },
+    //       {
+    //         conditions: { contractWorkingHours: 'yes', contractEmploymentPeriod: 'no' },
+    //         result: { eligible: false, reason: '雇用期間が2ヶ月以下のため加入対象外' },
+    //         priority: 2,
+    //       },
+    //       {
+    //         conditions: { contractWorkingHours: 'no' },
+    //         result: { eligible: false, reason: '労働時間が正社員の3/4未満のため加入対象外' },
+    //         priority: 3,
+    //       },
+    //     ],
+    //   },
+    // },
   };
 
   careInsurancePeriod?: { start: string; end: string };
