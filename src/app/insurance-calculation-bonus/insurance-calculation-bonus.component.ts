@@ -15,6 +15,7 @@ import {
   BonusCalculationService,
   CalculatedBonusHistoryItem,
   BonusPremiumResult,
+  BonusHistoryItem,
 } from '../services/bonus-calculation.service';
 import { OfficeService } from '../services/office.service';
 import { doc, setDoc } from 'firebase/firestore';
@@ -152,6 +153,8 @@ export class InsuranceCalculationBonusComponent implements OnInit {
   onLeaveStatusChange(event: Event, index: number): void {
     const target = event.target as HTMLSelectElement;
     this.updateLeaveStatus(index, target.value);
+    // 全体再計算を実行
+    this.recalculateAllBonuses();
   }
 
   // 安全に休業タイプを取得するヘルパーメソッド
@@ -918,6 +921,191 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     return d >= start && d <= end;
   }
 
+  /**
+   * 全体の賞与リストを一括再計算する
+   */
+  private async recalculateAllBonuses(): Promise<void> {
+    if (!this.employeeInfo || this.bonusDataList.length === 0) return;
+
+    try {
+      // 保険料率を取得
+      const rates = await this.bonusCalculationService.getInsuranceRates(
+        this.targetYear,
+        this.employeeInfo.addressPrefecture
+      );
+
+      if (!rates) {
+        console.error('保険料率が取得できませんでした。');
+        this.errorMessage = '保険料率の取得に失敗しました。';
+        return;
+      }
+
+      // 基本データのみ抽出（計算結果を除去）
+      const baseBonusData: BonusHistoryItem[] = this.bonusDataList.map((item) => ({
+        type: item.type,
+        amount: item.amount,
+        month: item.month,
+        year: item.year,
+        originalKey: item.originalKey,
+        fiscalYear: this.targetYear,
+        paymentDate: item.paymentDate,
+        leaveType: item.leaveType,
+      }));
+
+      // 新しいリストを作成
+      const updatedBonusDataList: DisplayBonusHistoryItem[] = [];
+
+      for (const baseItem of baseBonusData) {
+        // 産休・育休の場合は0計算結果を設定
+        if (baseItem.leaveType === 'maternity' || baseItem.leaveType === 'childcare') {
+          updatedBonusDataList.push({
+            ...baseItem,
+            calculationResult: {
+              standardBonusAmount: '0',
+              cappedPensionStandardAmount: '0',
+              isPensionLimitApplied: false,
+              applicableHealthStandardAmount: '0',
+              isHealthLimitApplied: false,
+              healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+              careInsurance: { employeeBurden: '0', companyBurden: '0' },
+              pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+              healthInsuranceRate: rates.nonNursingRate,
+              careInsuranceRate: '',
+              combinedHealthAndCareRate: rates.nursingRate,
+              pensionInsuranceRate: rates.pensionRate,
+            },
+            leaveType: baseItem.leaveType || 'excluded',
+          });
+        } else {
+          // 通常の場合は単体計算を実行
+          const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
+            baseItem,
+            {
+              age: this.employeeInfo.age,
+              addressPrefecture: this.employeeInfo.addressPrefecture,
+              companyId: this.employeeInfo.companyId,
+              birthDate: this.employeeInfo.birthDate,
+            },
+            '0', // 累計は後で正しく計算される
+            this.employeeInsurancePeriods
+          );
+
+          if (calculated) {
+            updatedBonusDataList.push({
+              ...calculated,
+              leaveType: baseItem.leaveType || 'excluded',
+            });
+          } else {
+            // 計算に失敗した場合は0で設定
+            updatedBonusDataList.push({
+              ...baseItem,
+              calculationResult: {
+                standardBonusAmount: '0',
+                cappedPensionStandardAmount: '0',
+                isPensionLimitApplied: false,
+                applicableHealthStandardAmount: '0',
+                isHealthLimitApplied: false,
+                healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+                careInsurance: { employeeBurden: '0', companyBurden: '0' },
+                pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+                healthInsuranceRate: rates.nonNursingRate,
+                careInsuranceRate: '',
+                combinedHealthAndCareRate: rates.nursingRate,
+                pensionInsuranceRate: rates.pensionRate,
+              },
+              leaveType: baseItem.leaveType || 'excluded',
+            });
+          }
+        }
+      }
+
+      // 支給日順でソートして累計額を正しく計算
+      updatedBonusDataList.sort((a, b) => {
+        const dateA = new Date(a.paymentDate || 0).getTime();
+        const dateB = new Date(b.paymentDate || 0).getTime();
+        return dateA - dateB;
+      });
+
+      // 健康保険の累計上限を再計算
+      let cumulativeHealthBonus = '0';
+      const HEALTH_INSURANCE_YEARLY_CAP = '5730000';
+
+      for (const item of updatedBonusDataList) {
+        if (item.leaveType !== 'maternity' && item.leaveType !== 'childcare') {
+          const standardBonusAmount = item.calculationResult.standardBonusAmount;
+
+          // 残り上限を計算
+          const remainingCap = SocialInsuranceCalculator.subtract(
+            HEALTH_INSURANCE_YEARLY_CAP,
+            cumulativeHealthBonus
+          );
+          const positiveRemainingCap =
+            SocialInsuranceCalculator.compare(remainingCap, '0') > 0 ? remainingCap : '0';
+
+          // 上限適用判定
+          const isHealthLimitApplied =
+            SocialInsuranceCalculator.compare(standardBonusAmount, positiveRemainingCap) > 0;
+
+          const applicableHealthStandardAmount = isHealthLimitApplied
+            ? positiveRemainingCap
+            : standardBonusAmount;
+
+          // 計算結果を更新
+          item.calculationResult.applicableHealthStandardAmount = applicableHealthStandardAmount;
+          item.calculationResult.isHealthLimitApplied = isHealthLimitApplied;
+
+          // 累計を更新
+          cumulativeHealthBonus = SocialInsuranceCalculator.addAmounts(
+            cumulativeHealthBonus,
+            standardBonusAmount
+          );
+
+          // 健康保険料を再計算
+          if (
+            item.paymentDate &&
+            this.employeeInsurancePeriods.healthInsurancePeriod &&
+            this.isInPeriod(item.paymentDate, this.employeeInsurancePeriods.healthInsurancePeriod)
+          ) {
+            const isCareApplicable =
+              item.paymentDate && this.employeeInsurancePeriods.careInsurancePeriod
+                ? this.isInPeriod(
+                    item.paymentDate,
+                    this.employeeInsurancePeriods.careInsurancePeriod
+                  )
+                : false;
+
+            const healthRate = isCareApplicable ? rates.nursingRate : rates.nonNursingRate;
+            const healthRateDecimal = parseFloat(healthRate.replace(/[^0-9.]/g, '')) / 100;
+
+            const healthTotalAmount =
+              parseFloat(applicableHealthStandardAmount) * healthRateDecimal;
+            const healthEmployeeAmount = healthTotalAmount / 2;
+            const healthCompanyAmount = healthTotalAmount / 2;
+
+            item.calculationResult.healthInsurance = {
+              employeeBurden: SocialInsuranceCalculator.roundForEmployeeBurden(
+                new Decimal(healthEmployeeAmount)
+              ),
+              companyBurden: SocialInsuranceCalculator.roundForTotalAmount(
+                new Decimal(healthCompanyAmount)
+              ),
+            };
+            item.calculationResult.healthInsuranceRate = healthRate;
+          }
+        }
+      }
+
+      // データリストを更新
+      this.bonusDataList = updatedBonusDataList;
+      this.sortBonusList();
+      this.createPivotedTable();
+      this.updateLimitNotes();
+    } catch (error) {
+      console.error('全体再計算エラー:', error);
+      this.errorMessage = '賞与の再計算中にエラーが発生しました。';
+    }
+  }
+
   async addBonus(bonus: { paymentDate: string; amount: number; leaveType: string }) {
     if (!this.employeeInfo) return;
 
@@ -926,75 +1114,81 @@ export class InsuranceCalculationBonusComponent implements OnInit {
       this.errorMessage = '年間3回までしか賞与を追加できません。';
       return;
     }
-    if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
-      // 産休・育休の場合は計算せず0で登録
-      this.bonusDataList.push({
-        amount: bonus.amount.toString(),
-        paymentDate: bonus.paymentDate,
-        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
-        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
-        type: 'bonus',
-        originalKey: '',
-        calculationResult: {
-          standardBonusAmount: '0',
-          cappedPensionStandardAmount: '0',
-          isPensionLimitApplied: false,
-          applicableHealthStandardAmount: '0',
-          isHealthLimitApplied: false,
-          healthInsurance: { employeeBurden: '0', companyBurden: '0' },
-          careInsurance: { employeeBurden: '0', companyBurden: '0' },
-          pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
-          healthInsuranceRate: '',
-          careInsuranceRate: '',
-          combinedHealthAndCareRate: '',
-          pensionInsuranceRate: '',
-        },
-        leaveType: bonus.leaveType || 'excluded',
-      });
-      this.sortBonusList();
-      this.createPivotedTable();
-      this.saveBonusResults();
-      return;
-    }
 
-    // 年間累計標準賞与額を計算
-    const cumulativeHealthBonus = this.bonusDataList
-      .reduce(
-        (acc, item) => acc.add(new Decimal(item.calculationResult.applicableHealthStandardAmount)),
-        new Decimal('0')
-      )
-      .toString();
+    // 新しい賞与データを追加
+    const newBonusItem: DisplayBonusHistoryItem = {
+      amount: bonus.amount.toString(),
+      paymentDate: bonus.paymentDate,
+      month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+      year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+      type: 'bonus',
+      originalKey: `bonus_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      fiscalYear: this.targetYear,
+      calculationResult: {
+        standardBonusAmount: '0',
+        cappedPensionStandardAmount: '0',
+        isPensionLimitApplied: false,
+        applicableHealthStandardAmount: '0',
+        isHealthLimitApplied: false,
+        healthInsurance: { employeeBurden: '0', companyBurden: '0' },
+        careInsurance: { employeeBurden: '0', companyBurden: '0' },
+        pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
+        healthInsuranceRate: '',
+        careInsuranceRate: '',
+        combinedHealthAndCareRate: '',
+        pensionInsuranceRate: '',
+      },
+      leaveType: bonus.leaveType || 'excluded',
+    };
 
-    // サービスで計算（期間情報を渡す）
-    const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
-      {
-        amount: bonus.amount.toString(),
-        paymentDate: bonus.paymentDate,
-        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
-        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
-        type: 'bonus',
-        originalKey: '',
-        fiscalYear: this.targetYear,
-      },
-      {
-        age: this.employeeInfo.age,
-        addressPrefecture: this.employeeInfo.addressPrefecture,
-        companyId: this.employeeInfo.companyId,
-        birthDate: this.employeeInfo.birthDate,
-      },
-      cumulativeHealthBonus,
-      this.employeeInsurancePeriods
+    this.bonusDataList.push(newBonusItem);
+
+    // 全体再計算を実行
+    await this.recalculateAllBonuses();
+    await this.saveBonusResults();
+  }
+
+  async onEditBonusSave(bonus: { paymentDate: string; amount: number; leaveType: string }) {
+    if (!this.editBonusTargetKey || !this.employeeInfo) return;
+
+    // 一意なキーで該当データを検索
+    const idx = this.bonusDataList.findIndex(
+      (item) =>
+        item.originalKey === this.editBonusTargetKey!.originalKey &&
+        item.amount === this.editBonusTargetKey!.amount &&
+        item.paymentDate === this.editBonusTargetKey!.paymentDate
     );
 
-    if (calculated) {
-      // 保険料率の上書きは削除 - サービス側で正しく計算された値をそのまま使用
-      this.bonusDataList.push({
-        ...calculated,
-        leaveType: bonus.leaveType || 'excluded',
-      });
-      this.sortBonusList();
-      this.createPivotedTable();
-      this.saveBonusResults();
+    if (idx === -1) return;
+
+    // データを更新
+    this.bonusDataList[idx] = {
+      ...this.bonusDataList[idx],
+      amount: bonus.amount.toString(),
+      paymentDate: bonus.paymentDate,
+      month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
+      year: BigInt(new Date(bonus.paymentDate).getFullYear()),
+      leaveType: bonus.leaveType || 'excluded',
+    };
+
+    // 全体再計算を実行
+    await this.recalculateAllBonuses();
+    await this.saveBonusResults();
+
+    // フォームを閉じる
+    this.showEditBonusForm = false;
+    this.editBonusTargetKey = null;
+    this.editBonusInitialData = null;
+  }
+
+  // 削除ボタン押下時の処理
+  async onDeleteBonus(index: number): Promise<void> {
+    if (confirm('この賞与情報を削除しますか？')) {
+      this.bonusDataList.splice(index, 1);
+
+      // 削除後に全体再計算
+      await this.recalculateAllBonuses();
+      await this.saveBonusResults();
     }
   }
 
@@ -1060,117 +1254,11 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     this.showEditBonusForm = true;
   }
 
-  async onEditBonusSave(bonus: { paymentDate: string; amount: number; leaveType: string }) {
-    if (!this.editBonusTargetKey || !this.employeeInfo) return;
-    // 一意なキーで該当データを検索
-    const idx = this.bonusDataList.findIndex(
-      (item) =>
-        item.originalKey === this.editBonusTargetKey!.originalKey &&
-        item.amount === this.editBonusTargetKey!.amount &&
-        item.paymentDate === this.editBonusTargetKey!.paymentDate
-    );
-    if (idx === -1) return;
-    // 以降は従来の編集ロジック
-    if (bonus.leaveType === 'maternity' || bonus.leaveType === 'childcare') {
-      const newItem: DisplayBonusHistoryItem = {
-        amount: bonus.amount.toString(),
-        paymentDate: bonus.paymentDate,
-        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
-        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
-        type: 'bonus',
-        originalKey: this.bonusDataList[idx].originalKey,
-        calculationResult: {
-          standardBonusAmount: '0',
-          cappedPensionStandardAmount: '0',
-          isPensionLimitApplied: false,
-          applicableHealthStandardAmount: '0',
-          isHealthLimitApplied: false,
-          healthInsurance: { employeeBurden: '0', companyBurden: '0' },
-          careInsurance: { employeeBurden: '0', companyBurden: '0' },
-          pensionInsurance: { employeeBurden: '0', companyBurden: '0' },
-          healthInsuranceRate: '',
-          careInsuranceRate: '',
-          combinedHealthAndCareRate: '',
-          pensionInsuranceRate: '',
-        },
-        leaveType: bonus.leaveType || 'excluded',
-      };
-      this.bonusDataList.splice(idx, 1);
-      this.bonusDataList.push(newItem);
-      this.sortBonusList();
-      this.createPivotedTable();
-      this.saveBonusResults();
-      this.showEditBonusForm = false;
-      this.editBonusTargetKey = null;
-      this.editBonusInitialData = null;
-      return;
-    }
-    if (this.bonusDataList[idx].originalCalculationResult) {
-      delete this.bonusDataList[idx].originalCalculationResult;
-    }
-
-    const cumulativeHealthBonus = this.bonusDataList
-      .filter((_, i) => i !== idx)
-      .reduce(
-        (acc, item) => acc.add(new Decimal(item.calculationResult.applicableHealthStandardAmount)),
-        new Decimal('0')
-      )
-      .toString();
-    const calculated = await this.bonusCalculationService.calculateSingleBonusPremium(
-      {
-        amount: bonus.amount.toString(),
-        paymentDate: bonus.paymentDate,
-        month: BigInt(new Date(bonus.paymentDate).getMonth() + 1),
-        year: BigInt(new Date(bonus.paymentDate).getFullYear()),
-        type: 'bonus',
-        originalKey: this.bonusDataList[idx].originalKey,
-        fiscalYear: this.targetYear,
-      },
-      {
-        age: this.employeeInfo.age,
-        addressPrefecture: this.employeeInfo.addressPrefecture,
-        companyId: this.employeeInfo.companyId,
-        birthDate: this.employeeInfo.birthDate,
-      },
-      cumulativeHealthBonus,
-      this.employeeInsurancePeriods
-    );
-
-    if (calculated) {
-      // 保険料率の上書きは削除 - サービス側で正しく計算された値をそのまま使用
-      this.bonusDataList.splice(idx, 1, {
-        ...calculated,
-        leaveType: bonus.leaveType || 'excluded',
-      });
-      this.sortBonusList();
-      this.createPivotedTable();
-      this.saveBonusResults();
-      this.showEditBonusForm = false;
-      this.editBonusTargetKey = null;
-      this.editBonusInitialData = null;
-    }
-  }
-
-  onEditBonusClosed() {
-    this.showEditBonusForm = false;
-    this.editBonusTargetKey = null;
-    this.editBonusInitialData = null;
-  }
-
   onAddBonusClosed() {
     this.showAddBonusForm = false;
     // 賞与制限エラーメッセージをクリア
     if (this.errorMessage === '年間3回までしか賞与を追加できません。') {
       this.errorMessage = '';
-    }
-  }
-
-  // 削除ボタン押下時の処理
-  onDeleteBonus(index: number): void {
-    if (confirm('この賞与情報を削除しますか？')) {
-      this.bonusDataList.splice(index, 1);
-      this.createPivotedTable();
-      this.saveBonusResults();
     }
   }
 
@@ -1184,5 +1272,11 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     return this.bonusDataList
       .filter((item) => item.paymentDate)
       .map((item) => item.paymentDate!.substring(0, 7));
+  }
+
+  onEditBonusClosed() {
+    this.showEditBonusForm = false;
+    this.editBonusTargetKey = null;
+    this.editBonusInitialData = null;
   }
 }

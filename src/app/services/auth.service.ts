@@ -18,6 +18,29 @@ export class AuthService {
   private firestore = getFirestore();
   private functions = getFunctions(undefined, 'asia-northeast1');
 
+  /**
+   * 日付文字列をタイムゾーンの影響を受けないように正規化する
+   * YYYY-MM-DD形式の文字列をローカル日付として扱う
+   */
+  private normalizeDateString(dateString: string): string {
+    if (!dateString) return '';
+
+    // YYYY-MM-DD形式かチェック
+    const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (dateOnlyRegex.test(dateString)) {
+      // ローカル時間として解釈するため、時刻部分を追加
+      const localDate = new Date(dateString + 'T00:00:00');
+      // ローカル日付をYYYY-MM-DD形式で返す
+      const year = localDate.getFullYear();
+      const month = String(localDate.getMonth() + 1).padStart(2, '0');
+      const day = String(localDate.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // その他の形式の場合は従来通り
+    return new Date(dateString).toISOString().slice(0, 10);
+  }
+
   async registerUser(
     email: string,
     password: string,
@@ -46,7 +69,7 @@ export class AuthService {
       firstName: firstName,
       lastNameKana: lastNameKana,
       firstNameKana: firstNameKana,
-      birthDate: birthDate ? new Date(birthDate).toISOString().slice(0, 10) : '',
+      birthDate: this.normalizeDateString(birthDate),
       gender: gender,
       companyId,
       createdAt: new Date(),
@@ -118,7 +141,7 @@ export class AuthService {
       firstName,
       lastNameKana,
       firstNameKana,
-      birthDate,
+      birthDate: this.normalizeDateString(birthDate),
       gender,
       companyId,
     };
@@ -159,7 +182,7 @@ export class AuthService {
       firstName: form.firstName,
       lastNameKana: form.lastNameKana,
       firstNameKana: form.firstNameKana,
-      birthDate: form.birthDate,
+      birthDate: this.normalizeDateString(form.birthDate),
       gender: form.gender,
       role: form.role,
       companyName: form.companyName,
