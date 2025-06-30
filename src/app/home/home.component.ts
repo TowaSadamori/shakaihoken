@@ -471,39 +471,11 @@ export class HomeComponent implements OnInit {
       }
     }
 
-    // 合計の再計算
-    currentMonthData.totalEmployee = SocialInsuranceCalculator.addAmounts(
-      SocialInsuranceCalculator.addAmounts(
-        currentMonthData.healthInsuranceEmployee,
-        currentMonthData.careInsuranceEmployee
-      ),
-      currentMonthData.pensionInsuranceEmployee
-    );
+    // 従業員負担合計の計算（賞与と同じロジック）
+    currentMonthData.totalEmployee = this.calculateSalaryEmployeeBurdenTotal(currentMonthData);
 
-    // 会社負担合計（参考値）
-    // 健康保険会社負担 = 健康保険全額 - 健康保険本人
-    // 介護保険会社負担 = 介護保険全額 - 介護保険本人
-    // 厚生年金会社負担 = 厚生年金全額 - 厚生年金本人
-    // (健康保険会社負担 + 介護保険会社負担)を合算し1円未満切り捨て、厚生年金会社負担も1円未満切り捨て、その合計
-    const healthCompany = SocialInsuranceCalculator.subtractAmounts(
-      currentMonthData.healthInsuranceCompany,
-      currentMonthData.healthInsuranceEmployee
-    );
-    const careCompany = SocialInsuranceCalculator.subtractAmounts(
-      currentMonthData.careInsuranceCompany,
-      currentMonthData.careInsuranceEmployee
-    );
-    const pensionCompany = SocialInsuranceCalculator.subtractAmounts(
-      currentMonthData.pensionInsuranceCompany,
-      currentMonthData.pensionInsuranceEmployee
-    );
-    // 健康＋介護を合算し1円未満切り捨て
-    const healthCareSum = new Decimal(healthCompany).add(new Decimal(careCompany)).floor();
-    // 厚生年金は単独で1円未満切り捨て
-    const pensionFloor = new Decimal(pensionCompany).floor();
-    // 合算
-    const totalCompanyValue = healthCareSum.add(pensionFloor);
-    currentMonthData.totalCompany = totalCompanyValue.isZero() ? '-' : totalCompanyValue.toString();
+    // 会社負担合計（参考値）の計算（賞与と同じロジック）
+    currentMonthData.totalCompany = this.calculateSalaryCompanyBurdenTotal(currentMonthData);
 
     return {
       employeeNumber: user.employeeNumber || '',
@@ -1295,6 +1267,146 @@ export class HomeComponent implements OnInit {
 
     // デバッグ情報をコンソールに出力（従業員番号も含めて識別しやすくする）
     console.log(`[従業員負担合計計算] 従業員番号: ${bonus.employeeNumber}`);
+    debugInfo.forEach((info) => console.log(`  ${info}`));
+
+    return total.toString();
+  }
+
+  /**
+   * 給与の従業員負担合計を計算（賞与と同じロジック）
+   */
+  public calculateSalaryEmployeeBurdenTotal(salary: MonthlyInsuranceFee): string {
+    let total = 0;
+    const debugInfo: string[] = [];
+
+    // 健康保険料（個人）- 介護保険非該当の場合
+    const healthInsuranceEmployee = salary.healthInsuranceEmployee;
+    if (
+      healthInsuranceEmployee &&
+      healthInsuranceEmployee !== '-' &&
+      !isNaN(parseFloat(healthInsuranceEmployee))
+    ) {
+      const healthAmount = parseFloat(healthInsuranceEmployee);
+      total += healthAmount;
+      debugInfo.push(`健康保険料(個人)（介護保険非該当）: ${healthAmount}円`);
+    }
+
+    // 介護保険料（個人）- 介護保険該当の場合
+    const careInsuranceEmployee = salary.careInsuranceEmployee;
+    if (
+      careInsuranceEmployee &&
+      careInsuranceEmployee !== '-' &&
+      !isNaN(parseFloat(careInsuranceEmployee))
+    ) {
+      const careAmount = parseFloat(careInsuranceEmployee);
+      total += careAmount;
+      debugInfo.push(`健康保険料(個人)（介護保険該当）: ${careAmount}円`);
+    }
+
+    // 厚生年金保険料（個人）
+    const pensionInsuranceEmployee = salary.pensionInsuranceEmployee;
+    if (
+      pensionInsuranceEmployee &&
+      pensionInsuranceEmployee !== '-' &&
+      !isNaN(parseFloat(pensionInsuranceEmployee))
+    ) {
+      const pensionAmount = parseFloat(pensionInsuranceEmployee);
+      total += pensionAmount;
+      debugInfo.push(`厚生年金保険料(個人): ${pensionAmount}円`);
+    }
+
+    debugInfo.push(`=== 合計: ${total}円 ===`);
+
+    // デバッグ情報をコンソールに出力
+    console.log(`[給与従業員負担合計計算]`);
+    debugInfo.forEach((info) => console.log(`  ${info}`));
+
+    return total.toString();
+  }
+
+  /**
+   * 給与の会社負担合計（参考値）を計算（賞与と同じロジック）
+   */
+  public calculateSalaryCompanyBurdenTotal(salary: MonthlyInsuranceFee): string {
+    const debugInfo: string[] = [];
+
+    // === 賞与と同じ計算方法 ===
+    debugInfo.push(`=== 賞与と同じ計算方法 ===`);
+
+    // 1. 健康保険の会社負担計算
+    // 健康保険料(全額)（介護保険非該当）+ 健康保険料(全額)（介護保険該当）
+    const healthTotalNonCare =
+      salary.healthInsuranceCompany &&
+      salary.healthInsuranceCompany !== '-' &&
+      salary.healthInsuranceCompany !== ''
+        ? parseFloat(salary.healthInsuranceCompany)
+        : 0;
+    const healthTotalCare =
+      salary.careInsuranceCompany &&
+      salary.careInsuranceCompany !== '-' &&
+      salary.careInsuranceCompany !== ''
+        ? parseFloat(salary.careInsuranceCompany)
+        : 0;
+    const healthTotalSum = healthTotalNonCare + healthTotalCare;
+
+    // 健康保険料(個人)（介護保険非該当）+ 健康保険料(個人)（介護保険該当）
+    const healthEmployeeNonCare =
+      salary.healthInsuranceEmployee &&
+      salary.healthInsuranceEmployee !== '-' &&
+      salary.healthInsuranceEmployee !== ''
+        ? parseFloat(salary.healthInsuranceEmployee)
+        : 0;
+    const healthEmployeeCare =
+      salary.careInsuranceEmployee &&
+      salary.careInsuranceEmployee !== '-' &&
+      salary.careInsuranceEmployee !== ''
+        ? parseFloat(salary.careInsuranceEmployee)
+        : 0;
+    const healthEmployeeSum = healthEmployeeNonCare + healthEmployeeCare;
+
+    // 健康保険会社負担 = (全額非該当 + 全額該当) - (個人非該当 + 個人該当)
+    const healthCompanyBurden = healthTotalSum - healthEmployeeSum;
+    const healthCompanyBurdenFloored = Math.floor(healthCompanyBurden);
+
+    debugInfo.push(`健康保険料(全額)（非該当）: ${healthTotalNonCare}円`);
+    debugInfo.push(`健康保険料(全額)（該当）: ${healthTotalCare}円`);
+    debugInfo.push(`健康保険料(個人)（非該当）: ${healthEmployeeNonCare}円`);
+    debugInfo.push(`健康保険料(個人)（該当）: ${healthEmployeeCare}円`);
+    debugInfo.push(
+      `健康保険会社負担 = (${healthTotalNonCare} + ${healthTotalCare}) - (${healthEmployeeNonCare} + ${healthEmployeeCare}) = ${healthCompanyBurden} → ${healthCompanyBurdenFloored}円（切り捨て）`
+    );
+
+    // 2. 厚生年金の会社負担計算
+    const pensionTotal =
+      salary.pensionInsuranceCompany &&
+      salary.pensionInsuranceCompany !== '-' &&
+      salary.pensionInsuranceCompany !== ''
+        ? parseFloat(salary.pensionInsuranceCompany)
+        : 0;
+    const pensionEmployeeAmount =
+      salary.pensionInsuranceEmployee &&
+      salary.pensionInsuranceEmployee !== '-' &&
+      salary.pensionInsuranceEmployee !== ''
+        ? parseFloat(salary.pensionInsuranceEmployee)
+        : 0;
+
+    const pensionCompanyBurden = pensionTotal - pensionEmployeeAmount;
+    const pensionCompanyBurdenFloored = Math.floor(pensionCompanyBurden);
+
+    debugInfo.push(`厚生年金保険料(全額): ${pensionTotal}円`);
+    debugInfo.push(`厚生年金保険料(個人): ${pensionEmployeeAmount}円`);
+    debugInfo.push(
+      `厚生年金会社負担 = ${pensionTotal} - ${pensionEmployeeAmount} = ${pensionCompanyBurden} → ${pensionCompanyBurdenFloored}円（切り捨て）`
+    );
+
+    // 3. 合計
+    const total = healthCompanyBurdenFloored + pensionCompanyBurdenFloored;
+    debugInfo.push(
+      `=== 最終合計 = ${healthCompanyBurdenFloored} + ${pensionCompanyBurdenFloored} = ${total}円 ===`
+    );
+
+    // デバッグ情報をコンソールに出力
+    console.log(`[給与会社負担合計計算]`);
     debugInfo.forEach((info) => console.log(`  ${info}`));
 
     return total.toString();
