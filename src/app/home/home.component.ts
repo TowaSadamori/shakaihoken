@@ -65,6 +65,8 @@ export interface EmployeeBonusData {
   paymentInfo: string; // 支給回数・支給日
   paymentNumber: string; // 支給回数
   paymentDate?: string;
+  month?: string | number; // Firestoreの月フィールド
+  year?: string | number; // Firestoreの年フィールド
   amount: string;
   calculationResult: BonusPremiumResult;
   leaveType: string;
@@ -673,19 +675,16 @@ export class HomeComponent implements OnInit {
 
   // 表示する列を動的に設定するメソッド
   private setDisplayedColumns() {
-    if (this.selectedMonth >= 13) {
-      this.displayedColumnsAdmin = this.displayedColumnsAdminBonus;
-      this.headerRowDefGroup = []; // 賞与テーブルにはグループヘッダーなし
-    } else {
-      this.displayedColumnsAdmin = this.displayedColumnsAdminMonth;
-      this.headerRowDefGroup = [
-        'employeeInfoGroup',
-        'healthInsuranceGroup',
-        'careInsuranceGroup',
-        'pensionInsuranceGroup',
-        'totalsGroup',
-      ];
-    }
+    // 年度ベース月選択では、常に月次データと賞与データ両方を表示可能にする
+    // デフォルトは月次データ表示
+    this.displayedColumnsAdmin = this.displayedColumnsAdminMonth;
+    this.headerRowDefGroup = [
+      'employeeInfoGroup',
+      'healthInsuranceGroup',
+      'careInsuranceGroup',
+      'pensionInsuranceGroup',
+      'totalsGroup',
+    ];
   }
 
   // データ更新処理（年月変更時共通）
@@ -705,20 +704,15 @@ export class HomeComponent implements OnInit {
       // 判定結果を再読み込み
       await this.loadJudgmentResults(employees as UserWithJudgment[]);
 
-      if (this.selectedMonth >= 13) {
-        // 賞与データ取得ロジック
-        await this.loadLeaveStatusForAllEmployees(employees, this.selectedYear);
-        this.allOriginalEmployeesData = await Promise.all(
-          employees.map((employee) => this.convertToEmployeeInsuranceData(employee))
-        );
-      } else {
-        // 月次データ取得ロジック
-        this.allOriginalEmployeesData = await Promise.all(
-          (employees as UserWithJudgment[]).map((employee) =>
-            this.convertToEmployeeInsuranceData(employee)
-          )
-        );
-      }
+      // 月次データ取得ロジック（常に実行）
+      this.allOriginalEmployeesData = await Promise.all(
+        (employees as UserWithJudgment[]).map((employee) =>
+          this.convertToEmployeeInsuranceData(employee)
+        )
+      );
+
+      // 賞与データも常に読み込み
+      await this.loadLeaveStatusForAllEmployees(employees, this.selectedYear);
 
       if (this.isAdmin) {
         // 管理者：全従業員のデータを表示
@@ -758,8 +752,8 @@ export class HomeComponent implements OnInit {
     const companyId = await this.authService.getCurrentUserCompanyId();
     if (!companyId) return;
 
-    // fiscalYearは日本の年度（4月始まり）
-    const fiscalYear = this.selectedMonth < 4 ? year - 1 : year;
+    // 年度ベースの選択では、yearが既に年度なのでそのまま使用
+    const fiscalYear = year;
 
     for (const employee of employees) {
       if (!employee.uid) continue;
@@ -846,20 +840,60 @@ export class HomeComponent implements OnInit {
   }
 
   private filterBonusData() {
-    console.log('filterBonusData: allEmployeesBonusData件数 =', this.allEmployeesBonusData.length);
+    console.log('=== filterBonusData開始 ===');
+    console.log('allEmployeesBonusData件数 =', this.allEmployeesBonusData.length);
+    console.log('selectedYear =', this.selectedYear);
+    console.log('selectedMonth =', this.selectedMonth);
+    console.log('fiscalMonths =', this.fiscalMonths);
+
+    // 現在選択されている月の実際の年月を取得
+    const selectedFiscalMonth = this.fiscalMonths.find((fm) => fm.value === this.selectedMonth);
+    console.log('selectedFiscalMonth =', selectedFiscalMonth);
+
+    const targetYear = selectedFiscalMonth?.actualYear || this.selectedYear;
+    const targetMonth = selectedFiscalMonth?.actualMonth || this.selectedMonth;
+
+    console.log(
+      `フィルタ条件: 年度${this.selectedYear}の${this.selectedMonth}月 → 実際の${targetYear}年${targetMonth}月`
+    );
+
     this.filteredEmployeesBonusData = this.allEmployeesBonusData.filter((bonus) => {
-      if (bonus.paymentDate) {
+      // Firestoreのmonth/yearフィールドを優先的に使用
+      let year: number;
+      let month: number;
+
+      if (bonus.month !== undefined && bonus.year !== undefined) {
+        // Firestoreのmonth/yearフィールドを使用（より確実）
+        year = Number(bonus.year);
+        month = Number(bonus.month);
+        console.log(`Firestoreフィールド使用: ${bonus.employeeNumber} - ${year}年${month}月`);
+      } else if (bonus.paymentDate) {
+        // paymentDateから取得（フォールバック）
         const date = new Date(bonus.paymentDate);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        if (year !== this.selectedYear || month !== this.selectedMonth) return false;
+        year = date.getFullYear();
+        month = date.getMonth() + 1;
+        console.log(`paymentDate使用: ${bonus.employeeNumber} - ${year}年${month}月`);
+      } else {
+        // どちらもない場合はスキップ
+        console.log(`日付情報なし: ${bonus.employeeNumber}`);
+        return false;
       }
+
+      if (year !== targetYear || month !== targetMonth) {
+        console.log(
+          `フィルタ除外: ${bonus.employeeNumber} - 実際:${year}年${month}月 vs 対象:${targetYear}年${targetMonth}月`
+        );
+        return false;
+      }
+
       if (
         this.selectedOffice !== 'all' &&
         String(bonus.officeNumber) !== String(this.selectedOffice)
       )
         return false;
       if (bonus.companyId && bonus.companyId !== this.currentCompanyId) return false;
+
+      console.log(`フィルタ通過: ${bonus.employeeNumber} - ${year}年${month}月`);
       return true;
     });
     console.log(
@@ -1128,28 +1162,66 @@ export class HomeComponent implements OnInit {
 
   // 全従業員分の賞与データを取得してallEmployeesBonusDataに格納する
   private async loadAllEmployeesBonusData() {
+    console.log('=== loadAllEmployeesBonusData 開始 ===');
     this.allEmployeesBonusData = [];
     try {
       const companyId = await this.authService.getCurrentUserCompanyId();
-      if (!companyId) return;
+      if (!companyId) {
+        console.log('companyId が取得できませんでした');
+        return;
+      }
+      console.log('companyId:', companyId);
+
       const employees = await this.userService.getUsersByCompanyId(companyId);
+      console.log('従業員数:', employees.length);
+
       const usersWithJudgment: UserWithJudgment[] = employees as UserWithJudgment[];
       await this.loadJudgmentResults(usersWithJudgment);
       const targetEmployees = usersWithJudgment.filter((u) => this.getJudgmentStatus(u) === '対象');
-      const fiscalYear = this.selectedMonth < 4 ? this.selectedYear - 1 : this.selectedYear;
+      console.log('対象従業員数:', targetEmployees.length);
+
+      // 年度ベースの選択では、selectedYearが既に年度なのでそのまま使用
+      const fiscalYear = this.selectedYear;
+      console.log(
+        '使用する年度:',
+        fiscalYear,
+        '(selectedYear:',
+        this.selectedYear,
+        ', selectedMonth:',
+        this.selectedMonth,
+        ')'
+      );
+
       const bonusDataList: EmployeeBonusData[] = [];
       for (const user of targetEmployees) {
         const employeeNumber = user.employeeNumber || '';
         const officeNumber = user.branchNumber || '';
         const employeeName = `${user.lastName || ''} ${user.firstName || ''}`.trim();
+
+        console.log(`\n--- 従業員 ${employeeNumber} (${employeeName}) の賞与データ取得 ---`);
+
         // Firestoreのbonus_calculation_resultsから直接取得
         const docPath = `companies/${companyId}/employees/${user.uid}/bonus_calculation_results/${fiscalYear}`;
+        console.log('Firestoreパス:', docPath);
+
         const docRef = doc(this.firestore, docPath);
         const docSnap = await getDoc(docRef);
+
+        console.log('ドキュメント存在:', docSnap.exists());
+
         if (docSnap.exists()) {
           const data = docSnap.data();
+          console.log('ドキュメントデータ:', data);
+
           if (data && Array.isArray(data['bonusResults'])) {
+            console.log('bonusResults配列の長さ:', data['bonusResults'].length);
+            console.log('bonusResults内容:', data['bonusResults']);
+
             data['bonusResults'].forEach((bonusItem: BonusResultFirestoreItem, idx: number) => {
+              console.log(
+                `  賞与${idx + 1}: year=${bonusItem.year}, month=${bonusItem.month}, paymentDate=${bonusItem.paymentDate}`
+              );
+
               const paymentInfo = `第${idx + 1}回（${bonusItem.paymentDate || '-'}）`;
               bonusDataList.push({
                 employeeNumber,
@@ -1158,6 +1230,8 @@ export class HomeComponent implements OnInit {
                 paymentInfo,
                 paymentNumber: `第${idx + 1}回`,
                 paymentDate: bonusItem.paymentDate,
+                month: bonusItem.month, // Firestoreの月フィールドを保持
+                year: bonusItem.year, // Firestoreの年フィールドを保持
                 amount: bonusItem.amount || '-',
                 calculationResult: bonusItem.calculationResult,
                 leaveType: bonusItem.leaveType || 'excluded',
@@ -1168,11 +1242,21 @@ export class HomeComponent implements OnInit {
                 companyId: companyId,
               });
             });
+          } else {
+            console.log('bonusResultsが配列ではないか、データがありません');
           }
+        } else {
+          console.log('ドキュメントが存在しません');
         }
       }
+      console.log('\n=== 賞与データ取得完了 ===');
+      console.log('取得した賞与データ件数:', bonusDataList.length);
+      console.log('取得した賞与データ:', bonusDataList);
+
       this.allEmployeesBonusData = bonusDataList;
       this.filterBonusData();
+
+      console.log('=== loadAllEmployeesBonusData 終了 ===');
     } catch (error) {
       console.error('賞与データ取得エラー:', error);
       this.allEmployeesBonusData = [];
