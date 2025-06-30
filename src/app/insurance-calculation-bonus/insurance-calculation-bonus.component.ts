@@ -23,6 +23,7 @@ import { AuthService } from '../services/auth.service';
 import { Decimal } from 'decimal.js';
 import { BonusAddFormComponent } from '../bonus-add-form/bonus-add-form.component';
 import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
+import { DateUtils } from '../utils/date-utils';
 
 interface EmployeeInfo {
   uid: string;
@@ -329,7 +330,7 @@ export class InsuranceCalculationBonusComponent implements OnInit {
           uid: this.uid,
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
-          birthDate: birthDate.toISOString().split('T')[0],
+          birthDate: DateUtils.formatToYMD(birthDate),
           age: this.calculateAge(birthDate),
           companyId: userData['companyId'] || '',
           branchNumber: userData['branchNumber'] || '',

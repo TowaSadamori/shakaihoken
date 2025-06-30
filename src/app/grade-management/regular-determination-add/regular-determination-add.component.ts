@@ -19,6 +19,7 @@ import {
 import { AuthService } from '../../services/auth.service';
 import { OfficeService } from '../../services/office.service';
 import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
+import { DateUtils } from '../../utils/date-utils';
 
 // 従業員区分の型定義
 type EmployeeType = 'general' | 'part_timer' | 'short_time_worker';
@@ -193,7 +194,7 @@ export class RegularDeterminationAddComponent implements OnInit {
         const age = this.calculateAge(birthDate);
 
         // 生年月日を日付のみの形式（YYYY-MM-DD）に変換
-        const formattedBirthDate = birthDate.toISOString().split('T')[0];
+        const formattedBirthDate = DateUtils.formatToYMD(birthDate);
 
         // 事業所情報から addressPrefecture を取得
         let addressPrefecture = userData['addressPrefecture'] || '';

@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { OfficeService } from '../services/office.service';
 import { AuthService } from '../services/auth.service';
+import { DateUtils } from '../utils/date-utils';
 
 interface EmployeeInfo {
   name: string;
@@ -109,7 +110,7 @@ export class InsuranceCalculationComponent implements OnInit {
 
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
-        const formattedBirthDate = birthDate.toISOString().split('T')[0];
+        const formattedBirthDate = DateUtils.formatToYMD(birthDate);
 
         let addressPrefecture = userData['addressPrefecture'] || '';
 

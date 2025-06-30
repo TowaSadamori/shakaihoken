@@ -18,6 +18,7 @@ import {
 import { AuthService } from '../../services/auth.service';
 import { OfficeService } from '../../services/office.service';
 import { SocialInsuranceCalculator } from '../../utils/decimal-calculator';
+import { DateUtils } from '../../utils/date-utils';
 
 interface EmployeeInfo {
   uid: string;
@@ -229,7 +230,7 @@ export class RevisionAddComponent implements OnInit {
   private initializeDefaultDates(): void {
     if (this.revisionData.revisionDate) return;
     const today = new Date();
-    this.revisionData.revisionDate = today.toISOString().split('T')[0];
+    this.revisionData.revisionDate = DateUtils.formatToYMD(today);
   }
 
   private async loadCompanyId(): Promise<void> {
@@ -275,7 +276,7 @@ export class RevisionAddComponent implements OnInit {
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
 
-        const formattedBirthDate = birthDate.toISOString().split('T')[0];
+        const formattedBirthDate = DateUtils.formatToYMD(birthDate);
 
         let addressPrefecture = userData['addressPrefecture'] || '';
 

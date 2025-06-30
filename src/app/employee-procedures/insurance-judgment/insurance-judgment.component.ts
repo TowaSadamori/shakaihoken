@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
+import { DateUtils } from '../../utils/date-utils';
 import {
   getFirestore,
   collection,
@@ -1701,7 +1702,7 @@ export class InsuranceJudgmentComponent implements OnInit {
 
   // 日付をISO文字列に変換するヘルパーメソッド
   private formatDateToString(date: Date): string {
-    return date.toISOString().split('T')[0];
+    return DateUtils.formatToYMD(date);
   }
 
   // 最大期間を設定

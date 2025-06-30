@@ -18,6 +18,7 @@ import { SocialInsuranceCalculator } from '../utils/decimal-calculator';
 import { AuthService } from '../services/auth.service';
 import { RoundForEmployeeBurdenPipe } from './round-for-employee-burden.pipe';
 import { Decimal } from 'decimal.js';
+import { DateUtils } from '../utils/date-utils';
 
 interface EmployeeInfo {
   uid: string;
@@ -177,7 +178,7 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
           uid: this.uid,
           name: `${userData['lastName'] || ''} ${userData['firstName'] || ''}`.trim(),
           employeeNumber: userData['employeeNumber'] || '',
-          birthDate: birthDate.toISOString().split('T')[0],
+          birthDate: DateUtils.formatToYMD(birthDate),
           age: age,
           companyId: userData['companyId'] || '',
           branchNumber: userData['branchNumber'] || '',
