@@ -622,55 +622,27 @@ export class HomeComponent implements OnInit {
 
   // 年次切り替え時の処理
   async onYearChange() {
-    console.log('=== onYearChange START ===');
-
     // 年度変更時に月配列を再生成
     this.generateFiscalMonths();
 
     this.setDisplayedColumns();
     await this.refreshData();
-    console.log(
-      'onYearChange: refreshData完了後のallEmployeesData件数:',
-      this.allEmployeesData.length
-    );
-    console.log(
-      'onYearChange: refreshData完了後のallEmployeesBonusData件数:',
-      this.allEmployeesBonusData.length
-    );
+
     this.monthlyCompanyTotals = this.calcMonthlyCompanyTotals();
-    console.log('=== onYearChange END ===');
   }
 
   // 月選択変更時の処理
   async onMonthChange() {
-    console.log('=== onMonthChange START ===');
     this.setDisplayedColumns();
     await this.refreshData();
-    console.log(
-      'onMonthChange: refreshData完了後のallEmployeesData件数:',
-      this.allEmployeesData.length
-    );
-    console.log(
-      'onMonthChange: refreshData完了後のallEmployeesBonusData件数:',
-      this.allEmployeesBonusData.length
-    );
+
     this.monthlyCompanyTotals = this.calcMonthlyCompanyTotals();
-    console.log('=== onMonthChange END ===');
   }
 
   async onOfficeChange() {
-    console.log('=== onOfficeChange START ===');
-    console.log('onOfficeChange: selectedOffice:', this.selectedOffice);
-    console.log('onOfficeChange: 実行前のallEmployeesData件数:', this.allEmployeesData.length);
-    console.log(
-      'onOfficeChange: 実行前のallOriginalEmployeesData件数:',
-      this.allOriginalEmployeesData.length
-    );
     this.filterDataByOffice();
     this.filterBonusData();
-    console.log('onOfficeChange: フィルタ後のallEmployeesData件数:', this.allEmployeesData.length);
     this.monthlyCompanyTotals = this.calcMonthlyCompanyTotals();
-    console.log('=== onOfficeChange END ===');
   }
 
   // 表示する列を動的に設定するメソッド
@@ -821,11 +793,6 @@ export class HomeComponent implements OnInit {
 
   // フィルタリングメソッド
   private filterDataByOffice() {
-    console.log('filterDataByOffice: selectedOffice =', this.selectedOffice);
-    console.log(
-      'filterDataByOffice: allOriginalEmployeesData件数 =',
-      this.allOriginalEmployeesData.length
-    );
     if (this.selectedOffice === 'all') {
       this.allEmployeesData = [...this.allOriginalEmployeesData];
     } else {
@@ -833,29 +800,13 @@ export class HomeComponent implements OnInit {
         (employee) => employee.officeNumber === this.selectedOffice
       );
     }
-    console.log(
-      'filterDataByOffice: フィルタ後のallEmployeesData件数 =',
-      this.allEmployeesData.length
-    );
   }
 
   private filterBonusData() {
-    console.log('=== filterBonusData開始 ===');
-    console.log('allEmployeesBonusData件数 =', this.allEmployeesBonusData.length);
-    console.log('selectedYear =', this.selectedYear);
-    console.log('selectedMonth =', this.selectedMonth);
-    console.log('fiscalMonths =', this.fiscalMonths);
-
     // 現在選択されている月の実際の年月を取得
     const selectedFiscalMonth = this.fiscalMonths.find((fm) => fm.value === this.selectedMonth);
-    console.log('selectedFiscalMonth =', selectedFiscalMonth);
-
     const targetYear = selectedFiscalMonth?.actualYear || this.selectedYear;
     const targetMonth = selectedFiscalMonth?.actualMonth || this.selectedMonth;
-
-    console.log(
-      `フィルタ条件: 年度${this.selectedYear}の${this.selectedMonth}月 → 実際の${targetYear}年${targetMonth}月`
-    );
 
     this.filteredEmployeesBonusData = this.allEmployeesBonusData.filter((bonus) => {
       // Firestoreのmonth/yearフィールドを優先的に使用
@@ -866,23 +817,17 @@ export class HomeComponent implements OnInit {
         // Firestoreのmonth/yearフィールドを使用（より確実）
         year = Number(bonus.year);
         month = Number(bonus.month);
-        console.log(`Firestoreフィールド使用: ${bonus.employeeNumber} - ${year}年${month}月`);
       } else if (bonus.paymentDate) {
         // paymentDateから取得（フォールバック）
         const date = new Date(bonus.paymentDate);
         year = date.getFullYear();
         month = date.getMonth() + 1;
-        console.log(`paymentDate使用: ${bonus.employeeNumber} - ${year}年${month}月`);
       } else {
         // どちらもない場合はスキップ
-        console.log(`日付情報なし: ${bonus.employeeNumber}`);
         return false;
       }
 
       if (year !== targetYear || month !== targetMonth) {
-        console.log(
-          `フィルタ除外: ${bonus.employeeNumber} - 実際:${year}年${month}月 vs 対象:${targetYear}年${targetMonth}月`
-        );
         return false;
       }
 
@@ -893,13 +838,8 @@ export class HomeComponent implements OnInit {
         return false;
       if (bonus.companyId && bonus.companyId !== this.currentCompanyId) return false;
 
-      console.log(`フィルタ通過: ${bonus.employeeNumber} - ${year}年${month}月`);
       return true;
     });
-    console.log(
-      'filterBonusData: フィルタ後のfilteredEmployeesBonusData件数 =',
-      this.filteredEmployeesBonusData.length
-    );
   }
 
   // 月ごとの会社負担額合計を計算する純粋関数
@@ -908,19 +848,11 @@ export class HomeComponent implements OnInit {
     healthInsuranceTotal: number;
     pensionTotal: number;
   }[] {
-    console.log('=== 会社負担額計算開始 ===');
-    console.log('allEmployeesData件数:', this.allEmployeesData.length);
-    console.log('allEmployeesBonusData件数:', this.allEmployeesBonusData.length);
-    console.log('selectedOffice:', this.selectedOffice);
-
     const results: { month: number; healthInsuranceTotal: number; pensionTotal: number }[] = [];
 
     for (let m = 4; m <= 15; m++) {
       const displayMonth = m > 12 ? m - 12 : m;
-      console.log(`\n--- ${displayMonth}月の計算開始 ---`);
-
       // 給与分の全従業員合計を先に計算
-      console.log('【給与分 - 全従業員合計計算】');
 
       let totalHealthInsuranceAll = 0; // 健康保険全額合計
       let totalHealthInsuranceEmployee = 0; // 健康保険本人負担合計
@@ -967,15 +899,7 @@ export class HomeComponent implements OnInit {
         totalPensionInsuranceAll - totalPensionInsuranceEmployee
       );
 
-      console.log(
-        `給与分合計: 健康+介護保険[全額${totalHealthInsuranceAll + totalCareInsuranceAll}円-本人${totalHealthInsuranceEmployee + totalCareInsuranceEmployee}円=会社${salaryHealthCareCompanyBurden}円]`
-      );
-      console.log(
-        `給与分合計: 厚生年金[全額${totalPensionInsuranceAll}円-本人${totalPensionInsuranceEmployee}円=会社${salaryPensionCompanyBurden}円]`
-      );
-
       // 賞与分の全従業員合計を計算
-      console.log('【賞与分 - 全従業員合計計算】');
 
       let bonusTotalHealthInsuranceAll = 0;
       let bonusTotalHealthInsuranceEmployee = 0;
@@ -983,7 +907,6 @@ export class HomeComponent implements OnInit {
       let bonusTotalCareInsuranceEmployee = 0;
       let bonusTotalPensionInsuranceAll = 0;
       let bonusTotalPensionInsuranceEmployee = 0;
-      let bonusCount = 0;
 
       for (const bonus of this.allEmployeesBonusData || []) {
         if (this.selectedOffice !== 'all' && bonus.officeNumber !== this.selectedOffice) continue;
@@ -1015,8 +938,6 @@ export class HomeComponent implements OnInit {
         bonusTotalCareInsuranceEmployee += careEmployee;
         bonusTotalPensionInsuranceAll += pensionTotal;
         bonusTotalPensionInsuranceEmployee += pensionEmployee;
-
-        bonusCount++;
       }
 
       // 賞与分会社負担計算
@@ -1030,13 +951,6 @@ export class HomeComponent implements OnInit {
         bonusTotalPensionInsuranceAll - bonusTotalPensionInsuranceEmployee
       );
 
-      console.log(
-        `賞与分合計(${bonusCount}件): 健康+介護保険[全額${bonusTotalHealthInsuranceAll + bonusTotalCareInsuranceAll}円-本人${bonusTotalHealthInsuranceEmployee + bonusTotalCareInsuranceEmployee}円=会社${bonusHealthCareCompanyBurden}円]`
-      );
-      console.log(
-        `賞与分合計(${bonusCount}件): 厚生年金[全額${bonusTotalPensionInsuranceAll}円-本人${bonusTotalPensionInsuranceEmployee}円=会社${bonusPensionCompanyBurden}円]`
-      );
-
       // 月合計の計算（給与分 + 賞与分）- 既に端数処理済み
       const monthlyHealthCareCompanyTotal =
         salaryHealthCareCompanyBurden + bonusHealthCareCompanyBurden;
@@ -1046,15 +960,6 @@ export class HomeComponent implements OnInit {
       const afterFloorHealthCare = monthlyHealthCareCompanyTotal;
       const afterFloorPension = monthlyPensionCompanyTotal;
 
-      console.log(`【${displayMonth}月 最終計算】`);
-      console.log(
-        `健康+介護保険: 給与${salaryHealthCareCompanyBurden}円 + 賞与${bonusHealthCareCompanyBurden}円 = ${monthlyHealthCareCompanyTotal}円 → 切り捨て後${afterFloorHealthCare}円`
-      );
-      console.log(
-        `厚生年金: 給与${salaryPensionCompanyBurden}円 + 賞与${bonusPensionCompanyBurden}円 = ${monthlyPensionCompanyTotal}円 → 切り捨て後${afterFloorPension}円`
-      );
-      console.log(`--- ${displayMonth}月の計算終了 ---`);
-
       results.push({
         month: displayMonth,
         healthInsuranceTotal: afterFloorHealthCare,
@@ -1062,7 +967,6 @@ export class HomeComponent implements OnInit {
       });
     }
 
-    console.log('=== 会社負担額計算終了 ===');
     return results;
   }
 
@@ -1162,35 +1066,18 @@ export class HomeComponent implements OnInit {
 
   // 全従業員分の賞与データを取得してallEmployeesBonusDataに格納する
   private async loadAllEmployeesBonusData() {
-    console.log('=== loadAllEmployeesBonusData 開始 ===');
     this.allEmployeesBonusData = [];
     try {
       const companyId = await this.authService.getCurrentUserCompanyId();
-      if (!companyId) {
-        console.log('companyId が取得できませんでした');
-        return;
-      }
-      console.log('companyId:', companyId);
+      if (!companyId) return;
 
       const employees = await this.userService.getUsersByCompanyId(companyId);
-      console.log('従業員数:', employees.length);
-
       const usersWithJudgment: UserWithJudgment[] = employees as UserWithJudgment[];
       await this.loadJudgmentResults(usersWithJudgment);
       const targetEmployees = usersWithJudgment.filter((u) => this.getJudgmentStatus(u) === '対象');
-      console.log('対象従業員数:', targetEmployees.length);
 
       // 年度ベースの選択では、selectedYearが既に年度なのでそのまま使用
       const fiscalYear = this.selectedYear;
-      console.log(
-        '使用する年度:',
-        fiscalYear,
-        '(selectedYear:',
-        this.selectedYear,
-        ', selectedMonth:',
-        this.selectedMonth,
-        ')'
-      );
 
       const bonusDataList: EmployeeBonusData[] = [];
       for (const user of targetEmployees) {
@@ -1198,30 +1085,15 @@ export class HomeComponent implements OnInit {
         const officeNumber = user.branchNumber || '';
         const employeeName = `${user.lastName || ''} ${user.firstName || ''}`.trim();
 
-        console.log(`\n--- 従業員 ${employeeNumber} (${employeeName}) の賞与データ取得 ---`);
-
         // Firestoreのbonus_calculation_resultsから直接取得
         const docPath = `companies/${companyId}/employees/${user.uid}/bonus_calculation_results/${fiscalYear}`;
-        console.log('Firestoreパス:', docPath);
-
         const docRef = doc(this.firestore, docPath);
         const docSnap = await getDoc(docRef);
 
-        console.log('ドキュメント存在:', docSnap.exists());
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('ドキュメントデータ:', data);
-
           if (data && Array.isArray(data['bonusResults'])) {
-            console.log('bonusResults配列の長さ:', data['bonusResults'].length);
-            console.log('bonusResults内容:', data['bonusResults']);
-
             data['bonusResults'].forEach((bonusItem: BonusResultFirestoreItem, idx: number) => {
-              console.log(
-                `  賞与${idx + 1}: year=${bonusItem.year}, month=${bonusItem.month}, paymentDate=${bonusItem.paymentDate}`
-              );
-
               const paymentInfo = `第${idx + 1}回（${bonusItem.paymentDate || '-'}）`;
               bonusDataList.push({
                 employeeNumber,
@@ -1242,21 +1114,12 @@ export class HomeComponent implements OnInit {
                 companyId: companyId,
               });
             });
-          } else {
-            console.log('bonusResultsが配列ではないか、データがありません');
           }
-        } else {
-          console.log('ドキュメントが存在しません');
         }
       }
-      console.log('\n=== 賞与データ取得完了 ===');
-      console.log('取得した賞与データ件数:', bonusDataList.length);
-      console.log('取得した賞与データ:', bonusDataList);
 
       this.allEmployeesBonusData = bonusDataList;
       this.filterBonusData();
-
-      console.log('=== loadAllEmployeesBonusData 終了 ===');
     } catch (error) {
       console.error('賞与データ取得エラー:', error);
       this.allEmployeesBonusData = [];
@@ -1279,17 +1142,28 @@ export class HomeComponent implements OnInit {
 
   // 賞与テーブル用: 金額フォーマット
   public formatAmount(value: string | number | undefined | null): string {
+    // null、undefined、空文字列の場合は"-"を返す
     if (value === null || typeof value === 'undefined' || value === '') return '-';
+
+    // 文字列の"-"の場合も"-"を返す
+    if (value === '-') return '-';
+
+    // 数値に変換してチェック
+    const numValue = Number(value);
+
+    // NaN、Infinity、-Infinityの場合は"-"を返す
+    if (isNaN(numValue) || !isFinite(numValue)) return '-';
+
     try {
-      const decimal = new Decimal(String(value));
+      const decimal = new Decimal(numValue);
       // 丸め処理適用（50銭以下切り捨て、50銭超切り上げ）
       const roundedAmount = SocialInsuranceCalculator.roundForTotalAmount(decimal);
       const num = Number(roundedAmount);
-      if (isNaN(num)) return String(value);
+      if (isNaN(num)) return '-';
       return num.toLocaleString();
     } catch (error) {
-      console.error('金額フォーマットエラー:', error);
-      return String(value);
+      console.error('金額フォーマットエラー:', error, 'value:', value);
+      return '-';
     }
   }
 
@@ -1384,12 +1258,6 @@ export class HomeComponent implements OnInit {
       debugInfo.push(`厚生年金保険料(個人): 0円（データなし）`);
     }
 
-    debugInfo.push(`=== 合計: ${total}円 ===`);
-
-    // デバッグ情報をコンソールに出力（従業員番号も含めて識別しやすくする）
-    console.log(`[従業員負担合計計算] 従業員番号: ${bonus.employeeNumber}`);
-    debugInfo.forEach((info) => console.log(`  ${info}`));
-
     return total.toString();
   }
 
@@ -1435,12 +1303,6 @@ export class HomeComponent implements OnInit {
       total += pensionAmount;
       debugInfo.push(`厚生年金保険料(個人): ${pensionAmount}円`);
     }
-
-    debugInfo.push(`=== 合計: ${total}円 ===`);
-
-    // デバッグ情報をコンソールに出力
-    console.log(`[給与従業員負担合計計算]`);
-    debugInfo.forEach((info) => console.log(`  ${info}`));
 
     return total.toString();
   }
@@ -1525,10 +1387,6 @@ export class HomeComponent implements OnInit {
     debugInfo.push(
       `=== 最終合計 = ${healthCompanyBurdenFloored} + ${pensionCompanyBurdenFloored} = ${total}円 ===`
     );
-
-    // デバッグ情報をコンソールに出力
-    console.log(`[給与会社負担合計計算]`);
-    debugInfo.forEach((info) => console.log(`  ${info}`));
 
     return total.toString();
   }
@@ -1627,10 +1485,6 @@ export class HomeComponent implements OnInit {
     debugInfo.push(
       `=== 最終合計 = ${healthCompanyBurdenFloored} + ${pensionCompanyBurdenFloored} = ${total}円 ===`
     );
-
-    // デバッグ情報をコンソールに出力
-    console.log(`[会社負担合計計算] 従業員番号: ${bonus.employeeNumber}`);
-    debugInfo.forEach((info) => console.log(`  ${info}`));
 
     return total.toString();
   }
