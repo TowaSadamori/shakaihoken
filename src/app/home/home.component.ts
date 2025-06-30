@@ -1206,11 +1206,31 @@ export class HomeComponent implements OnInit {
     paymentDate: string | undefined,
     period: { start: string; end: string } | undefined
   ): boolean {
-    if (!paymentDate || !period) return false;
-    const date = new Date(paymentDate);
-    const start = new Date(period.start);
-    const end = new Date(period.end);
-    return date >= start && date <= end;
+    if (!paymentDate || !period || !period.start || !period.end) return false;
+
+    const d = new Date(paymentDate);
+
+    // 開始日の処理
+    let start: Date;
+    if (period.start.length === 7) {
+      // "YYYY-MM" 形式 - 月の1日から
+      const [year, month] = period.start.split('-').map(Number);
+      start = new Date(year, month - 1, 1);
+    } else {
+      start = new Date(period.start);
+    }
+
+    // 終了日の処理
+    let end: Date;
+    if (period.end.length === 7) {
+      // "YYYY-MM" 形式 - 月の最終日まで
+      const [year, month] = period.end.split('-').map(Number);
+      end = new Date(year, month, 0, 23, 59, 59, 999);
+    } else {
+      end = new Date(period.end);
+    }
+
+    return d >= start && d <= end;
   }
 
   // 日付から月のみを表示するフォーマット関数
