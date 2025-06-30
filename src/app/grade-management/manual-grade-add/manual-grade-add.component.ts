@@ -134,6 +134,9 @@ export class ManualGradeAddComponent implements OnInit {
     { value: BigInt(12), label: '12月' },
   ];
 
+  // 生年月日に基づいてフィルタリングされた月の選択肢
+  filteredAvailableMonths = [...this.availableMonths];
+
   private employeeId: string | null = null;
   private recordId: string | null = null;
   isEditMode = false;
@@ -170,14 +173,115 @@ export class ManualGradeAddComponent implements OnInit {
         }
       }
     }
-    this.initializeYears();
+
+    // 常に基本的な年の初期化を実行（フィルタリングなし）
+    this.initializeBasicYears();
   }
 
-  private initializeYears(): void {
+  // 基本的な年の初期化（フィルタリングなし）
+  private initializeBasicYears(): void {
     const currentYear = new Date().getFullYear();
+    this.availableYears = [];
     for (let year = currentYear - 5; year <= currentYear + 10; year++) {
       this.availableYears.push(BigInt(year));
     }
+    // 常に全ての月を表示
+    this.filteredAvailableMonths = [...this.availableMonths];
+  }
+
+  // 生年月日から年を取得
+  private getBirthYear(): bigint | null {
+    if (!this.employeeInfo?.birthDate) return null;
+    const birthDate = new Date(this.employeeInfo.birthDate);
+    return BigInt(birthDate.getFullYear());
+  }
+
+  // 生年月日から月を取得
+  private getBirthMonth(): bigint | null {
+    if (!this.employeeInfo?.birthDate) return null;
+    const birthDate = new Date(this.employeeInfo.birthDate);
+    return BigInt(birthDate.getMonth() + 1);
+  }
+
+  // 年が変更された時の処理（フィルタリング削除）
+  onYearChange(): void {
+    // フィルタリングは行わず、判定結果をクリア
+    this.judgmentResult = null;
+
+    // 型と値の詳細なデバッグ
+    console.log('=== onYearChange Debug ===');
+    console.log('applicableYear value:', this.applicableYear);
+    console.log('applicableYear type:', typeof this.applicableYear);
+    console.log('applicableYear constructor:', this.applicableYear?.constructor?.name);
+    console.log('===========================');
+  }
+
+  // 月が変更された時の処理
+  onMonthChange(): void {
+    // 判定結果をクリア
+    this.judgmentResult = null;
+
+    // 型と値の詳細なデバッグ
+    console.log('=== onMonthChange Debug ===');
+    console.log('applicableMonth value:', this.applicableMonth);
+    console.log('applicableMonth type:', typeof this.applicableMonth);
+    console.log('applicableMonth constructor:', this.applicableMonth?.constructor?.name);
+    console.log('===========================');
+  }
+
+  // 運用開始年月が生年月日より前かどうかをチェック
+  isApplicableDateBeforeBirthDate(): boolean {
+    console.log('=== isApplicableDateBeforeBirthDate Debug ===');
+    console.log('employeeInfo:', this.employeeInfo);
+    console.log('applicableYear:', this.applicableYear, 'type:', typeof this.applicableYear);
+    console.log('applicableMonth:', this.applicableMonth, 'type:', typeof this.applicableMonth);
+
+    if (!this.employeeInfo?.birthDate || !this.applicableYear || !this.applicableMonth) {
+      console.log('Early return: missing data');
+      return false;
+    }
+
+    const birthYear = this.getBirthYear();
+    const birthMonth = this.getBirthMonth();
+    console.log('birthYear:', birthYear, 'type:', typeof birthYear);
+    console.log('birthMonth:', birthMonth, 'type:', typeof birthMonth);
+
+    if (!birthYear || !birthMonth) {
+      console.log('Early return: missing birth data');
+      return false;
+    }
+
+    // HTMLのselectから来る値は文字列なので、確実にBigIntに変換
+    let applicableYearBigInt: bigint;
+    let applicableMonthBigInt: bigint;
+
+    try {
+      applicableYearBigInt =
+        typeof this.applicableYear === 'string' ? BigInt(this.applicableYear) : this.applicableYear;
+      applicableMonthBigInt =
+        typeof this.applicableMonth === 'string'
+          ? BigInt(this.applicableMonth)
+          : this.applicableMonth;
+    } catch (error) {
+      console.log('BigInt conversion error:', error);
+      return false;
+    }
+
+    console.log('applicableYearBigInt:', applicableYearBigInt);
+    console.log('applicableMonthBigInt:', applicableMonthBigInt);
+
+    if (applicableYearBigInt < birthYear) {
+      console.log('Year comparison: applicable year is before birth year');
+      return true;
+    }
+
+    if (applicableYearBigInt === birthYear && applicableMonthBigInt < birthMonth) {
+      console.log('Month comparison: same year but applicable month is before birth month');
+      return true;
+    }
+
+    console.log('Date is valid (after birth date)');
+    return false;
   }
 
   private async loadEmployeeInfo(): Promise<void> {
@@ -262,64 +366,98 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   isFormValid(): boolean {
-    return !!(
-      this.monthlyAmount &&
-      SocialInsuranceCalculator.compare(String(this.monthlyAmount), '0') > 0 &&
-      this.applicableYear &&
-      this.applicableMonth
-    );
+    // 基本的なフィールドのみチェック（生年月日チェックは削除）
+    const isBasicValid =
+      this.monthlyAmount !== null &&
+      this.monthlyAmount !== '' &&
+      this.applicableYear !== null &&
+      this.applicableMonth !== null;
+
+    return isBasicValid;
   }
 
   // 保存専用のバリデーション
   isSaveValid(): boolean {
-    return this.isFormValid() && !!this.judgmentResult;
+    return this.isFormValid() && !!this.judgmentResult && !this.isApplicableDateBeforeBirthDate();
   }
 
-  // 月額報酬の変更時に自動で等級判定を実行
-  onMonthlyAmountChange(): void {
-    // リアルタイム判定を無効化
-    // ユーザーが判定ボタンを押すまで判定結果を表示しない
-    // if (this.monthlyAmount && this.monthlyAmount > 0) {
-    //   this.calculateGradeFromAmount();
-    // } else {
-    //   this.judgmentResult = null;
-    // }
+  // 判定ボタン押下時のバリデーション
+  private validateBeforeCalculation(): boolean {
+    console.log('=== validateBeforeCalculation called ===');
+
+    // 基本フィールドのチェック
+    if (!this.isFormValid()) {
+      console.log('Form validation failed');
+      this.errorMessage = '必須項目を入力してください。';
+      return false;
+    }
+
+    // 生年月日より前の日付チェック
+    const isBeforeBirthDate = this.isApplicableDateBeforeBirthDate();
+    console.log('isBeforeBirthDate result:', isBeforeBirthDate);
+
+    if (isBeforeBirthDate) {
+      console.log('Birth date validation failed');
+      this.errorMessage = '運用開始年月は生年月日より前を選択することはできません。';
+      return false;
+    }
+
+    // エラーメッセージをクリア
+    console.log('All validations passed');
+    this.errorMessage = '';
+    return true;
   }
 
-  // 月額報酬から等級を即座に計算
-  private calculateGradeFromAmount(): void {
-    if (!this.monthlyAmount || !this.employeeInfo) {
-      this.judgmentResult = null;
-      return;
+  // 保存前のバリデーション
+  private validateBeforeSave(): boolean {
+    // 基本フィールドのチェック
+    if (!this.isFormValid()) {
+      this.errorMessage = '必須項目を入力してください。';
+      return false;
     }
 
-    try {
-      const result = this.findGradeByAmountFromStandardTable(this.monthlyAmount);
-      this.judgmentResult = result;
-      this.errorMessage = '';
-    } catch (error) {
-      console.error('等級判定エラー:', error);
-      this.errorMessage = '等級判定に失敗しました';
-      this.judgmentResult = null;
+    // 判定結果の存在チェック
+    if (!this.judgmentResult) {
+      this.errorMessage = '判定を実行してから保存してください。';
+      return false;
     }
+
+    // 生年月日より前の日付チェック
+    if (this.isApplicableDateBeforeBirthDate()) {
+      this.errorMessage = '運用開始年月は生年月日より前を選択することはできません。';
+      return false;
+    }
+
+    // エラーメッセージをクリア
+    this.errorMessage = '';
+    return true;
   }
 
   async calculateGrade(): Promise<void> {
-    if (
-      this.judgmentReason === 'new_employee' ||
-      this.judgmentReason === 'normal_work' ||
-      this.judgmentReason === 'other' ||
-      !this.judgmentReason
-    ) {
-      // 「通常業務」も「新入社員」と同じロジック
-      this.calculateGradeFromAmount();
-    } else if (this.judgmentReason === 'maternity_leave') {
-      this.judgmentResult = { isMaternityLeave: true };
-    } else if (this.judgmentReason === 'childcare_leave') {
-      this.judgmentResult = { isChildcareLeave: true };
-    } else {
-      this.judgmentResult = null;
-      console.log(`判定ロジックが未実装の理由: ${this.judgmentReason}`);
+    // バリデーションを実行
+    if (!this.validateBeforeCalculation()) {
+      return;
+    }
+
+    if (!this.employeeInfo?.addressPrefecture || !this.applicableYear) {
+      this.errorMessage = '従業員情報または適用年が不足しています。';
+      return;
+    }
+
+    this.isCalculating = true;
+    this.judgmentResult = null;
+
+    try {
+      const firestorePrefecture = this.convertPrefectureForFirestore(
+        this.employeeInfo.addressPrefecture
+      );
+      const tables = await this.getInsuranceTable(Number(this.applicableYear), firestorePrefecture);
+      this.judgmentResult = this.findGradeByAmount(tables, this.monthlyAmount!);
+    } catch (error) {
+      console.error('等級計算エラー:', error);
+      this.errorMessage = `等級計算に失敗しました: ${error}`;
+    } finally {
+      this.isCalculating = false;
     }
   }
 
@@ -805,54 +943,27 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   async saveGradeData(): Promise<void> {
-    if (!this.employeeId || !this.judgmentResult || !this.isFormValid()) {
+    // バリデーションを実行
+    if (!this.validateBeforeSave()) {
+      return;
+    }
+
+    // 既存の保存ロジックを継続
+    if (!this.employeeId || !this.judgmentResult) {
       this.errorMessage = '保存に必要な情報が不足しています。';
       return;
     }
-    // 変更がない場合は goBack() と同じ挙動にする
-    if (this.isEditMode && this.savedGradeData && !this.hasGradeDataChanged()) {
-      this.goBack();
-      return;
-    }
+
     this.isSaving = true;
-    this.errorMessage = '';
-
-    const docId = this.savedGradeData?.id || `${this.employeeId}_manual`;
-
-    const gradeData: SavedGradeData = {
-      id: docId,
-      employeeId: this.employeeId,
-      monthlyAmount: this.monthlyAmount!,
-      applicableYear: this.applicableYear!,
-      applicableMonth: this.applicableMonth!,
-      judgmentResult: this.judgmentResult,
-      createdAt: this.savedGradeData?.createdAt || new Date(),
-      updatedAt: new Date(),
-      judgmentType: 'manual',
-    };
-
-    if (this.endYear && this.endMonth) {
-      gradeData.endYear = this.endYear;
-      gradeData.endMonth = this.endMonth;
-    }
-
     try {
-      const docRef = doc(this.firestore, 'employee_grades', docId);
-      // undefinedをnullに変換
-      const dataForFirestore = this.deepConvertBigIntToString(
-        this.replaceUndefinedWithNull(gradeData)
-      );
-      await setDoc(docRef, dataForFirestore);
-
       await this.saveToGradeJudgmentHistory();
+      this.errorMessage = '';
 
-      // 保存成功後、コンポーネントの状態を更新
-      this.savedGradeData = gradeData;
-      alert('手入力データが保存されました');
-      this.router.navigate(['/grade-judgment', this.employeeId]);
+      // 保存成功後、前の画面に戻る
+      this.goBack();
     } catch (error) {
       console.error('保存エラー:', error);
-      this.errorMessage = '保存に失敗しました: ' + (error as Error).message;
+      this.errorMessage = `保存に失敗しました: ${error}`;
     } finally {
       this.isSaving = false;
     }
@@ -1012,7 +1123,7 @@ export class ManualGradeAddComponent implements OnInit {
 
         console.log('削除処理完了');
         alert('手入力データを削除しました');
-        this.router.navigate(['/grade-judgment', this.employeeId]);
+        this.goBack();
       } catch (error) {
         console.error('削除エラー:', error);
         this.errorMessage = `削除に失敗しました: ${error}`;
@@ -1148,5 +1259,11 @@ export class ManualGradeAddComponent implements OnInit {
       }
     }
     return false;
+  }
+
+  // 月額報酬の変更時の処理
+  onMonthlyAmountChange(): void {
+    // 判定結果をクリア（新しい金額で判定し直すため）
+    this.judgmentResult = null;
   }
 }

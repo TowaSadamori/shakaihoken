@@ -87,17 +87,25 @@
       <div class="form-group">
         <label for="applicableYear">適用開始年月 *</label>
         <div class="date-input-row">
-          <select id="applicableYear" [(ngModel)]="applicableYear">
+          <select id="applicableYear" [(ngModel)]="applicableYear" (ngModelChange)="onYearChange()">
             <option value="">年を選択</option>
             <option *ngFor="let year of availableYears" [value]="year">{{ year }}年</option>
           </select>
-          <select id="applicableMonth" [(ngModel)]="applicableMonth">
+          <select
+            id="applicableMonth"
+            [(ngModel)]="applicableMonth"
+            (ngModelChange)="onMonthChange()"
+          >
             <option value="">月を選択</option>
-            <option *ngFor="let month of availableMonths" [value]="month.value">
+            <option *ngFor="let month of filteredAvailableMonths" [value]="month.value">
               {{ month.label }}
             </option>
           </select>
         </div>
+
+        <small class="help-text" *ngIf="employeeInfo && employeeInfo.birthDate">
+          運用開始年月は適切な期間を選択してください
+        </small>
       </div>
 
       <!-- 適用終了期間（任意） -->
