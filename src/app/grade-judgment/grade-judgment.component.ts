@@ -546,25 +546,12 @@ export class GradeJudgmentComponent implements OnInit {
   }
 
   goBack(): void {
-    console.log('戻るボタンが押されました。期間重複チェックを開始します。');
-    console.log('判定レコード数:', this.judgmentRecords.length);
-    this.judgmentRecords.forEach((record, index) => {
-      console.log(`レコード${index + 1}:`, {
-        id: record.id,
-        effectiveDate: record.effectiveDate,
-        endDate: record.endDate,
-        effectiveDateType: typeof record.effectiveDate,
-        endDateType: typeof record.endDate,
-      });
-    });
-
     // 期間の重複チェックを実行
     if (this.hasOverlappingPeriods()) {
       alert('期間の重複がありますので編集で修正してください。');
       return;
     }
 
-    console.log('重複なし。前の画面に戻ります。');
     // 給与賞与情報従業員一覧画面に戻る
     this.router.navigate(['/employee-salary-bonus']);
   }
@@ -574,9 +561,7 @@ export class GradeJudgmentComponent implements OnInit {
    * @returns 重複がある場合はtrue、ない場合はfalse
    */
   private hasOverlappingPeriods(): boolean {
-    console.log('hasOverlappingPeriods開始');
     if (this.judgmentRecords.length <= 1) {
-      console.log('レコード数が1つ以下のため、重複なし');
       return false; // レコードが1つ以下の場合は重複なし
     }
 
@@ -586,29 +571,12 @@ export class GradeJudgmentComponent implements OnInit {
         const record1 = this.judgmentRecords[i];
         const record2 = this.judgmentRecords[j];
 
-        console.log(`レコード${i + 1}とレコード${j + 1}の重複チェック:`, {
-          record1: {
-            id: record1.id,
-            effectiveDate: record1.effectiveDate,
-            endDate: record1.endDate,
-          },
-          record2: {
-            id: record2.id,
-            effectiveDate: record2.effectiveDate,
-            endDate: record2.endDate,
-          },
-        });
-
         if (this.periodsOverlap(record1, record2)) {
-          console.log('期間の重複を検出しました！');
           return true;
-        } else {
-          console.log('この組み合わせは重複なし');
         }
       }
     }
 
-    console.log('全ての組み合わせをチェックしましたが、重複は見つかりませんでした');
     return false;
   }
 
@@ -624,48 +592,27 @@ export class GradeJudgmentComponent implements OnInit {
     const start2 = this.convertToDate(record2.effectiveDate);
     const end2 = record2.endDate ? this.convertToDate(record2.endDate) : null;
 
-    console.log('periodsOverlap詳細:', {
-      period1: {
-        start: start1,
-        end: end1,
-        isOngoing: !end1,
-      },
-      period2: {
-        start: start2,
-        end: end2,
-        isOngoing: !end2,
-      },
-    });
-
     // 期間1が継続中（終了日がnull）の場合
     if (!end1) {
       if (!end2) {
         // 両方とも継続中の場合、開始日が同じ日以降なら重複
-        const overlap = start1.getTime() === start2.getTime();
-        console.log('両方継続中:', { start1, start2, overlap });
-        return overlap;
+        return start1.getTime() === start2.getTime();
       } else {
         // 期間1が継続中、期間2に終了日がある場合
         // 期間2の終了日が期間1の開始日以降なら重複
-        const overlap = end2 >= start1;
-        console.log('期間1継続中、期間2終了あり:', { start1, end2, overlap });
-        return overlap;
+        return end2 >= start1;
       }
     }
 
     // 期間2が継続中（終了日がnull）の場合
     if (!end2) {
       // 期間1の終了日が期間2の開始日以降なら重複
-      const overlap = end1 >= start2;
-      console.log('期間2継続中、期間1終了あり:', { end1, start2, overlap });
-      return overlap;
+      return end1 >= start2;
     }
 
     // 両方の期間に終了日がある場合
     // 期間が重複している条件: start1 <= end2 && start2 <= end1
-    const overlap = start1 <= end2 && start2 <= end1;
-    console.log('両方に終了日あり:', { start1, end1, start2, end2, overlap });
-    return overlap;
+    return start1 <= end2 && start2 <= end1;
   }
 
   navigateToManualAdd(): void {
