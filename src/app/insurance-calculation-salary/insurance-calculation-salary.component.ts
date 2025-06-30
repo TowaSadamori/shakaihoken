@@ -380,11 +380,23 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
                   // 介護保険対象者：介護保険料の欄にnursingHalfをセット、健康保険料は空
                   result.healthInsuranceFeeEmployee = null;
                   result.healthInsuranceFeeCompany = null;
-                  result.careInsuranceFeeEmployee = nursingHalf;
+                  // データクリーンアップ後に端数処理適用
+                  const cleanNursingHalf = String(nursingHalf || '0')
+                    .replace(/,/g, '')
+                    .trim();
+                  result.careInsuranceFeeEmployee =
+                    SocialInsuranceCalculator.roundForEmployeeBurden(new Decimal(cleanNursingHalf));
                   result.careInsuranceFeeCompany = nursingTotal; // 全額を保険料マスタから取得
                 } else {
                   // 非対象者：健康保険料の欄にnonNursingHalfをセット、介護保険料は空
-                  result.healthInsuranceFeeEmployee = nonNursingHalf;
+                  // データクリーンアップ後に端数処理適用
+                  const cleanNonNursingHalf = String(nonNursingHalf || '0')
+                    .replace(/,/g, '')
+                    .trim();
+                  result.healthInsuranceFeeEmployee =
+                    SocialInsuranceCalculator.roundForEmployeeBurden(
+                      new Decimal(cleanNonNursingHalf)
+                    );
                   result.healthInsuranceFeeCompany = nonNursingTotal; // 全額を保険料マスタから取得
                   result.careInsuranceFeeEmployee = null;
                   result.careInsuranceFeeCompany = null;
@@ -398,7 +410,12 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
               if (pensionGradeInfo) {
                 const pensionHalf = pensionGradeInfo.pensionHalf;
                 const pensionTotal = pensionGradeInfo.pensionTotal;
-                result.pensionInsuranceFeeEmployee = pensionHalf;
+                // データクリーンアップ後に端数処理適用
+                const cleanPensionHalf = String(pensionHalf || '0')
+                  .replace(/,/g, '')
+                  .trim();
+                result.pensionInsuranceFeeEmployee =
+                  SocialInsuranceCalculator.roundForEmployeeBurden(new Decimal(cleanPensionHalf));
                 result.pensionInsuranceFeeCompany = pensionTotal; // 全額を保険料マスタから取得
               }
             }
