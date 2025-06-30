@@ -671,4 +671,17 @@ export class InsuranceCalculationSalaryComponent implements OnInit {
       return String(amount);
     }
   }
+
+  // 生年月日を日本語形式で表示するフォーマット関数
+  formatBirthDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parseInt(parts[1]);
+      const day = parseInt(parts[2]);
+      return `${year}年${month}月${day}日`;
+    }
+    return dateStr;
+  }
 }

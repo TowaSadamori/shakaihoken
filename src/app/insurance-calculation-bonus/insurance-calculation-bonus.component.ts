@@ -1239,6 +1239,19 @@ export class InsuranceCalculationBonusComponent implements OnInit {
     return dateStr;
   }
 
+  // 生年月日を日本語形式で表示するフォーマット関数
+  formatBirthDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parseInt(parts[1]);
+      const day = parseInt(parts[2]);
+      return `${year}年${month}月${day}日`;
+    }
+    return dateStr;
+  }
+
   // 編集ボタン押下時の処理（今はアラートのみ）
   onEditBonus(index: number): void {
     const item = this.bonusDataList[index];

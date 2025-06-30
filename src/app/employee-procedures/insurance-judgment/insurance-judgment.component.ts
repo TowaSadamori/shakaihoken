@@ -3190,10 +3190,14 @@ export class InsuranceJudgmentComponent implements OnInit {
     const bd = new Date(birthDate);
     // 開始月（生まれた月）
     const start = `${bd.getFullYear()}-${('0' + (bd.getMonth() + 1)).slice(-2)}`;
-    // 75歳の誕生日（1日生まれ特例なし、常に誕生月が終了月）
+    // 75歳の誕生日月から健康保険料は発生しないため、誕生日月の前月まで
+    // 75歳の誕生日当日が喪失日となる特例（1日生まれ特例はなし）
     const seventyFifthBirthday = new Date(bd);
     seventyFifthBirthday.setFullYear(bd.getFullYear() + 75);
-    const end = `${seventyFifthBirthday.getFullYear()}-${('0' + (seventyFifthBirthday.getMonth() + 1)).slice(-2)}`;
+    // 誕生日月の前月を終了月とする
+    const endDate = new Date(seventyFifthBirthday);
+    endDate.setMonth(endDate.getMonth() - 1);
+    const end = `${endDate.getFullYear()}-${('0' + (endDate.getMonth() + 1)).slice(-2)}`;
     return { start, end };
   }
 

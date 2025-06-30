@@ -20,6 +20,10 @@
         <span>{{ employeeInfo.age }}歳</span>
       </div>
       <div class="info-item">
+        <span class="info-label">生年月日:</span>
+        <span>{{ formatBirthDate(employeeInfo.birthDate) }}</span>
+      </div>
+      <div class="info-item">
         <span class="info-label">事業所所在地:</span>
         <span>{{ employeeInfo.addressPrefecture }}</span>
       </div>
