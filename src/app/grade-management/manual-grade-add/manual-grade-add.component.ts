@@ -207,47 +207,24 @@ export class ManualGradeAddComponent implements OnInit {
   onYearChange(): void {
     // フィルタリングは行わず、判定結果をクリア
     this.judgmentResult = null;
-
-    // 型と値の詳細なデバッグ
-    console.log('=== onYearChange Debug ===');
-    console.log('applicableYear value:', this.applicableYear);
-    console.log('applicableYear type:', typeof this.applicableYear);
-    console.log('applicableYear constructor:', this.applicableYear?.constructor?.name);
-    console.log('===========================');
   }
 
   // 月が変更された時の処理
   onMonthChange(): void {
     // 判定結果をクリア
     this.judgmentResult = null;
-
-    // 型と値の詳細なデバッグ
-    console.log('=== onMonthChange Debug ===');
-    console.log('applicableMonth value:', this.applicableMonth);
-    console.log('applicableMonth type:', typeof this.applicableMonth);
-    console.log('applicableMonth constructor:', this.applicableMonth?.constructor?.name);
-    console.log('===========================');
   }
 
   // 運用開始年月が生年月日より前かどうかをチェック
   isApplicableDateBeforeBirthDate(): boolean {
-    console.log('=== isApplicableDateBeforeBirthDate Debug ===');
-    console.log('employeeInfo:', this.employeeInfo);
-    console.log('applicableYear:', this.applicableYear, 'type:', typeof this.applicableYear);
-    console.log('applicableMonth:', this.applicableMonth, 'type:', typeof this.applicableMonth);
-
     if (!this.employeeInfo?.birthDate || !this.applicableYear || !this.applicableMonth) {
-      console.log('Early return: missing data');
       return false;
     }
 
     const birthYear = this.getBirthYear();
     const birthMonth = this.getBirthMonth();
-    console.log('birthYear:', birthYear, 'type:', typeof birthYear);
-    console.log('birthMonth:', birthMonth, 'type:', typeof birthMonth);
 
     if (!birthYear || !birthMonth) {
-      console.log('Early return: missing birth data');
       return false;
     }
 
@@ -262,25 +239,18 @@ export class ManualGradeAddComponent implements OnInit {
         typeof this.applicableMonth === 'string'
           ? BigInt(this.applicableMonth)
           : this.applicableMonth;
-    } catch (error) {
-      console.log('BigInt conversion error:', error);
+    } catch {
       return false;
     }
 
-    console.log('applicableYearBigInt:', applicableYearBigInt);
-    console.log('applicableMonthBigInt:', applicableMonthBigInt);
-
     if (applicableYearBigInt < birthYear) {
-      console.log('Year comparison: applicable year is before birth year');
       return true;
     }
 
     if (applicableYearBigInt === birthYear && applicableMonthBigInt < birthMonth) {
-      console.log('Month comparison: same year but applicable month is before birth month');
       return true;
     }
 
-    console.log('Date is valid (after birth date)');
     return false;
   }
 
@@ -289,12 +259,6 @@ export class ManualGradeAddComponent implements OnInit {
 
     this.isLoading = true;
     try {
-      console.log(
-        '従業員情報を読み込み中 (employeeNumber, companyId):',
-        this.employeeId,
-        this.companyId
-      );
-
       const usersRef = collection(this.firestore, 'users');
       const q = query(
         usersRef,
@@ -306,7 +270,6 @@ export class ManualGradeAddComponent implements OnInit {
       if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
-        console.log('Firestoreから取得した従業員データ:', userData);
 
         const birthDate = new Date(userData['birthDate']);
         const age = this.calculateAge(birthDate);
@@ -334,8 +297,6 @@ export class ManualGradeAddComponent implements OnInit {
           branchNumber: userData['branchNumber'] || '',
           addressPrefecture: addressPrefecture,
         };
-
-        console.log('設定された従業員情報:', this.employeeInfo);
       } else {
         console.error(`従業員番号 ${this.employeeId} のデータがFirestoreに存在しません`);
         this.errorMessage = `従業員番号: ${this.employeeId} の情報が見つかりません`;
@@ -383,27 +344,21 @@ export class ManualGradeAddComponent implements OnInit {
 
   // 判定ボタン押下時のバリデーション
   private validateBeforeCalculation(): boolean {
-    console.log('=== validateBeforeCalculation called ===');
-
     // 基本フィールドのチェック
     if (!this.isFormValid()) {
-      console.log('Form validation failed');
       this.errorMessage = '必須項目を入力してください。';
       return false;
     }
 
     // 生年月日より前の日付チェック
     const isBeforeBirthDate = this.isApplicableDateBeforeBirthDate();
-    console.log('isBeforeBirthDate result:', isBeforeBirthDate);
 
     if (isBeforeBirthDate) {
-      console.log('Birth date validation failed');
       this.errorMessage = '運用開始年月は生年月日より前を選択することはできません。';
       return false;
     }
 
     // エラーメッセージをクリア
-    console.log('All validations passed');
     this.errorMessage = '';
     return true;
   }
@@ -1082,9 +1037,20 @@ export class ManualGradeAddComponent implements OnInit {
   }
 
   async deleteGradeData(): Promise<void> {
+    console.log('🗑️ deleteGradeData() が呼び出されました');
+    console.log('現在の状態:', {
+      isEditMode: this.isEditMode,
+      recordId: this.recordId,
+      savedGradeData: this.savedGradeData,
+      employeeId: this.employeeId,
+      companyId: this.companyId,
+    });
+
     if (this.isEditMode && this.recordId) {
+      console.log('📝 編集モードでの削除処理を開始');
       // 編集モードの場合は履歴から削除
       if (!confirm('この手入力履歴を削除しますか？この操作は元に戻せません。')) {
+        console.log('❌ ユーザーが削除をキャンセルしました');
         return;
       }
 
@@ -1094,32 +1060,42 @@ export class ManualGradeAddComponent implements OnInit {
       try {
         console.log('削除開始:', { employeeId: this.employeeId, recordId: this.recordId });
 
-        // 1. 履歴コレクションから削除（メイン画面と同じロジック）
-        const historyDocRef = doc(this.firestore, `gradeJudgments`, this.recordId);
-        const docSnap = await getDoc(historyDocRef);
-        if (!docSnap.exists() || docSnap.data()['companyId'] !== this.companyId) {
-          throw new Error('削除権限のない、または存在しないドキュメントです。');
+        // 1. 等級履歴コレクションから削除（loadExistingManualGradeDataと完全に同じロジック）
+        if (!this.employeeInfo?.uid || !this.companyId) {
+          throw new Error('従業員情報または会社情報が不足しているため削除できません。');
         }
-        console.log('履歴削除:', historyDocRef.path);
+
+        // 読み込み処理と全く同じパスを使用
+        const historyDocRef = doc(
+          this.firestore,
+          `companies/${this.companyId}/employees/${this.employeeInfo.uid}/gradeHistory`,
+          this.recordId
+        );
+        console.log('📄 ドキュメント参照:', historyDocRef.path);
+
+        const docSnap = await getDoc(historyDocRef);
+        console.log('📋 ドキュメント存在確認:', docSnap.exists());
+
+        if (!docSnap.exists()) {
+          console.log('❌ ドキュメントが存在しません');
+          throw new Error(`削除対象のドキュメントが見つかりません。recordId: ${this.recordId}`);
+        }
+
+        const docData = docSnap.data();
+        console.log('📊 ドキュメントデータ:', docData);
+
+        // companyId の確認（あれば）
+        if (docData['companyId'] && docData['companyId'] !== this.companyId) {
+          console.log('🏢 ドキュメントのcompanyId:', docData['companyId']);
+          console.log('🏢 現在のcompanyId:', this.companyId);
+          throw new Error('削除権限がありません。異なる会社のデータです。');
+        }
+
+        console.log('✅ 削除権限確認OK、削除を実行:', historyDocRef.path);
         await deleteDoc(historyDocRef);
 
-        // 2. employee_gradesコレクションからも削除
-        const gradeDocId = `${this.employeeId}_manual`;
-        const gradeDocRef = doc(this.firestore, 'employee_grades', gradeDocId);
-        console.log('employee_grades削除:', gradeDocRef.path);
-
-        try {
-          const gradeDocSnap = await getDoc(gradeDocRef);
-          if (gradeDocSnap.exists()) {
-            await deleteDoc(gradeDocRef);
-            console.log('employee_gradesからも削除しました');
-          } else {
-            console.log('employee_gradesにドキュメントが存在しませんでした');
-          }
-        } catch (gradeDeleteError) {
-          console.warn('employee_gradesからの削除でエラー:', gradeDeleteError);
-          // 履歴削除は成功しているので、続行
-        }
+        // 注意: employee_gradesコレクションは読み込み処理で使用していないため削除対象外
+        console.log('📝 メモ: employee_gradesコレクションは手動等級データでは使用していません');
 
         console.log('削除処理完了');
         alert('手入力データを削除しました');
@@ -1132,8 +1108,10 @@ export class ManualGradeAddComponent implements OnInit {
         this.isSaving = false;
       }
     } else {
+      console.log('📄 通常モードでの削除処理を開始');
       // 通常モードの場合
       if (!this.savedGradeData?.id) {
+        console.log('💡 保存データがないため、画面上の表示のみクリア');
         // 保存データがない場合は画面上の表示のみクリア
         this.judgmentResult = null;
         this.monthlyAmount = null;
@@ -1144,14 +1122,22 @@ export class ManualGradeAddComponent implements OnInit {
         return;
       }
 
+      console.log('🔄 Firestoreからの削除処理を開始');
+      if (!confirm('この手入力データを削除しますか？この操作は元に戻せません。')) {
+        console.log('❌ ユーザーが削除をキャンセルしました');
+        return;
+      }
+
       this.isSaving = true;
       this.errorMessage = '';
 
       try {
+        console.log('📤 Firestoreドキュメントを削除中:', this.savedGradeData.id);
         // Firestoreからデータを削除
         const docRef = doc(this.firestore, 'employee_grades', this.savedGradeData.id);
         await deleteDoc(docRef);
 
+        console.log('✅ Firestoreからの削除が完了');
         // 画面の表示をクリア
         this.judgmentResult = null;
         this.monthlyAmount = null;
@@ -1161,18 +1147,22 @@ export class ManualGradeAddComponent implements OnInit {
         this.endMonth = null;
         this.savedGradeData = null;
 
+        console.log('🧹 画面表示をクリアしました');
         // 成功メッセージを表示
         this.errorMessage = 'データが削除されました';
         setTimeout(() => {
           this.errorMessage = '';
         }, 3000);
+        console.log('✨ 削除処理が正常に完了しました');
       } catch (error) {
-        console.error('削除エラー:', error);
+        console.error('❌ 削除エラー:', error);
         this.errorMessage = '削除に失敗しました: ' + (error as Error).message;
       } finally {
         this.isSaving = false;
+        console.log('🏁 削除処理を終了');
       }
     }
+    console.log('🔚 deleteGradeData() メソッドを終了');
   }
 
   /**
