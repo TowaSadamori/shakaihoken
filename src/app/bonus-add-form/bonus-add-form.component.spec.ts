@@ -8,9 +8,8 @@ describe('BonusAddFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BonusAddFormComponent]
-    })
-    .compileComponents();
+      imports: [BonusAddFormComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(BonusAddFormComponent);
     component = fixture.componentInstance;

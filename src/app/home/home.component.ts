@@ -126,7 +126,14 @@ export class HomeComponent implements OnInit {
   // 年次切り替え用
   selectedYear: number = new Date().getFullYear();
   selectedMonth: number = new Date().getMonth() + 1;
-  years: number[] = [];
+  fiscalYears: number[] = []; // 年度のリスト
+  fiscalMonths: { value: number; display: string; actualYear: number; actualMonth: number }[] = []; // 年度ベースの月リスト
+
+  // 従来のyearsとmonthsは削除し、新しい年度ベースのプロパティを使用
+  get years() {
+    return this.fiscalYears;
+  }
+
   months: { value: number; display: string }[] = [
     { value: 1, display: '1月' },
     { value: 2, display: '2月' },
@@ -145,9 +152,9 @@ export class HomeComponent implements OnInit {
     { value: 15, display: '賞与3回目' },
   ];
 
-  // 賞与月を除外した月リスト
+  // 年度ベースの月リスト（賞与除外）
   get monthsFiltered() {
-    return this.months.filter((m) => m.value < 13);
+    return this.fiscalMonths;
   }
 
   // 現在のユーザーの保険料データ
@@ -299,7 +306,13 @@ export class HomeComponent implements OnInit {
 
       // 年次切り替え用の年リストを生成
       const currentYear = new Date().getFullYear();
-      this.years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+      this.fiscalYears = Array.from({ length: 10 }, (_, i) => currentYear - i);
+
+      // 現在の年度を設定（初期値）
+      this.initializeFiscalYear();
+
+      // 年度ベースの月配列を生成
+      this.generateFiscalMonths();
 
       // 賞与データ取得処理の呼び出し（実装は後続で追加）
       await this.loadAllEmployeesBonusData();
@@ -608,6 +621,10 @@ export class HomeComponent implements OnInit {
   // 年次切り替え時の処理
   async onYearChange() {
     console.log('=== onYearChange START ===');
+
+    // 年度変更時に月配列を再生成
+    this.generateFiscalMonths();
+
     this.setDisplayedColumns();
     await this.refreshData();
     console.log(
@@ -1532,5 +1549,45 @@ export class HomeComponent implements OnInit {
     debugInfo.forEach((info) => console.log(`  ${info}`));
 
     return total.toString();
+  }
+
+  // 現在の年度を初期化
+  private initializeFiscalYear(): void {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1; // 1-12
+    // 4月以降なら当年度、3月以前なら前年度
+    const fiscalYear =
+      currentMonth >= 4 ? currentDate.getFullYear() : currentDate.getFullYear() - 1;
+    this.selectedYear = fiscalYear;
+
+    // 現在の月も設定
+    this.selectedMonth = currentMonth;
+  }
+
+  // 年度ベースの月配列を生成
+  private generateFiscalMonths(): void {
+    const fiscalMonths = [];
+
+    // 4月から12月（選択された年度）
+    for (let month = 4; month <= 12; month++) {
+      fiscalMonths.push({
+        value: month,
+        display: `${this.selectedYear}年${month}月`,
+        actualYear: this.selectedYear,
+        actualMonth: month,
+      });
+    }
+
+    // 1月から3月（選択された年度の翌年）
+    for (let month = 1; month <= 3; month++) {
+      fiscalMonths.push({
+        value: month,
+        display: `${this.selectedYear + 1}年${month}月`,
+        actualYear: this.selectedYear + 1,
+        actualMonth: month,
+      });
+    }
+
+    this.fiscalMonths = fiscalMonths;
   }
 }

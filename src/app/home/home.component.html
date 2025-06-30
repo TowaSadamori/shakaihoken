@@ -5,9 +5,9 @@
       <h1>HOME</h1>
       <div class="period-selector">
         <mat-form-field appearance="outline">
-          <mat-label>表示年</mat-label>
+          <mat-label>表示年度</mat-label>
           <mat-select [(value)]="selectedYear" (selectionChange)="onYearChange()">
-            <mat-option *ngFor="let year of years" [value]="year"> {{ year }}年 </mat-option>
+            <mat-option *ngFor="let year of years" [value]="year"> {{ year }}年度 </mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
