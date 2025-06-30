@@ -1243,7 +1243,7 @@ export class HomeComponent implements OnInit {
 
   // 日付から月のみを表示するフォーマット関数
   public formatPaymentMonth(dateStr?: string): string {
-    if (!dateStr) return '';
+    if (!dateStr) return '-';
     const parts = dateStr.split('-');
     if (parts.length >= 2) {
       const year = parts[0];
@@ -1251,5 +1251,60 @@ export class HomeComponent implements OnInit {
       return `${year}年${month}月`;
     }
     return dateStr;
+  }
+
+  /**
+   * 賞与の従業員負担合計を計算
+   */
+  public calculateEmployeeBurdenTotal(bonus: EmployeeBonusData): string {
+    if (!bonus.calculationResult) return '0';
+
+    let total = 0;
+
+    // 健康保険料（個人）
+    const healthInsuranceEmployee = bonus.calculationResult.healthInsurance?.employeeBurden;
+    if (healthInsuranceEmployee && !isNaN(parseFloat(healthInsuranceEmployee))) {
+      total += parseFloat(healthInsuranceEmployee);
+    }
+
+    // 厚生年金保険料（個人）
+    const pensionInsuranceEmployee = bonus.calculationResult.pensionInsurance?.employeeBurden;
+    if (pensionInsuranceEmployee && !isNaN(parseFloat(pensionInsuranceEmployee))) {
+      total += parseFloat(pensionInsuranceEmployee);
+    }
+
+    return total.toString();
+  }
+
+  /**
+   * 賞与の会社負担合計（参考値）を計算
+   */
+  public calculateCompanyBurdenTotal(bonus: EmployeeBonusData): string {
+    if (!bonus.calculationResult) return '0';
+
+    let total = 0;
+
+    // 健康保険料（全額）- 介護保険の対象かどうかで分岐
+    if (this.isInCareInsurancePeriod(bonus.paymentDate, bonus.careInsurancePeriod)) {
+      // 介護保険該当の場合
+      const careInsuranceTotal = bonus.careInsuranceTotal;
+      if (careInsuranceTotal && !isNaN(parseFloat(careInsuranceTotal))) {
+        total += parseFloat(careInsuranceTotal);
+      }
+    } else {
+      // 介護保険非該当の場合
+      const healthInsuranceTotal = bonus.healthInsuranceTotal;
+      if (healthInsuranceTotal && !isNaN(parseFloat(healthInsuranceTotal))) {
+        total += parseFloat(healthInsuranceTotal);
+      }
+    }
+
+    // 厚生年金保険料（全額）
+    const pensionInsuranceTotal = bonus.pensionInsuranceTotal;
+    if (pensionInsuranceTotal && !isNaN(parseFloat(pensionInsuranceTotal))) {
+      total += parseFloat(pensionInsuranceTotal);
+    }
+
+    return total.toString();
   }
 }

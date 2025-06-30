@@ -403,20 +403,82 @@
               </td>
             </ng-container>
 
+            <!-- Col: 健康保険上限適用後標準賞与額 -->
+            <ng-container matColumnDef="applicableHealthStandardAmount">
+              <th mat-header-cell *matHeaderCellDef>健康保険<br />上限適用後標準賞与額</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ formatAmount(bonus.calculationResult?.applicableHealthStandardAmount) }}
+              </td>
+            </ng-container>
             <!-- Col: 従業員負担合計 -->
-            <ng-container matColumnDef="totalEmployee">
+            <ng-container matColumnDef="totalEmployeeBurden">
               <th mat-header-cell *matHeaderCellDef>従業員負担合計</th>
-              <td mat-cell *matCellDef="let bonus">{{ formatNumber(bonus.totalEmployee) }}円</td>
+              <td mat-cell *matCellDef="let bonus">
+                {{ formatAmount(calculateEmployeeBurdenTotal(bonus)) }}
+              </td>
             </ng-container>
-
-            <!-- Col: 会社負担合計 -->
-            <ng-container matColumnDef="totalCompany">
+            <!-- Col: 会社負担合計（参考値） -->
+            <ng-container matColumnDef="totalCompanyBurden">
               <th mat-header-cell *matHeaderCellDef>会社負担合計（参考値）</th>
-              <td mat-cell *matCellDef="let bonus">{{ formatNumber(bonus.totalCompany) }}円</td>
+              <td mat-cell *matCellDef="let bonus">
+                {{ formatAmount(calculateCompanyBurdenTotal(bonus)) }}
+              </td>
             </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsAdmin"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumnsAdmin"></tr>
+            <tr
+              mat-header-row
+              *matHeaderRowDef="[
+                'paymentNumber',
+                'paymentDate',
+                'employeeNumber',
+                'officeNumber',
+                'employeeName',
+                'leaveType',
+                'amount',
+                'standardBonusAmount',
+                'healthInsuranceRate',
+                'healthInsuranceEmployee',
+                'healthInsuranceCompany',
+                'careInsuranceRate',
+                'careInsuranceEmployee',
+                'careInsuranceCompany',
+                'pensionInsuranceRate',
+                'pensionInsuranceEmployee',
+                'pensionInsuranceCompany',
+                'cappedPensionStandardAmount',
+                'applicableHealthStandardAmount',
+                'totalEmployeeBurden',
+                'totalCompanyBurden',
+              ]"
+            ></tr>
+            <tr
+              mat-row
+              *matRowDef="
+                let row;
+                columns: [
+                  'paymentNumber',
+                  'paymentDate',
+                  'employeeNumber',
+                  'officeNumber',
+                  'employeeName',
+                  'leaveType',
+                  'amount',
+                  'standardBonusAmount',
+                  'healthInsuranceRate',
+                  'healthInsuranceEmployee',
+                  'healthInsuranceCompany',
+                  'careInsuranceRate',
+                  'careInsuranceEmployee',
+                  'careInsuranceCompany',
+                  'pensionInsuranceRate',
+                  'pensionInsuranceEmployee',
+                  'pensionInsuranceCompany',
+                  'cappedPensionStandardAmount',
+                  'applicableHealthStandardAmount',
+                  'totalEmployeeBurden',
+                  'totalCompanyBurden',
+                ]
+              "
+            ></tr>
           </table>
         </div>
       </mat-card-content>
@@ -583,6 +645,20 @@
                 {{ formatAmount(bonus.calculationResult?.applicableHealthStandardAmount) }}
               </td>
             </ng-container>
+            <!-- Col: 従業員負担合計 -->
+            <ng-container matColumnDef="totalEmployeeBurden">
+              <th mat-header-cell *matHeaderCellDef>従業員負担合計</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ formatAmount(calculateEmployeeBurdenTotal(bonus)) }}
+              </td>
+            </ng-container>
+            <!-- Col: 会社負担合計（参考値） -->
+            <ng-container matColumnDef="totalCompanyBurden">
+              <th mat-header-cell *matHeaderCellDef>会社負担合計（参考値）</th>
+              <td mat-cell *matCellDef="let bonus">
+                {{ formatAmount(calculateCompanyBurdenTotal(bonus)) }}
+              </td>
+            </ng-container>
             <tr
               mat-header-row
               *matHeaderRowDef="[
@@ -605,6 +681,8 @@
                 'pensionInsuranceCompany',
                 'cappedPensionStandardAmount',
                 'applicableHealthStandardAmount',
+                'totalEmployeeBurden',
+                'totalCompanyBurden',
               ]"
             ></tr>
             <tr
@@ -631,6 +709,8 @@
                   'pensionInsuranceCompany',
                   'cappedPensionStandardAmount',
                   'applicableHealthStandardAmount',
+                  'totalEmployeeBurden',
+                  'totalCompanyBurden',
                 ]
               "
             ></tr>
